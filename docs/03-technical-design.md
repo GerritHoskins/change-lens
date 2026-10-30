@@ -164,6 +164,7 @@ Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 | First comparison (both extracted) | 22k / 6k | 10% | ≈ €0.17 | |
 | Heavy (20 pages ≈ 15k words) | 70k / 15k | 20% | ≈ €0.52 | At the input cap |
 | Worst case (heavy, both extracted, every stage retried once) | 100k / 22k | 100% | ≈ €1.26 | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
+| Screenshot vision parse (per image) | 1.5k / 0.5k | 10% | ≈ €0.013 | Charged as 1 allowance unit (03a P2) [U: image token counts vary by provider] |
 
 **Monthly cost per account (sensitivity):**
 
@@ -181,6 +182,7 @@ These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A])
 - Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead.
 - **The pilot's discounted prices (€9 / €39) do not cover full-allowance usage within 30%.** For example, 25 typical comparisons cost €3.25, which is 36% of €9. The pilot is deliberately priced below target to test willingness to pay, so the unit-economics gate (04 §6, Gate 4) is judged against **target** prices.
 - The pilot must measure real token usage per comparison (I-14) and replace these placeholders.
+- `scripts/cost-model.ps1` recomputes this table and fails if a scenario is worse than the reviewed baseline (14748b6) or breaks a cost gate. Benchmark findings: if every comparison is a new project, full-allowance cost reaches ≈ 35% of target price (review ledger REV-19); at 1.5× the placeholder prices, heavy documents and the worst case break their limits (REV-20).
 
 ## 9. Modules, interfaces and data flow
 
