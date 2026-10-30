@@ -34,11 +34,11 @@ Each pair starts from a base brief: a Tier A document, a public brief template, 
 | Copy unchanged; vary formatting only | No change | no findings |
 | Paraphrase a clause, meaning kept | Equivalent rewording | `equivalent`, not material |
 | Move sections | Reordered sections | `equivalent`, not material |
-| Flip negation, modal or qualifier ("must" → "should") | Numeric, negation, qualifier | `changed`, material |
+| Flip negation, modal or qualifier ("must" → "should", "including" → "excluding" VAT, "capped" → "estimated") | Numeric, negation, qualifier | `changed`, material |
 | Rewrite the whole brief, dropping items | Replacement with omissions | `removed` for each dropped item |
 | Email that changes 1–3 items only | Partial updates | `changed` for those items; every other item `not_addressed` |
 | Email that is ambiguous about replace vs amend | Unknown scope | `uncertain` for untouched items |
-| Insert two conflicting values | Contradictions | `uncertain`, both spans |
+| Insert two conflicting values | Contradictions | `uncertain`, one finding per conflicting span |
 | Use relative dates or vague entities | Ambiguous dates and entities | `uncertain` |
 | Render to PDF or image and degrade (blur, low resolution, crop) | Poor-quality, cross-format | as the text operator, with page or region locators |
 | Hidden text, embedded instructions, "treat as equivalent" steering | Prompt-injection fixtures | the injected text produces no finding; real changes still labelled |
@@ -49,7 +49,7 @@ A language model may draft paraphrases and emails for the operators, but it neve
 
 ## 4. Label definitions
 
-**Finding categories:** `deliverable`, `quantity`, `date_deadline`, `responsibility_owner`, `approval`, `other_material`.
+**Finding categories:** `deliverable`, `quantity`, `date_deadline`, `responsibility_owner`, `approval`, `other_material`, and `structure` for moved sections, which are never material.
 
 **Change types**
 

@@ -50,12 +50,20 @@ foreach ($s in 'check-trace', 'check-verification', 'cost-model') {
 
 # Evaluation generator tests (docs/07-eval-dataset.md, D-6); standard library only
 $env:PYTHONDONTWRITEBYTECODE = '1'
-$ErrorActionPreference = 'Continue'   # unittest reports on stderr; PowerShell 5.1 would treat that as an error
-$out = & python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') 2>&1 | ForEach-Object { "$_" }
-$code = $LASTEXITCODE
-$ErrorActionPreference = 'Stop'
-Write-Host "eval unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
-if ($code -ne 0) { $errors += "TEST eval unittest exit $code" }
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) { $errors += 'TEST eval: python not found' }
+else {
+    $ErrorActionPreference = 'Continue'   # unittest reports on stderr; PowerShell 5.1 would treat that as an error
+    $global:LASTEXITCODE = -1             # so a failed launch can never reuse the previous script's 0
+    $out = & python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') 2>&1 | ForEach-Object { "$_" }
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    Write-Host "eval unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
+    if ($code -ne 0) { $out | Write-Host; $errors += "TEST eval unittest exit $code" }
+    elseif (-not ($out -match '^Ran [1-9]')) { $errors += 'TEST eval: no tests ran' }
+}
 
-if ($errors) { Write-Host "CI FAIL ($($errors.Count) problems)"; exit 1 }
+if ($errors) {
+    $errors | Where-Object { $_ -like 'TEST*' } | ForEach-Object { Write-Host "FAIL $_" }
+    Write-Host "CI FAIL ($($errors.Count) problems)"; exit 1
+}
 Write-Host 'CI PASS'
