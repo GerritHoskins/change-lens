@@ -27,3 +27,6 @@ Checked by `scripts/check-trace.ps1`. Every AC in `02-mvp-spec.md` §7 must appe
 | AC-21 | 03 §8 | I-14 | — |
 | AC-22 | 03 §6 | I-13 | — |
 | AC-23 | 03 §6 | I-8, I-13 | — |
+| AC-24 | 02 §1, 02 §2, 03 §1.1 | I-9, I-16 | — |
+| AC-25 | 03 §1.1, 03 §6 | I-9, I-16, I-8 | — |
+| AC-26 | 03 §1.1 | I-8, D-9 | — |
