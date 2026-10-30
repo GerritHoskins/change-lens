@@ -85,9 +85,9 @@ These must be agreed and committed before the held-out evaluation and the pilot 
 
 ### Gate 1 — Problem validation (three-signal rubric, handoff v2 §11)
 
-The thresholds are the v2 proposed defaults [E]. They are experiment defaults, not market benchmarks. The definitions in §6.1 are this plan's proposals [A][O]. All of it must be frozen and committed before recruitment starts.
+The thresholds are the v2 proposed defaults [E]. They are experiment defaults, not market benchmarks. The definitions in §6.1 were proposed by this plan and **confirmed by the owner on 2026-10-30**. They are frozen; any change before recruitment must be logged in 06 with a reason.
 
-#### 6.1 Frozen definitions [A][O]
+#### 6.1 Frozen definitions (owner-confirmed 2026-10-30)
 
 | Term | Definition |
 |---|---|

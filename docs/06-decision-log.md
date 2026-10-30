@@ -39,17 +39,17 @@ Plan section: §13.6. Every entry is tagged:
 | Language and market | English; EU/UK; EUR excluding VAT | 01 |
 | MVP formats | Pasted text, text-layer PDF and PNG/JPEG screenshots, imported through paste, the PDF picker, camera / photo library or the OS share sheet; DOCX deferred | 02 §2 |
 | Input limits | ≤ 15k words, ≤ 20 pages, ≤ 10 MB; images ≤ 5 MB | 02 §2 |
-| Share expiry | 30 days by default, revocable | 02 §6 |
+| Share expiry | 30 days by default, revocable — owner-confirmed 2026-10-30 | 02 §6 |
 | Architecture | Script prototype (A), then Flutter mobile app + FastAPI + Postgres + Python worker + a read-only web share page (B) | 03 §1 |
-| Retention | Until the user deletes; backups purged within 30 days | 03 §6 |
+| Retention | Until the user deletes; backups purged within 30 days — owner-confirmed 2026-10-30 | 03 §6 |
 | Cost inputs | Placeholder `p_in = €3/M`, `p_out = €15/M`; brief ≈ 4k tokens | 03 §8 |
 | Allowances | 25 comparisons per month individual / 100 per month team; heavy document = 4; failed runs not counted | 03 §8, 04 §2 |
-| Team seats | 3 seats per team plan | 06 O-8 |
+| Team seats | 3 seats per team plan — owner-confirmed 2026-10-30 | 06 O-8 |
 | Pilot price | €9 / €39 per month, 2 months prepaid, 5–10 accounts; unit economics judged at target €12 / €49 | 04 §2, §6 |
 | Evaluation data | ≥ 10 real permissioned pairs; the rest of the ≥ 80 are synthetic | 04 §1, §4 |
-| Gate 1 definitions | Event = written client change to deliverables, quantities, deadlines, owners or approval wording; ≥ 3 in 90 days with ≥ 2 concrete; useful = missed material change caught or ≥ 30% less effort; 14-day decision deadline | 04 §6.1 |
+| Gate 1 definitions | Event = written client change to deliverables, quantities, deadlines, owners or approval wording; ≥ 3 in 90 days with ≥ 2 concrete; useful = missed material change caught or ≥ 30% less effort; 14-day decision deadline — confirmed by the owner 2026-10-30 | 04 §6.1 |
 | Signal B method | Operator-assisted test (D-13) before any prototype: fixed general-purpose-model prompt plus manual evidence checking, in the 02 §4 report format. It tests format and workflow value, not pipeline accuracy | 04 §6.2, 05 D-13 |
-| Retest budget | ≤ 10 new organisations, ≤ 6 weeks, ≤ 8 person-days | 04 §6.3 |
+| Retest budget | ≤ 10 new organisations, ≤ 6 weeks, ≤ 8 person-days — confirmed by the owner 2026-10-30 | 04 §6.3 |
 | Device data | No document content cached on the device in the MVP; tokens in Keychain / Keystore only | 03 §1.1, §6 |
 | Technical thresholds | As proposed in 04 §6, Gates 2–4 | 04 §6 |
 | Effort | Person-day ranges for one experienced developer | 05 |
@@ -71,17 +71,17 @@ Plan section: §13.6. Every entry is tagged:
 
 | # | Decision | Recommendation | Needed by |
 |---|---|---|---|
-| O-1 | Customer niche | Fix before recruitment (D-2); proposed: web/digital and design freelancers and studios | D-2 |
-| O-2 | Launch language and market | English, EU/UK | D-1 |
+| O-1 | Customer niche | **Decided 2026-10-30:** web/digital and design freelancers and studios of 1–10 people | — |
+| O-2 | Launch language and market | **Decided 2026-10-30:** English; EU + UK | — |
 | O-3 | First production input formats | **Decided 2026-10-30:** text, PDF and screenshots, via paste, picker, camera and share sheet | — |
 | O-4 | Stack, auth and hosting | **Decided 2026-10-30:** Flutter + FastAPI stack (final after D-15); managed IdP with EU residency, using email one-time code + Google + Sign in with Apple; Germany region; Hetzner excluded; minimum spec in 03 §1.2. **Open:** IdP vendor and OVHcloud vs IONOS, both priced in D-8 | D-8 |
 | O-5 | Model provider and processing location | Provider with a no-training, zero or short retention plan in the EU/UK; pick from the D-7 comparison | I-2 |
-| O-6 | Storage and retention policy | Until deletion; 30-day backup purge | I-13 |
-| O-7 | Sharing mechanism and default expiry | Revocable snapshot link, 30 days | I-12 |
-| O-8 | Team seats and usage limits | 3 seats per team plan [A]; allowances as above | I-14 |
-| O-9 | Gate 1 definitions and technical thresholds | Gate 1 thresholds adopted from handoff v2; confirm the 04 §6.1 definitions (event, ≥ 3 in 90 days, materiality, 30% effort reduction, 14-day deadline), the retest budget and the Gate 2 technical thresholds | D-2 / Gate 2 |
-| O-10 | Acquisition channel for the pilot | Owner network + freelancer communities | D-4 |
-| O-11 | Pilot pricing and data terms | €9 / €39 prepaid; terms after D-7 | D-4 |
+| O-6 | Storage and retention policy | **Decided 2026-10-30:** kept until the user deletes; immediate primary deletion; backups expire within 30 days | — |
+| O-7 | Sharing mechanism and default expiry | **Decided 2026-10-30:** revocable snapshot link, 30-day default expiry | — |
+| O-8 | Team seats and usage limits | **Decided 2026-10-30:** 3 seats per team plan; 25 comparisons per month individual, 100 per month team; heavy document = 4 | — |
+| O-9 | Gate 1 definitions and technical thresholds | **Gate 1 decided 2026-10-30:** v2 thresholds; ≥ 3 qualifying events in 90 days with ≥ 2 concrete; useful = missed material change caught or ≥ 30% less effort; 14-day decision deadline; retest ≤ 10 organisations, 6 weeks, 8 person-days. **Gate 2 decided 2026-10-30** as proposed in 04 §6. **Open:** confirm Gate 3–4 before the pilot | Gate 3 |
+| O-10 | Acquisition channel for the pilot | **Decided 2026-10-30:** the owner's own network. Mitigation: a screener blind to revision pain, every eligible respondent kept in the denominator, the relationship to the owner recorded per organisation. If the network can't supply 10 eligible organisations by the D-1 deadline, Gate 1 is *inconclusive*; widening the channel is a logged change | — |
+| O-11 | Pilot pricing and data terms | **Decided 2026-10-30:** €9 / €39 per month, 2 months prepaid. Data terms are still drafted after D-7 | D-4 (terms) |
 
 ## Change log
 
@@ -92,3 +92,6 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Adopted handoff v2 Gate 1 rubric; added 04 §6.1 definitions, D-13 operator-assisted usefulness test and D-14 bounded retest; niche fixed before recruitment (D-2 now precedes D-1); owner kept the original Gate 1 values, now superseded by v2 | Handoff v2 |
 | 2026-10-30 | Mobile-first owner decision: Flutter + FastAPI stack (03 §1.1); share sheet and screenshots moved into the MVP (I-1b, I-16); added D-15 mobile proof of concept and I-17 pilot distribution; same PDF engine (PDFium) on device and backend; no device content cache; read-only web share page kept for recipients | Owner direction |
 | 2026-10-30 | O-4 interview: managed EU IdP; email one-time code + Google + Sign in with Apple; Germany; Hetzner excluded; OVHcloud vs IONOS shortlist; minimum hosting spec (03 §1.2) | Owner interview |
+| 2026-10-30 | Interview round 2: O-1 web/design niche, O-2 English EU+UK, O-10 own network (with bias mitigation), O-11 €9 / €39 prepaid | Owner interview |
+| 2026-10-30 | Interview round 3: Gate 1 definitions (04 §6.1) and retest budget confirmed and frozen | Owner interview |
+| 2026-10-30 | Interview round 4: O-6 retention until deletion with 30-day backups; O-7 30-day revocable shares; O-8 3 seats; Gate 2 thresholds accepted | Owner interview |
