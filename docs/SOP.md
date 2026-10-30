@@ -16,6 +16,12 @@ The check passes only if:
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
+Cost-model benchmark (rerun after D-7 with real prices, e.g. `-PIn 3 -POut 15`):
+
+```powershell
+powershell -NoProfile -File scripts/cost-model.ps1
+```
+
 Mission completion check (fails until independent verification and review closure are recorded):
 
 ```powershell
