@@ -1,6 +1,6 @@
 # ADR 0019: Model provider selection
 
-**Status:** Proposed: D-7 recommendation recorded, awaiting owner confirmation (2026-10-30)
+**Status:** Proposed: the D-17 spike decides between IONOS AI Model Hub and Bedrock (2026-10-30)
 
 ## Context
 
@@ -8,7 +8,7 @@ Retention, training use, EU processing, DPA and price are all unverified.
 
 ## Decision
 
-Primary: Claude Sonnet 5.5 on AWS Bedrock, EU geo profile `eu.anthropic.claude-sonnet-5-5` from eu-central-1, with zero data retention enforced at account level. Fallback: Mistral Large 4 on La Plateforme, only after Mistral approves zero data retention and the training opt-out is confirmed; if it refuses, IONOS AI Model Hub after a structured-output spike. Ruled out: Anthropic's first-party API (no EU residency), Azure OpenAI (abuse data kept for human review by default), Claude on Vertex (abuse retention unverified). Full comparison and sources: 06, D-7 comparison.
+At the owner's request IONOS AI Model Hub is evaluated first: Qwen3.5-397B-A17B becomes primary if it passes the D-17 spike thresholds, and Claude Sonnet 5.5 on AWS Bedrock (EU geo profile `eu.anthropic.claude-sonnet-5-5` from eu-central-1, zero data retention) stays the configured fallback behind the `llm` port. If IONOS fails the spike, Bedrock is primary. Further fallback: Mistral Large 4 on La Plateforme, only after Mistral approves zero data retention and the training opt-out is confirmed. Ruled out: Anthropic's first-party API (no EU residency), Azure OpenAI (abuse data kept for human review by default), Claude on Vertex (abuse retention unverified). Full comparison and sources: 06, D-7 comparison.
 
 ## Consequences
 
