@@ -1,6 +1,6 @@
 # ADR 0005: Managed identity provider with EU residency
 
-**Status:** Accepted; vendor open (D-8) (2026-10-30)
+**Status:** Superseded by ADR-0020 (2026-10-30): self-hosted Logto on IONOS instead of a managed provider
 
 ## Context
 
