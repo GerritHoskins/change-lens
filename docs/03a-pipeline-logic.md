@@ -31,11 +31,14 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
         user ← create_user(invite.tenant); consume(invite)   # joins only the tenant that invited this email  [AC-26]
      else:
         user ← create_user(new_tenant())                     # never attach to someone else's tenant  [AC-26]
-
-INVITE_MEMBER(email):                                         # team owner, or the operator during the pilot (I-15)
-  require caller is the team owner; create invite(tenant, email, expires = now + 7 days)  [AC-19, AC-26]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
+
+INVITE_MEMBER(email):
+  require caller is the team owner, or the operator acting for that owner during the pilot (I-15)  [AC-19, AC-26]
+  create invite(tenant, email, expires = now + 7 days)
+  # Pilot limitation (accepted): invites apply to first sign-in only. A user who already
+  # has a tenant cannot join a team; tenant migration is out of pilot scope (review ledger REV-17).
 ```
 
 ## P2. Import a version (mobile → API)

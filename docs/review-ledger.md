@@ -35,3 +35,21 @@ Every review finding, with its status. Checked by `scripts/check-verification.ps
 | PLAN-17 | plan-reviewer (5.8) | Open TODO(human) marker in 04 §6 | low | resolved | Owner removed it; superseded by the v2 rubric (0216e96) |
 | PLAN-18 | plan-reviewer (5.9) | Conditional I-11 counted in totals; no grand total | low | resolved | 14748b6: grand total added; I-11 later folded into the MVP (e863ddb) |
 | PLAN-19 | plan-reviewer (6.1) | Locator schema and field lists border on implementation detail | low | resolved | 14748b6: 03 §3 labels the schemas illustrative |
+| REV-1 | ac-verifier, 2026-10-30 | AC-2/3/4: model explanations could describe omissions as removed or cancelled | high | resolved | 60f038b: P5.5 templates for omissions; contradiction check falls back to template; re-verified pass |
+| REV-2 | ac-verifier | AC-5: equivalent findings had no evidence and were withheld; presentation-only step missing | medium | resolved | 60f038b: P5.3 evidence; P5.4 presentation_only; re-verified pass |
+| REV-3 | ac-verifier | AC-7: needs-review drafts lacked evidence; ambiguity checked only on matched pairs; no within-version contradiction logic | medium | resolved | 60f038b: P5.2 step 0; P5.3 evidence and all-kinds check; re-verified pass |
+| REV-4 | ac-verifier | AC-10: prioritised list included needs-review findings | medium | resolved | 60f038b: P5.5 excludes the needs-review group; re-verified pass |
+| REV-5 | ac-verifier | AC-18: model "equivalent" verdicts counted as explanations, hiding forced false equivalence | high | resolved | 60f038b: P5.4 excludes equivalent from coverage; 03 §2 Verify row; re-verified pass |
+| REV-6 | ac-verifier | AC-20: word cap checked only for pasted text | medium | resolved | 60f038b: P3 word count for all kinds; re-verified pass |
+| REV-7 | ac-verifier | AC-21: screenshot vision parse unmetered | medium | resolved | 60f038b: P2 unit reservation, P3 CostMeter; I-14; re-verified pass |
+| REV-8 | ac-verifier | AC-22: deletion only revoked share snapshots; approval attachments possibly outside the purged prefix | high | resolved | 60f038b: P8 deletes SharedReport rows; P6 stores approvals under the project prefix; re-verified pass |
+| REV-9 | ac-verifier | AC-23: deny-list logging; exception messages unscrubbed; then metrics and traces unconstrained | high | resolved | 60f038b (allow-list, ON_EXCEPTION), 3a40a87 (METRIC, TRACING_CONFIG, I-8 acceptance) |
+| REV-10 | ac-verifier | AC-25: hand-off and picker/camera temp files persisted on device | medium | resolved | 60f038b: P10 purge after upload and on start; I-9, I-16 acceptance; re-verified pass |
+| REV-11 | ac-verifier (note) | Scanned PDFs: P3 warned per page; 02 §2 says reject | low | resolved | 60f038b: P3 rejects all-pages-without-text with no_text_layer |
+| REV-12 | ac-verifier (note) | Share-extension upload path described differently in 03 §6 and §9.2 | low | resolved | 60f038b: 03 §6 aligned with §9.2 and P10 |
+| REV-13 | ac-verifier (note) | block_diff ordering and moved blocks ambiguous | low | resolved | 60f038b: P5.4 separates moved_identical into presentation_only |
+| REV-14 | ac-verifier (note) | No team-seat invite flow; every new user got a new tenant | medium | resolved | 3a40a87: P1 invite flow and INVITE_MEMBER; I-8 acceptance |
+| REV-15 | ac-verifier (note) | OS app-switcher snapshot could capture document screens | low | resolved | 3a40a87: P10 ON_APP_BACKGROUNDING privacy cover |
+| REV-16 | ac-verifier | AC-26 regression: the INVITE_MEMBER insertion moved the 15-minute and MFA lines out of ON_SIGN_IN | high | resolved | Lines restored under ON_SIGN_IN (commit after 3a40a87); re-verification requested |
+| REV-17 | ac-verifier (note) | An existing user with their own tenant can never join a team | low | accepted | Pilot accounts are operator-provisioned before first sign-in (I-15), so invites precede tenant creation. Tenant migration is deferred until pilot evidence shows teams form after solo sign-up |
+| REV-18 | ac-verifier (note) | INVITE_MEMBER comment allowed the operator; the body required the team owner | low | resolved | P1 body now permits the owner or the operator acting for that owner during the pilot |
