@@ -7,15 +7,34 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Option | Summary | For | Against |
 |---|---|---|---|
 | A. Notebook or script prototype | Local scripts run the pipeline over the evaluation set; no UI | Fastest way to measure comparison quality; no hosting or privacy surface | Cannot test the workflow, history or sharing with users |
-| **B. Single web app + Postgres + background worker** | One deployable app (UI + API), Postgres for records and the job queue, object storage for originals, one worker process for pipeline jobs | Simplest design that supports private uploads, background processing, history and sharing; one database to secure and back up | Needs auth, hosting and a security pass before real client data |
+| **B. Mobile app (iOS + Android) + API + Postgres + background worker** | Flutter client; FastAPI service; Postgres for records and the job queue; S3-compatible storage for originals; one Python worker for pipeline jobs; one server-rendered read-only page for shared snapshots | Owner requires a mobile app [O, decided 2026-10-30]. Keeps document intelligence in Python, separate from the UI. One database to secure and back up | Two codebases (Dart + Python); store review on every release; needs auth, hosting and a security pass before real client data |
 | C. Serverless functions + managed queue + document DB | Pipeline steps as functions | Scales to zero | More moving parts, harder to keep provenance and transactions together; not needed at pilot scale |
 | D. No-code builder + LLM plugin | Bubble or Retool style tool | Quick demo | Weak control over evidence fidelity, tenancy and data sent to providers |
 
 **Recommendation:**
 - Use **A** for the comparison prototype stage (handoff §12, stage 2).
 - Then build **B** for the thin product slice and pilot, reusing the same pipeline module.
-- The language and framework are an owner decision [O]. Default proposal: TypeScript or Python. PDF text extraction with page and character offsets should be strong in the chosen ecosystem (`pdfplumber` / `pdf.js`) [A].
+- The stack below follows the owner's direction. Flutter becomes final only after the mobile proof of concept (D-15) passes. If it fails, React Native + Expo is evaluated against the same tests.
 - Do not add queues, agents, vector stores or OCR services beyond B unless measurements require them (handoff §8).
+
+### 1.1 Stack (owner direction, 2026-10-30)
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Mobile | Flutter + Dart; Riverpod; go_router; Dio; Freezed + json_serializable | Shared UI for iOS and Android |
+| Device storage | `flutter_secure_storage` for tokens only. **No offline cache of document content in the MVP** | A device cache would put client briefs outside deletion (AC-22) and the data inventory (AC-23). Drift/SQLite only if pilot evidence needs offline use |
+| Import | `file_picker` (PDF); paste; camera / photo library (screenshots); OS share sheet: an iOS Share Extension (a native Swift target) and an Android `ACTION_SEND` intent filter | The share sheet and screenshots are owner overrides of handoff §5 (see 06) |
+| PDF evidence view | `pdfrx` (PDFium-based) with per-page highlight overlays, subject to D-15 | Fallback: highlighted spans in the parsed text, which always works because locators are character offsets |
+| Backend API | FastAPI + Pydantic; SQLAlchemy + Alembic | Pydantic models double as the schema check on model structured output |
+| PDF parsing | **`pypdfium2` (PDFium)** for text, character boxes and page geometry | The same engine as `pdfrx` on the device, so backend locators and on-device text coordinates come from one implementation. This is the main lever for the alignment risk D-15 tests |
+| Database / queue | PostgreSQL with row-level security; Postgres-backed job queue (for example `procrastinate`) | RLS is set per request and per job with `SET LOCAL app.tenant_id` |
+| Object storage | S3-compatible, EU region | Private bucket; short-lived signed URLs |
+| Auth | **Open, decided in D-8 [O]**. Must support MFA, refresh-token rotation and session revocation. Options: a managed identity provider with an EU region, or FastAPI-native auth | Missing from the owner's stack list; blocks I-8 |
+| Push notifications | FCM (Android) + APNs (iOS), sending only "comparison ready" with an ID, never content | Comparisons are asynchronous |
+| Share page | One server-rendered HTML page from FastAPI, showing the snapshot only | A recipient (the client) may not have the app. This is the only web surface, not a web front end |
+| AI | Hosted LLM with structured output; provider decided in D-7 | — |
+| Testing / CI | Flutter unit, widget and integration tests; pytest; GitHub Actions | — |
+| Distribution (pilot) | TestFlight + Google Play closed testing; pilot invoiced directly, no in-app purchase | In-app purchase rules and fees (15–30%) must be checked before a public listing [U] |
 
 ## 2. Pipeline
 
@@ -69,7 +88,7 @@ Alignment uses content keys (fact type + normalised subject), not position. Sect
 ## 5. Data model
 
 The six logical records from handoff §8, plus two supporting records. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19):
-- Postgres row-level security applies to the web app *and* the worker. The worker runs under a tenant-scoped role per job, not a role that bypasses RLS.
+- Postgres row-level security applies to the API *and* the worker. The worker runs under a tenant-scoped role per job, not a role that bypasses RLS.
 - Job idempotency keys and fact caches include `tenant_id`.
 - Content-hash (`sha256`) deduplication across tenants is forbidden.
 
@@ -97,11 +116,12 @@ Share tokens are stored only as hashes. The share route loads `snapshot_json` al
 | Tenant isolation | `tenant_id` on every row, a scoped data-access layer, row-level security in Postgres as a second layer, and object keys prefixed by tenant. Authorisation tests cover every route. | AC-19 |
 | Share links | Hashed random token, snapshot-only route, expiry and revocation checked on every request. Share pages send these headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`. No third-party scripts, fonts or analytics. The share route is rate-limited per IP. Shares are revoked automatically when the owning account or member is removed. Share creation, revocation and views are audit-logged. | AC-16, AC-17 |
 | Model provider | Choose a provider and plan that contractually excludes training on inputs and offers zero or short retention, with processing in the EU or UK. Check abuse-monitoring retention, which often still applies under "zero retention", plus the DPA and sub-processors. Verify all of this before any real client document [U][O]. Send only the parsed text blocks needed, never original files or account data. The AI processor is disclosed to users in the pilot terms. | — |
+| Mobile client | Tokens only in Keychain / Keystore (`flutter_secure_storage`). No document content cached on the device; opened PDFs stream from signed URLs into memory. Screenshots taken in-app are not saved to the photo library. The share extension uploads directly and keeps nothing after hand-off. Certificate pinning is optional [A]. App Store privacy labels and the Play data-safety form must match the data inventory | AC-22, AC-23 |
 | Real client data gate | Synthetic or consented data only, until signed pilot terms cover the freelancer's obligations to *their* client (confidentiality, disclosure of the AI processor) and D-7 is complete. | — |
 | Abuse and cost exhaustion | The per-comparison cost ceiling, per-account and per-IP rate limits, and a cap on signups per IP are built into the app skeleton (I-8), before any external user. MFA is offered, sessions expire, and an incident-response runbook is ready before the pilot. | AC-21 |
 | Storage | Encryption at rest (assumed provider default [A]; verify in D-8), originals in a private bucket, signed short-lived URLs for owner download. | — |
 | Retention and deletion | Default: keep until the user deletes [A][O]. Deletion removes primary rows and objects immediately, and backups expire within 30 days. Pilot terms state this. | AC-22 |
-| Upload validation | Check MIME type and magic bytes. Enforce size limits, and check page count from metadata *before* full parsing. Parse in a sandboxed process with no network and caps of 60 s CPU, 512 MB memory and 5 MB extracted text [A]. Never execute PDF JavaScript or extract embedded files. For images (I-11, post-pilot), cap decompression and pixel count (≤ 40 MP). | AC-20 |
+| Upload validation | Check MIME type and magic bytes. Enforce size limits, and check page count from metadata *before* full parsing. Parse in a sandboxed process with no network and caps of 60 s CPU, 512 MB memory and 5 MB extracted text [A]. Never execute PDF JavaScript or extract embedded files. For images, cap decompression and pixel count (≤ 40 MP). | AC-20 |
 | Claims | No compliance claims (GDPR certification, SOC 2) are made until they are verified. The pilot uses only synthetic data or data with consent. | — |
 
 ## 7. Failure handling

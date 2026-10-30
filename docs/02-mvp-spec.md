@@ -5,7 +5,7 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 ## 1. User flow
 
 1. **Project.** The user creates a project for a client engagement, or opens an existing one.
-2. **Earlier version.** The user imports it as pasted text or a text-based PDF, and gives it a label (for example "Brief v1, 3 Oct").
+2. **Earlier version.** In the iOS or Android app, the user imports it by pasting text, picking a PDF, taking or choosing a screenshot, or sharing it into ChangeLens from another app. They give it a label (for example "Brief v1, 3 Oct").
 3. **Newer input.** The user imports the revised brief or a partial update.
 4. **Confirm the pair** (required, no defaults inferred):
    - which input is the earlier one and which is the newer one
@@ -22,8 +22,8 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 | Limit | Prototype | Thin slice | Rationale |
 |---|---|---|---|
-| Formats | Pasted text; PDF with an extractable text layer | Same. Screenshots are rejected with "image input not yet supported". PNG/JPEG support comes only as a focused expansion after the pilot (I-11) | Handoff §5 staged approach, §12 |
-| Size per input | ≤ 15,000 words; PDF ≤ 20 pages and ≤ 10 MB | Same; image limits (≤ 5 MB, short side ≥ 800 px) apply once I-11 ships | Typical briefs are 1–10 pages [U]; caps cost per comparison |
+| Formats | Pasted text; PDF with an extractable text layer; PNG/JPEG screenshots | Same, entered through the PDF picker, paste, camera / photo library, or the OS share sheet | Mobile-first owner decision (2026-10-30) overrides handoff §5 staging; screenshots are evaluated in Gate 2 |
+| Size per input | ≤ 15,000 words; PDF ≤ 20 pages and ≤ 10 MB; image ≤ 5 MB, short side ≥ 800 px, ≤ 40 MP | Same | Typical briefs are 1–10 pages [U]; caps cost per comparison |
 | Language | English only | English; others evaluated after the pilot | Evaluation dataset is English |
 | Scanned PDFs | Rejected, with the message "no text layer" | Allowed only through the screenshot path, with warnings | No custom OCR |
 | DOCX | Not supported; users export to PDF | Decide from D-1 interview evidence | Avoids speculative format work |
@@ -91,7 +91,7 @@ Each criterion is testable and mapped in `traceability.md`. "Evaluation set" mea
 | AC-8 | Changes to numbers, negation, deadlines or qualifiers (for example "must" → "may") are never classed as equivalent. | §6 |
 | AC-9 | Every substantive finding cites its source version and location, and every quoted evidence string matches the source exactly. There are no fabricated absence quotes. | §6, §7 |
 | AC-10 | Low-confidence matches are shown as "needs review" or withheld with a count, and never presented as certain. A numeric score alone is never shown as evidence. | §6 |
-| AC-11 | Unreadable, unsupported or partly processed content produces an explicit warning, and the comparison is marked partial. Example: a screenshot with unreadable text surfaces its limitation. Before I-11 ships, any screenshot upload is rejected with an explicit "not supported" message rather than processed silently. | §5, §11 |
+| AC-11 | Unreadable, unsupported or partly processed content produces an explicit warning, and the comparison is marked partial. Example: a screenshot with unreadable text surfaces its limitation. Any input type outside §2 is rejected with an explicit "not supported" message rather than processed silently. | §5, §11 |
 | AC-12 | AI-detected, user-reviewed and client-approval states are stored separately, and a review action never creates or implies client approval. | §7, §11 |
 | AC-13 | Non-prioritised differences can be inspected, or the report states that it is a selected summary. | §7 |
 | AC-14 | Processing cannot start until the user confirms the order and scope of the comparison. Order is never inferred from upload time or filename. | §4 |
