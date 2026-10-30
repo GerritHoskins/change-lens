@@ -69,7 +69,8 @@
         "start": { "type": "integer", "minimum": 0 },
         "end": { "type": "integer", "minimum": 0 },
         "box": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
-      }
+      },
+      "anyOf": [{ "required": ["start", "end"] }, { "required": ["page"] }, { "required": ["box"] }]
     },
     "finding": {
       "type": "object",
@@ -77,7 +78,7 @@
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
-        "category": { "enum": ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval", "other_material"] },
+        "category": { "enum": ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval", "other_material", "structure"] },
         "change_type": { "enum": ["added", "changed", "removed", "not_addressed", "uncertain", "equivalent"] },
         "old_value": { "type": "string" },
         "new_value": { "type": "string" },

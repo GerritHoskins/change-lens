@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# Evaluation texts belong in private storage, never in git (docs/07-eval-dataset.md §2)
+records.jsonl
+texts/
