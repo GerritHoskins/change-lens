@@ -15,7 +15,7 @@ $scenarios = @(
     @{ Name = 'First comparison (both extracted)';  In = 22;  Out = 6;   Retry = 0.10; Base = 0.17; Gate = 0.20 },
     @{ Name = 'Heavy (20 pages, at input cap)';     In = 70;  Out = 15;  Retry = 0.20; Base = 0.52; Gate = 0.60 },
     @{ Name = 'Worst case (heavy, all retried)';    In = 100; Out = 22;  Retry = 1.00; Base = 1.26; Gate = 1.50 },
-    @{ Name = 'Screenshot vision parse (new)';      In = 1.5; Out = 0.5; Retry = 0.10; Base = $null; Gate = 0.13 }
+    @{ Name = 'Screenshot vision parse (2 passes)';  In = 3;   Out = 1;   Retry = 0.10; Base = $null; Gate = 0.13 }
 )
 
 $fail = @()

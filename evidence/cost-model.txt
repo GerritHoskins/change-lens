@@ -3,30 +3,9 @@ Typical (3k words, earlier cached)        0,130      0,13    0,20  ok
 First comparison (both extracted)         0,172      0,17    0,20  ok
 Heavy (20 pages, at input cap)            0,522      0,52    0,60  ok
 Worst case (heavy, all retried)           1,260      1,26    1,50  ok
-Screenshot vision parse (new)             0,013       n/a    0,13  ok
+Screenshot vision parse (2 passes)        0,026       n/a    0,13  ok
 
 Unit-economics sensitivity at target price (Gate 4 limit 30%, judged on real usage):
   Individual full allowance, follow-up revisions:  27,2%   every comparison a new project:  35,8%
   Team       full allowance, follow-up revisions:  26,6%   every comparison a new project:  35,0%
 PASS cost model no worse than baseline 14748b6 and within cost gates
-exit=0
-
-Sensitivity, prices x1.5 (-PIn 4.5 -POut 22.5):
-Scenario                               Cost EUR  Baseline    Gate  Result
-Typical (3k words, earlier cached)        0,196      0,13    0,20  FAIL
-First comparison (both extracted)         0,257      0,17    0,20  FAIL
-Heavy (20 pages, at input cap)            0,783      0,52    0,60  FAIL
-Worst case (heavy, all retried)           1,890      1,26    1,50  FAIL
-Screenshot vision parse (new)             0,020       n/a    0,13  ok
-
-Unit-economics sensitivity at target price (Gate 4 limit 30%, judged on real usage):
-  Individual full allowance, follow-up revisions:  40,7%   every comparison a new project:  53,6%
-  Team       full allowance, follow-up revisions:  39,9%   every comparison a new project:  52,5%
-FAIL Typical (3k words, earlier cached) worse than baseline
-FAIL First comparison (both extracted) worse than baseline
-FAIL First comparison (both extracted) exceeds gate 0.2
-FAIL Heavy (20 pages, at input cap) worse than baseline
-FAIL Heavy (20 pages, at input cap) exceeds gate 0.6
-FAIL Worst case (heavy, all retried) worse than baseline
-FAIL Worst case (heavy, all retried) exceeds gate 1.5
-exit=1

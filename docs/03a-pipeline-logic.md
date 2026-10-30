@@ -4,7 +4,9 @@ Step-by-step logic for every acceptance criterion in `02-mvp-spec.md` §7. Modul
 
 Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` never receives document content [AC-23].
 
-## P0. Request guard (every authenticated route)
+## P0. Request guard (every authenticated route except `POST /session`)
+
+`POST /session` is the only bootstrap route (R1). It verifies the JWT, runs ON_SIGN_IN (P1) through the narrow `SECURITY DEFINER` functions, sets no tenant, and returns only the session status, the `link_required` methods, or a pending invite's team name and owner. Every other route goes through GUARD.
 
 ```
 GUARD(request):
@@ -29,6 +31,7 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
      if existing and idp_identity.email_verified:
         # No silent linking (SA-3): the user first signs in with an existing method and passes
         # its MFA, then the IdP links the new identity. A matching email alone never links.
+        # The IdP refuses to link an identity already mapped to a different app user (no orphaned tenant).
         reject(link_required, methods = existing.methods)    # app shows "sign in with your usual method to link"
      elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
           and invite not expired and team.seats_used < team.seats:   # 3 seats (O-8)
@@ -102,10 +105,10 @@ PARSE_JOB(tenant, version_id):
         block.hidden ← true; v.warnings += hidden_text(block.locator)         [AC-18]
      if block is covered by a later-drawn opaque image or shape:               # SA-9: text a reader cannot see
         block.hidden ← true; v.warnings += covered_text(block.locator)        [AC-18]
-  for region in result.image_regions_on_text_pages:          # visible content not in the text layer (SA-9)
+  for region in result.image_regions_on_text_pages where region.area > 15% of the page:  # logos and header graphics stay below it; PDF parse makes no model call (SA-9, R2)
      v.warnings += unextracted_region(region)                # makes the comparison partial (P5)  [AC-11, AC-18]
   if v.kind in {png, jpeg}:                                  # vision transcript is model output, not ground truth (SA-9)
-     cross-check the transcript against local OCR (same engine both sides); mismatched blocks → needs_review
+     run a second, independent vision pass under the same meter (no OCR, per 02 §2); blocks whose transcripts differ → needs_review
      every finding quoting this version is labelled "transcribed by AI" and the app shows the image region beside the quote  [AC-9, AC-18]
   for page in result.pages_without_text: v.warnings += no_text_layer(page)    [AC-11]
   for region in result.unreadable_regions: v.warnings += unreadable(region)   [AC-11]
@@ -319,7 +322,10 @@ DELETE_PROJECT(project_id):                                   # GUARD first
 DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
   account: REMOVE_MEMBER(user) semantics, then delete the user row, IdP user and all linked identities,
            revoke the Sign in with Apple token, delete device tokens          [AC-22, AC-26]
-  sole owner deleting their account, or contract end: DELETE_PROJECT for every project, then
+  owner deleting their account while other members remain: the app requires a choice, either
+           transfer ownership to a named member first, or delete the whole team after explicit confirmation
+  tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,
+           DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
 
