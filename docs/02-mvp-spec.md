@@ -4,7 +4,7 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 ## 1. User flow
 
-1. **Project.** The user creates a project for a client engagement, or opens an existing one.
+1. **Project.** The user signs in to the iOS or Android app (email one-time code, Google, or Sign in with Apple), then creates a project for a client engagement or opens an existing one.
 2. **Earlier version.** In the iOS or Android app, the user imports it by pasting text, picking a PDF, taking or choosing a screenshot, or sharing it into ChangeLens from another app. They give it a label (for example "Brief v1, 3 Oct").
 3. **Newer input.** The user imports the revised brief or a partial update.
 4. **Confirm the pair** (required, no defaults inferred):
@@ -104,3 +104,6 @@ Each criterion is testable and mapped in `traceability.md`. "Evaluation set" mea
 | AC-21 | Each account has a metered comparison allowance and a hard per-comparison cost ceiling. No path allows unlimited processing. | §10 |
 | AC-22 | Deleting a project removes its sources, derived records and active shares from primary storage immediately, and from backups within the stated retention window. | §8 |
 | AC-23 | No document content (parsed text, prompts, model responses) is written to application logs, error-tracking breadcrumbs, metrics or job payloads. Jobs carry record IDs only, and every content store is listed in the data inventory that deletion covers. | §8 |
+| AC-24 | On both iOS and Android, a brief can be imported by paste, PDF picker, camera / photo library, or OS share sheet from another app (Mail, Files). Every path lands in a user-chosen project and goes through the same order and scope confirmation (AC-14) and input limits (AC-20). | Owner, O-3 |
+| AC-25 | No document content is persisted on the device: no offline cache, no copy saved to the photo library, nothing kept by the share extension after hand-off. Only auth tokens are stored, in Keychain / Keystore. Push notifications carry a comparison ID and a generic message, never document text. | Owner, O-4; §8 |
+| AC-26 | Users sign in with email one-time code, Google or Sign in with Apple. MFA is available. Revoking a session at the identity provider ends API access on the next token refresh, within 15 minutes at most [A]. Linking sign-in methods by verified email never merges two tenants. | Owner, O-4; §8 |
