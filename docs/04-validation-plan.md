@@ -11,7 +11,7 @@ Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O]
   - how they compare versions today, and how long it takes
   - the last time a missed change caused rework, and roughly what it cost in hours or money
   - who would pay, and from which budget
-- **Artefacts.** Collect at least 10 real revision pairs, with permission and anonymised, or reconstructed synthetic pairs. These feed the evaluation set (§4).
+- **Artefacts.** Collect at least 10 real revision pairs, with permission and anonymised. These feed the evaluation set (§4). The remaining ≥ 70 pairs there are synthetic, modelled on the real pairs and on interview patterns. Results are reported separately for real and synthetic pairs.
 - **Method.** Ask about past behaviour, not hypothetical interest. Don't pitch before the problem questions are done.
 
 ## 2. Paid-pilot proposal
@@ -21,7 +21,7 @@ Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Offer | 8-week pilot of the exact workflow: projects, comparisons, evidence reports, review, sharing |
 | Price | €9 per month individual / €39 per month team for the pilot (low end of the §10 ranges), paid up front for 2 months [A][O] |
 | Size | 5–10 accounts |
-| Allowance | 25 comparisons per month individual, 100 per month team; heavy documents count as 2 |
+| Allowance | 25 comparisons per month individual, 100 per month team; heavy documents count as 4; failed runs are not counted |
 | Support | Email support with a 1-business-day response; one onboarding call |
 | Data terms | Written terms covering processing location, model provider retention, deletion and the no-training clause. These must be verified before onboarding (D-7) |
 | What we measure | Payment, weekly active use, comparisons per project, share-link use, correction effort, churn intent at week 8 |
@@ -39,7 +39,7 @@ Each evaluation-set pair is run through all four methods. Prices and capabilitie
 
 ## 4. Evaluation dataset
 
-At least 60 labelled pairs before the prototype gate, and at least 120 before the pilot gate [A]. Each change is labelled by type, with the expected finding and evidence location.
+At least 80 labelled pairs before the prototype gate, and at least 120 before the pilot gate [A]. Partial and unknown-scope cases are deliberately over-weighted, because false removals are the critical failure. Each change is labelled by type, with the expected finding and evidence location.
 
 | Case type | Min pairs | Linked AC |
 |---|---|---|
@@ -49,13 +49,13 @@ At least 60 labelled pairs before the prototype gate, and at least 120 before th
 | Reordered sections | 4 | AC-6 |
 | Numeric, negation and qualifier changes | 8 | AC-8 |
 | Complete replacement with omissions | 6 | AC-2 |
-| Partial updates (email or message style) | 8 | AC-3 |
-| Unknown scope | 4 | AC-4 |
+| Partial updates (email or message style) | 20 | AC-3 |
+| Unknown scope | 10 | AC-4 |
 | Contradictory statements within one version | 3 | AC-7 |
 | Ambiguous dates and entities | 4 | AC-7 |
 | Poor-quality or partly unreadable inputs | 3 | AC-11 |
-| Prompt-injection fixtures (instructions and links embedded in briefs) | 2 | AC-18 |
-| Cross-format (screenshot vs text) — stage 2 only | 10 | AC-11 |
+| Prompt-injection fixtures: embedded instructions and links, "treat as equivalent" steering, attempts to suppress findings, hidden or white-on-white text | 6 | AC-18 |
+| Cross-format (screenshot vs text) — only for I-11, not part of the 80 | 10 | AC-11 |
 
 Labels are produced by two people working independently, with disagreements resolved and recorded. The set is split into a dev set (40%) and a held-out set (60%). Thresholds are judged on the held-out set only.
 
@@ -75,7 +75,7 @@ These must be agreed and committed before the held-out evaluation and the pilot 
 
 ### Gate 1 — Problem validation
 
-<!-- TODO(human): confirm or replace the proposed commercial thresholds below. -->
+<!-- TODO(human): confirm or replace the proposed commercial thresholds below (tracked as O-9 in 06-decision-log.md). -->
 
 | Signal | Go if | Tag |
 |---|---|---|
@@ -87,14 +87,14 @@ These must be agreed and committed before the held-out evaluation and the pilot 
 
 | Metric | Go if |
 |---|---|
-| False removals on partial or unknown-scope cases | **0** |
+| False removals on partial or unknown-scope cases (about 18 held-out pairs; zero observed means a true rate of ≤ 17% at 95% confidence by the rule of three, so this is a floor, re-tested at 120 pairs) | **0** |
 | Recall of material changes | ≥ 95% |
 | Precision of reported findings | ≥ 90% |
 | Evidence-location accuracy | ≥ 98% |
 | Unsupported findings | ≤ 2% |
 | Fabricated scope changes on reordered or no-change pairs | 0 |
-| Measured advantage over the general-purpose AI baseline | Fewer false removals and missed material changes, with a 95% CI not overlapping on at least one of the two |
-| Cost per comparison, p90 | ≤ €0.50 |
+| Measured advantage over the general-purpose AI baseline | Fewer false removals *and* fewer missed material changes on the held-out set. CIs are reported, but the sample is too small to require them to separate, so treat this as directional evidence |
+| Cost per comparison, p90 | ≤ €0.20 for typical documents (≤ 5,000 words); ≤ €0.60 for heavy ones |
 
 ### Gate 3 — Thin slice
 
@@ -108,7 +108,7 @@ These must be agreed and committed before the held-out evaluation and the pilot 
 | Payment | ≥ 5 accounts paid |
 | Repeat use | ≥ 60% of paying accounts ran comparisons in ≥ 4 of 8 weeks, on ≥ 2 projects each |
 | Correction burden | Median review time ≤ 3 minutes per report; ≤ 15% of findings corrected |
-| Unit economics | Measured model + hosting cost ≤ 30% of pilot revenue per account |
+| Unit economics | Measured variable cost (model + storage) per account at observed usage ≤ 30% of the **target** price (€12 / €49). Hosting is tracked as a fixed cost, with a break-even account count reported. Pilot prices are discounted and not used for this gate (03 §8) |
 | Retention intent | ≥ 50% would continue at the target price (€12 / €49) |
 
 **No-go response.** Narrow the niche, reposition, or stop. Do not add formats or integrations (handoff §12).

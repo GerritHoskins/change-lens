@@ -24,17 +24,19 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Stage | Deterministic or AI | Output | Failure handling |
 |---|---|---|---|
 | Import | Deterministic | Validated source version: original bytes stored immutably, plus hash | Reject over-limit or unsupported input with a named reason (AC-20) |
-| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region later) | Pages with no text layer → partial warning (AC-11) |
+| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region later), each flagged if a reader can't see it | Pages with no text layer → partial warning (AC-11). Invisible, tiny or off-page text → hidden-text warning, and that text is excluded from findings unless the user includes it (AC-18) |
 | Extract | AI (structured output, schema-validated) | Extracted facts: type, raw span, normalised value, locator, confidence | Retry once on schema failure. If it fails again, the block is marked *unextracted* and the comparison becomes partial |
 | Align | Deterministic keys first, AI for remaining candidates | Fact pairs: matched / unmatched-earlier / unmatched-newer / ambiguous | Ambiguous pairs are never forced (AC-7) |
 | Compare | Deterministic for numbers, dates and quantities; AI for meaning, with guards (§4) | Draft findings | Guard violations downgrade the finding to *needs review* |
-| Verify | Deterministic | Each evidence quote is an exact substring at its locator | Unverifiable finding → withheld with a count (AC-9, AC-10) |
+| Verify | Deterministic | Each evidence quote is an exact substring at its locator. A deterministic block-level diff is cross-checked against the findings | Unverifiable finding → withheld with a count (AC-9, AC-10). A changed block that no finding covers is listed as an "unexplained difference", so injected text can't silently suppress a change (AC-18) |
 | Report | AI for explanation wording only; structure is deterministic | Findings with explanations | If wording generation fails, fall back to a template |
 | Review | Human | Review records | — |
 
 Facts are extracted **once per source version** and cached. A new revision compared with the previous one only needs extraction for the new version. This matters for cost (§8).
 
 ## 3. Evidence representation
+
+The schemas in §3 and §5 are illustrative, at design level. They are not final definitions.
 
 - **Locator:** `{source_version_id, kind: text|pdf|image, page?, char_start, char_end, bbox?}`. Character offsets refer to the stored parsed text of that version. That parsed text is immutable, so locators never drift.
 - **Evidence item:** `{locator, quote}`, where `quote` must equal `parsed_text[char_start:char_end]`. The verifier enforces this (AC-9).
@@ -66,7 +68,10 @@ Alignment uses content keys (fact type + normalised subject), not position. Sect
 
 ## 5. Data model
 
-The six logical records from handoff §8, plus two supporting records. Every row has `tenant_id`, and every query is scoped by it (AC-19).
+The six logical records from handoff §8, plus two supporting records. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19):
+- Postgres row-level security applies to the web app *and* the worker. The worker runs under a tenant-scoped role per job, not a role that bypasses RLS.
+- Job idempotency keys and fact caches include `tenant_id`.
+- Content-hash (`sha256`) deduplication across tenants is forbidden.
 
 | Record | Key fields | Mutability |
 |---|---|---|
@@ -85,14 +90,18 @@ Share tokens are stored only as hashes. The share route loads `snapshot_json` al
 
 | Concern | Design | AC |
 |---|---|---|
-| Prompt injection | Document text is placed in delimited data fields, and the system prompt states that it is untrusted. The model has **no tools** and no network access, and structured output is validated against a schema. Explanations are rendered as escaped text. | AC-18 |
+| Prompt injection | Document text is placed in delimited data fields, and the system prompt states that it is untrusted. The model has **no tools** and no network access, and structured output is validated against a schema. The likeliest attacker is the author of the newer version, so the design does not rely on the model alone. Changed numbers, dates and negation are caught by deterministic guards (§4.1). Changed blocks no finding explains are listed (§2, Verify). Hidden text is flagged (§2, Parse). | AC-18 |
+| Rendering | All document and model text is rendered as plain escaped text, never as HTML or Markdown, and never auto-linked. A strict CSP is set (no inline scripts, `self` only). Client-approval attachments get the same upload validation and are served only as `Content-Disposition: attachment` from a separate download origin. | AC-18 |
+| Logs and telemetry | No parsed text, prompts or model responses go into logs, error-tracking breadcrumbs, metrics or queue payloads. Jobs carry IDs only, and the error tracker scrubs request bodies. A **data inventory** lists every store that holds content: database, object storage, backups, provider. Deletion and retention cover every store on it. | AC-22, AC-23 |
 | Link fetching or actions | The pipeline never dereferences URLs found in documents. The worker has no outbound network except the model API and storage. | AC-18 |
 | Tenant isolation | `tenant_id` on every row, a scoped data-access layer, row-level security in Postgres as a second layer, and object keys prefixed by tenant. Authorisation tests cover every route. | AC-19 |
-| Share links | Hashed random token, snapshot-only route, expiry and revocation checked on every request, no caching headers. `noindex` is set. | AC-16, AC-17 |
-| Model provider | Choose a provider and plan that contractually excludes training on inputs and offers zero or short retention, with processing in the EU or UK. Verify this before any real client document [U][O]. Send only the parsed text blocks needed, never original files or account data. | — |
-| Storage | Encryption at rest (provider default), originals in a private bucket, signed short-lived URLs for owner download. | — |
+| Share links | Hashed random token, snapshot-only route, expiry and revocation checked on every request. Share pages send these headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`. No third-party scripts, fonts or analytics. The share route is rate-limited per IP. Shares are revoked automatically when the owning account or member is removed. Share creation, revocation and views are audit-logged. | AC-16, AC-17 |
+| Model provider | Choose a provider and plan that contractually excludes training on inputs and offers zero or short retention, with processing in the EU or UK. Check abuse-monitoring retention, which often still applies under "zero retention", plus the DPA and sub-processors. Verify all of this before any real client document [U][O]. Send only the parsed text blocks needed, never original files or account data. The AI processor is disclosed to users in the pilot terms. | — |
+| Real client data gate | Synthetic or consented data only, until signed pilot terms cover the freelancer's obligations to *their* client (confidentiality, disclosure of the AI processor) and D-7 is complete. | — |
+| Abuse and cost exhaustion | The per-comparison cost ceiling, per-account and per-IP rate limits, and a cap on signups per IP are built into the app skeleton (I-8), before any external user. MFA is offered, sessions expire, and an incident-response runbook is ready before the pilot. | AC-21 |
+| Storage | Encryption at rest (assumed provider default [A]; verify in D-8), originals in a private bucket, signed short-lived URLs for owner download. | — |
 | Retention and deletion | Default: keep until the user deletes [A][O]. Deletion removes primary rows and objects immediately, and backups expire within 30 days. Pilot terms state this. | AC-22 |
-| Upload validation | Check MIME type and magic bytes, enforce size and page caps, parse PDFs in a sandboxed worker with timeouts. | AC-20 |
+| Upload validation | Check MIME type and magic bytes. Enforce size limits, and check page count from metadata *before* full parsing. Parse in a sandboxed process with no network and caps of 60 s CPU, 512 MB memory and 5 MB extracted text [A]. Never execute PDF JavaScript or extract embedded files. For images (I-11, post-pilot), cap decompression and pixel count (≤ 40 MP). | AC-20 |
 | Claims | No compliance claims (GDPR certification, SOC 2) are made until they are verified. The pilot uses only synthetic data or data with consent. | — |
 
 ## 7. Failure handling
@@ -122,7 +131,7 @@ Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 | Typical (3k words, earlier cached) | 17k / 4.5k | 10% | **≈ €0.13** | |
 | First comparison (both extracted) | 22k / 6k | 10% | ≈ €0.17 | |
 | Heavy (20 pages ≈ 15k words) | 70k / 15k | 20% | ≈ €0.52 | At the input cap |
-| Worst case (heavy, both extracted, 2 retries) | 100k / 22k | 100% | ≈ €1.26 | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
+| Worst case (heavy, both extracted, every stage retried once) | 100k / 22k | 100% | ≈ €1.26 | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
 
 **Monthly cost per account (sensitivity):**
 
@@ -132,9 +141,11 @@ Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 | Heavy freelancer | 40 | 75% typical / 25% heavy | ≈ €9.1 | 76% of €12 — needs an allowance |
 | Small team | 120 | 75 / 25 | ≈ €27 | 55% of €49 |
 
-These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A]), payment fees (≈ 1.5–3% + fixed fee [U]), support time and acquisition.
+These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A]), storage (originals plus parsed text ≈ 1–5 MB per version, so under €0.10 per account per month at object-storage rates [A]), payment fees (≈ 1.5–3% + fixed fee [U]), support time and acquisition.
 
 **Implications:**
 - Each plan needs a comparison allowance, for example 25 per month for individuals and 100 per month for teams [O].
-- Heavy documents should count as more than one comparison.
+- Heavy documents (over 5,000 words) count as **4** comparisons, which matches their roughly 4× cost.
+- Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead.
+- **The pilot's discounted prices (€9 / €39) do not cover full-allowance usage within 30%.** For example, 25 typical comparisons cost €3.25, which is 36% of €9. The pilot is deliberately priced below target to test willingness to pay, so the unit-economics gate (04 §6, Gate 4) is judged against **target** prices.
 - The pilot must measure real token usage per comparison (I-14) and replace these placeholders.

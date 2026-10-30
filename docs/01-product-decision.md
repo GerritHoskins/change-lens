@@ -32,7 +32,7 @@ The niche should be chosen by evidence, not taste. Discovery task D-2 (see `05-b
 Diffchecker already offers AI summaries, multiple formats, saved comparisons and link sharing (S1, S2), so those are not differentiators. Visualping's model, scheduled monitoring of websites (S3), is a different job. The hypothesis to test is that a **brief-specific workflow** beats both generic diffs and a general-purpose AI chat on these points:
 
 1. **Typed findings.** Changes are reported as deliverables, quantities, dates, owners and approval wording, not as changed lines.
-2. **Scope-aware omission handling.** Every report distinguishes *changed*, *absent from a complete replacement*, *not addressed by a partial update* and *unknown*. General AI chats routinely blur these.
+2. **Scope-aware omission handling.** Every report distinguishes *changed*, *absent from a complete replacement*, *not addressed by a partial update* and *unknown*. The hypothesis is that general AI chats blur these [U]; D-5 tests this against the baseline.
 3. **Verifiable evidence.** Every finding points to an exact passage in each source version.
 4. **Project change history** across successive revisions. Each report stays tied to its exact inputs and review state. This is the proposed paid feature.
 

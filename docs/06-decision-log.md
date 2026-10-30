@@ -23,14 +23,16 @@ Plan section: §13.6. Every entry is tagged:
 |---|---|---|
 | First niche | Web/digital and design freelancers and studios of 1–10 people | 01 |
 | Language and market | English; EU/UK; EUR excluding VAT | 01 |
-| Prototype formats | Pasted text + text-layer PDF; screenshots gated to stage 2; DOCX deferred | 02 §2 |
+| Prototype formats | Pasted text + text-layer PDF; screenshots only as post-pilot focused expansion (I-11); DOCX deferred | 02 §2 |
 | Input limits | ≤ 15k words, ≤ 20 pages, ≤ 10 MB; images ≤ 5 MB | 02 §2 |
 | Share expiry | 30 days by default, revocable | 02 §6 |
 | Architecture | Script prototype (A), then single web app + Postgres + worker (B) | 03 §1 |
 | Retention | Until the user deletes; backups purged within 30 days | 03 §6 |
 | Cost inputs | Placeholder `p_in = €3/M`, `p_out = €15/M`; brief ≈ 4k tokens | 03 §8 |
-| Allowances | 25 comparisons per month individual / 100 per month team; heavy document = 2 | 03 §8, 04 §2 |
-| Pilot price | €9 / €39 per month, 2 months prepaid, 5–10 accounts | 04 §2 |
+| Allowances | 25 comparisons per month individual / 100 per month team; heavy document = 4; failed runs not counted | 03 §8, 04 §2 |
+| Team seats | 3 seats per team plan | 06 O-8 |
+| Pilot price | €9 / €39 per month, 2 months prepaid, 5–10 accounts; unit economics judged at target €12 / €49 | 04 §2, §6 |
+| Evaluation data | ≥ 10 real permissioned pairs; the rest of the ≥ 80 are synthetic | 04 §1, §4 |
 | Thresholds | As proposed in 04 §6 | 04 §6 |
 | Effort | Person-day ranges for one experienced developer | 05 |
 
@@ -66,3 +68,5 @@ Plan section: §13.6. Every entry is tagged:
 | Date | Change | Reason |
 |---|---|---|
 | 2026-10-30 | Initial plan | Handoff `a8280b9` |
+
+| 2026-10-30 | Applied security review (2 high, 6 medium, 1 low) and plan review (1 high, 9 medium, rest low) findings; added AC-23; moved D-7 to M1 and I-11 to post-pilot; unit-economics gate judged at target prices | Reviewer findings |

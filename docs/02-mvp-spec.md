@@ -22,8 +22,8 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 | Limit | Prototype | Thin slice | Rationale |
 |---|---|---|---|
-| Formats | Pasted text; PDF with an extractable text layer | Adds PNG/JPEG screenshots (stage 2, gated by D-6 / I-11) | Handoff §5 staged approach |
-| Size per input | ≤ 15,000 words; PDF ≤ 20 pages and ≤ 10 MB | Same; image ≤ 5 MB, short side ≥ 800 px | Typical briefs are 1–10 pages [U]; caps cost per comparison |
+| Formats | Pasted text; PDF with an extractable text layer | Same. Screenshots are rejected with "image input not yet supported". PNG/JPEG support comes only as a focused expansion after the pilot (I-11) | Handoff §5 staged approach, §12 |
+| Size per input | ≤ 15,000 words; PDF ≤ 20 pages and ≤ 10 MB | Same; image limits (≤ 5 MB, short side ≥ 800 px) apply once I-11 ships | Typical briefs are 1–10 pages [U]; caps cost per comparison |
 | Language | English only | English; others evaluated after the pilot | Evaluation dataset is English |
 | Scanned PDFs | Rejected, with the message "no text layer" | Allowed only through the screenshot path, with warnings | No custom OCR |
 | DOCX | Not supported; users export to PDF | Decide from D-1 interview evidence | Avoids speculative format work |
@@ -62,7 +62,7 @@ There are three separate states, stored separately and never derived from each o
 |---|---|---|
 | AI-detected | Pipeline | The system found this from the supplied text |
 | User-reviewed | User action: confirmed, corrected or dismissed | The user checked the finding |
-| Client approval recorded | User attaches external evidence, such as a pasted email excerpt or file, plus a date | Someone has stated that the client approved. ChangeLens does not verify it |
+| Client approval recorded | User attaches external evidence, such as a pasted email excerpt or file, plus a date | Someone has stated that the client approved. ChangeLens does not verify it. This is a single record, not an approval workflow. It exists because handoff §7 requires this state to be kept separate |
 
 - Corrections create a new finding revision. The original AI output is kept (AC-15).
 - No UI wording may present a reviewed finding as "approved" or "agreed".
@@ -83,23 +83,24 @@ Each criterion is testable and mapped in `traceability.md`. "Evaluation set" mea
 |---|---|---|
 | AC-1 | When both inputs state different explicit values, a *changed* finding shows both values and both source locations. Example: a changed deadline shows both dates. | §7, §11 |
 | AC-2 | When a complete replacement omits an earlier statement, it is reported as *absent from the replacement*, with the earlier passage, and never as cancelled. | §7 |
-| AC-3 | When a partial update omits an earlier statement, it is reported as *not addressed*. Example: an email-style update that does not mention deliverables produces zero removed-deliverable findings. | §7, §11 |
-| AC-4 | When scope is unknown, omissions are flagged as uncertain and there are zero definitive removal claims. | §7 |
+| AC-3 | When a partial update omits an earlier statement, it is reported as *not addressed*, showing the earlier passage and stating that the update is partial. Example: an email-style update that does not mention deliverables produces zero removed-deliverable findings. | §7, §11 |
+| AC-4 | When scope is unknown, omissions are flagged as uncertain, showing the earlier passage and stating that the scope is unknown. There are zero definitive removal claims. | §7 |
 | AC-5 | Reworded text with unchanged meaning is classed as equivalent or presentation-only, and the underlying text diff stays reachable. | §7 |
 | AC-6 | A reordered but otherwise identical brief produces zero scope, date, quantity or responsibility findings. | §11 |
 | AC-7 | Ambiguous dates, entities, extraction or matches are preserved as ambiguous and flagged for review. No silent guess is made. | §7 |
 | AC-8 | Changes to numbers, negation, deadlines or qualifiers (for example "must" → "may") are never classed as equivalent. | §6 |
 | AC-9 | Every substantive finding cites its source version and location, and every quoted evidence string matches the source exactly. There are no fabricated absence quotes. | §6, §7 |
 | AC-10 | Low-confidence matches are shown as "needs review" or withheld with a count, and never presented as certain. A numeric score alone is never shown as evidence. | §6 |
-| AC-11 | Unreadable, unsupported or partly processed content produces an explicit warning, and the comparison is marked partial. Example: a screenshot with unreadable text surfaces its limitation. | §5, §11 |
+| AC-11 | Unreadable, unsupported or partly processed content produces an explicit warning, and the comparison is marked partial. Example: a screenshot with unreadable text surfaces its limitation. Before I-11 ships, any screenshot upload is rejected with an explicit "not supported" message rather than processed silently. | §5, §11 |
 | AC-12 | AI-detected, user-reviewed and client-approval states are stored separately, and a review action never creates or implies client approval. | §7, §11 |
 | AC-13 | Non-prioritised differences can be inspected, or the report states that it is a selected summary. | §7 |
 | AC-14 | Processing cannot start until the user confirms the order and scope of the comparison. Order is never inferred from upload time or filename. | §4 |
 | AC-15 | Original sources and AI outputs are immutable. Corrections and re-runs create new records. | §8 |
 | AC-16 | A shared report contains only the selected findings and their excerpts, and no other project files or versions. | §8 |
 | AC-17 | A revoked or expired share link returns no report content on the next request. | §11 |
-| AC-18 | Instructions embedded in a document are not followed, links are not fetched, and no external action is triggered. This is verified with prompt-injection fixtures in the evaluation set. | §6 |
+| AC-18 | Instructions embedded in a document are not followed, links are not fetched, and no external action is triggered. Injected text cannot suppress a finding or force a false equivalence: every changed text block that no finding explains is listed as an unexplained difference. Text the parser extracts but a reader cannot see (invisible, tiny or off-page) raises a warning. This is verified with prompt-injection, suppression and hidden-text fixtures in the evaluation set. | §6 |
 | AC-19 | A user cannot read, list or share another tenant's projects, sources or reports. This is verified by authorisation tests on every data route. | §8 |
 | AC-20 | Inputs over the limits in §2 are rejected before processing, with a message that names the limit. | §5 |
 | AC-21 | Each account has a metered comparison allowance and a hard per-comparison cost ceiling. No path allows unlimited processing. | §10 |
 | AC-22 | Deleting a project removes its sources, derived records and active shares from primary storage immediately, and from backups within the stated retention window. | §8 |
+| AC-23 | No document content (parsed text, prompts, model responses) is written to application logs, error-tracking breadcrumbs, metrics or job payloads. Jobs carry record IDs only, and every content store is listed in the data inventory that deletion covers. | §8 |
