@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "change-lens/eval-pair",
+  "title": "ChangeLens evaluation pair (docs/07-eval-dataset.md)",
+  "type": "object",
+  "required": ["id", "tier", "source", "case_types", "split", "old", "new", "findings", "labelled_by"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^P-[0-9]{3,}$" },
+    "tier": { "enum": ["public", "owner", "donated", "constructed"] },
+    "source": {
+      "type": "object",
+      "required": ["kind", "anonymised"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["tender_amendment", "rfp_addendum", "owner_project", "interview_donation", "generator"] },
+        "url": { "type": "string" },
+        "licence": { "type": "string" },
+        "retrieved": { "type": "string", "format": "date" },
+        "base_pair": { "type": "string", "description": "For constructed pairs: the base document's ID" },
+        "operators": { "type": "array", "items": { "type": "string" } },
+        "anonymised": { "type": "boolean" }
+      }
+    },
+    "case_types": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": ["value_change", "no_change", "equivalent_rewording", "reordered", "numeric_negation_qualifier",
+                 "replacement_with_omissions", "partial_update", "unknown_scope", "contradiction",
+                 "ambiguous_date_entity", "poor_quality", "prompt_injection", "cross_format"]
+      }
+    },
+    "split": { "enum": ["dev", "heldout", "unsplit"] },
+    "old": { "$ref": "#/$defs/version" },
+    "new": { "$ref": "#/$defs/version" },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "labelled_by": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "reconciliation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding", "disagreement", "resolution"],
+        "additionalProperties": false,
+        "properties": {
+          "finding": { "type": "string" },
+          "disagreement": { "type": "string" },
+          "resolution": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "object",
+      "required": ["format", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["text", "pdf", "image"] },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "storage_ref": { "type": "string", "description": "Path in private storage; never a file in git" }
+      }
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "page": { "type": "integer", "minimum": 1 },
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 },
+        "box": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "category", "change_type", "material"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "enum": ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval", "other_material"] },
+        "change_type": { "enum": ["added", "changed", "removed", "not_addressed", "uncertain", "equivalent"] },
+        "old_value": { "type": "string" },
+        "new_value": { "type": "string" },
+        "material": { "type": "boolean" },
+        "evidence_old": { "$ref": "#/$defs/locator" },
+        "evidence_new": { "$ref": "#/$defs/locator" },
+        "note": { "type": "string" }
+      },
+      "anyOf": [{ "required": ["evidence_old"] }, { "required": ["evidence_new"] }]
+    }
+  }
+}
