@@ -1,5 +1,6 @@
-# Fails (exit 1) if any acceptance criterion is unmapped, maps to a missing backlog task,
-# a required §13 plan document is missing, or an architecture decision (AD-n) has no ADR.
+# Fails (exit 1) if any acceptance criterion is unmapped, maps to a missing backlog task, is not
+# tagged in 03a-pipeline-logic.md, a required §13 plan document is missing, or an architecture
+# decision (AD-n) has no ADR.
 # How to run and change the plan: docs/SOP.md. Decision records: docs/adr/ (index in docs/SOP.md).
 $ErrorActionPreference = 'Stop'
 $docs = Join-Path $PSScriptRoot '..\docs'

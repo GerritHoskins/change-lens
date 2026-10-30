@@ -71,7 +71,7 @@ APP_IMPORT(source):                                          # paste | pdf_picke
   project ← user_chooses_project()                           # every path lands in a chosen project  [AC-24]
   bytes, kind ← read_into_memory(source)                     # never written to app storage or the photo library  [AC-25]
   if source = share_sheet: extension.delete_handoff_copy()   # nothing kept after hand-off  [AC-25]
-  POST /projects/{project}/versions (bytes, kind, label)
+  POST /projects/{id}/versions (bytes, kind, label)
 
 API_UPLOAD_VERSION(project, bytes, kind, label):             # GUARD first
   kind ← sniff_magic_bytes(bytes)                            # ignore client-claimed type
