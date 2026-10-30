@@ -121,3 +121,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Spec gap check (mission t2): added AC-24 (mobile import paths), AC-25 (no document content on device or in push), AC-26 (auth behaviour); mapped in traceability.md | Mission t2 |
 | 2026-10-30 | Architecture (mission t3): added 03 §9 modules, pipeline stage interfaces, API surface, end-to-end data flow and decisions AD-1 to AD-9 | Mission t3 |
 | 2026-10-30 | ADRs and SOP (mission t4): 19 ADRs in docs/adr (AD-1 to AD-9 plus owner and security decisions; 0006 and 0019 Proposed); docs/SOP.md; check-trace.ps1 links the SOP and fails on any AD-n without an ADR | Mission t4 |
+| 2026-10-30 | Pseudocode (mission t5): docs/03a-pipeline-logic.md with steps P0–P10 covering AC-1 to AC-26; check-trace.ps1 requires 03a and fails on any AC not covered there | Mission t5 |
