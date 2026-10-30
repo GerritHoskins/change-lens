@@ -10,7 +10,9 @@ Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` n
 GUARD(request):
   claims ← verify_jwt(request.token, idp_keys)              # signature, expiry, audience
   if claims invalid or session revoked at IdP: reject(unauthenticated)        [AC-26]
-  tenant ← tenant_of(claims.subject)                         # never from the request body
+  m ← membership_of(claims.subject)                          # tenant comes from here, never from the request body
+  if m is none or m.status ≠ active: reject(unauthenticated)                   [AC-19, AC-26]
+  tenant ← m.tenant
   db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)               [AC-19]
   # Every repository query runs under row-level security.
   # A row from another tenant is invisible, so lookups return nothing → reject(not_found).  [AC-19]
@@ -25,10 +27,16 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   if user is none:
      existing ← find_user_by_verified_email(idp_identity.email)
      if existing and idp_identity.email_verified:
-        link(existing, idp_identity)                         # same user, same tenant
+        # No silent linking (SA-3): the user first signs in with an existing method and passes
+        # its MFA, then the IdP links the new identity. A matching email alone never links.
+        reject(link_required, methods = existing.methods)    # app shows "sign in with your usual method to link"
      elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
           and invite not expired and team.seats_used < team.seats:   # 3 seats (O-8)
-        user ← create_user(invite.tenant); consume(invite)   # joins only the tenant that invited this email  [AC-26]
+        # Explicit acceptance (SA-2): the app shows the team name and owner and offers
+        # "join this team" or "create my own workspace"; nothing is joined without the choice.
+        if user_choice(invite) = join:
+           user ← create_user(invite.tenant); consume(invite)   # joins only the tenant that invited this email  [AC-26]
+        else: user ← create_user(new_tenant())
      else:
         user ← create_user(new_tenant())                     # never attach to someone else's tenant  [AC-26]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
@@ -39,6 +47,14 @@ INVITE_MEMBER(email):
   create invite(tenant, email, expires = now + 7 days)
   # Pilot limitation (accepted): invites apply to first sign-in only. A user who already
   # has a tenant cannot join a team; tenant migration is out of pilot scope (review ledger REV-17).
+
+REMOVE_MEMBER(user):                                         # review ledger SA-1
+  require caller is the team owner, or the operator acting for that owner (I-15); owner cannot remove self
+  membership(user).status ← inactive                         # GUARD rejects from the next request  [AC-19, AC-26]
+  idp.revoke_sessions_and_refresh_tokens(user)               # no new access tokens; open token dies ≤ 15 min, but GUARD already blocks it
+  delete device push tokens of user; ON_ACCOUNT_OR_MEMBER_REMOVED(user)        [AC-17]
+  free the seat; audit(member_removed)
+  # Projects and versions belong to the tenant, not the member, so nothing is deleted.
 ```
 
 ## P2. Import a version (mobile → API)
@@ -84,6 +100,13 @@ PARSE_JOB(tenant, version_id):
   for block in result.blocks:
      if block.invisible or block.tiny or block.off_page:     # white-on-white, < 2pt, outside page box
         block.hidden ← true; v.warnings += hidden_text(block.locator)         [AC-18]
+     if block is covered by a later-drawn opaque image or shape:               # SA-9: text a reader cannot see
+        block.hidden ← true; v.warnings += covered_text(block.locator)        [AC-18]
+  for region in result.image_regions_on_text_pages:          # visible content not in the text layer (SA-9)
+     v.warnings += unextracted_region(region)                # makes the comparison partial (P5)  [AC-11, AC-18]
+  if v.kind in {png, jpeg}:                                  # vision transcript is model output, not ground truth (SA-9)
+     cross-check the transcript against local OCR (same engine both sides); mismatched blocks → needs_review
+     every finding quoting this version is labelled "transcribed by AI" and the app shows the image region beside the quote  [AC-9, AC-18]
   for page in result.pages_without_text: v.warnings += no_text_layer(page)    [AC-11]
   for region in result.unreadable_regions: v.warnings += unreadable(region)   [AC-11]
   v.parsed_text, v.blocks ← result.text, result.blocks       # immutable after this  [AC-15]
@@ -100,6 +123,7 @@ API_CREATE_COMPARISON(project, earlier_id, later_id, scope): # GUARD first
   # never from upload time, filename or dates in the text.                    [AC-14]
   units ← 4 if is_heavy(earlier) or is_heavy(later) else 1   # heavy = > 5,000 words
   if allowance_remaining(tenant) < units: reject(allowance_exhausted)         [AC-21]
+  if month_spend(tenant) ≥ tenant_spend_cap or global_kill_switch_on(): reject(spend_cap_reached)  # counts failed runs too (SA-4)  [AC-21]
   c ← Comparison(earlier_id, later_id, scope_snapshot=scope, status=queued)
   jobs.enqueue(compare, ids={tenant, c.id})                  [AC-23]
   return 202, c.id
@@ -274,7 +298,9 @@ VIEW_SHARE(token):                                            # no auth; rate-li
   render escaped(s.snapshot) with Cache-Control: no-store, Referrer-Policy: no-referrer
   # The route reads only SharedReport; it has no joins to project data.        [AC-16]
 
-REVOKE_SHARE(share_id): s.revoked_at ← now; audit(share_revoked)              [AC-17]
+REVOKE_SHARE(share_id): s.revoked_at ← now; s.snapshot_json ← null; audit(share_revoked)  [AC-17]
+DAILY: for s expired: s.snapshot_json ← null                  # no excerpts outlive the link (SA-12)  [AC-17]
+# Access logs at the proxy, load balancer and uvicorn record /s/* as "/s/[redacted]" (SA-12).  [AC-23]
 ON_ACCOUNT_OR_MEMBER_REMOVED(x): revoke every share x created                 [AC-17]
 ```
 
@@ -286,13 +312,24 @@ DELETE_PROJECT(project_id):                                   # GUARD first
   # Revocation alone would leave excerpts in snapshot_json.                     [AC-22]
   delete rows: shared reports, client approvals, review events, findings, facts,
                comparisons, versions, project                                   [AC-22]
-  storage.delete_prefix(tenant/project)                       # originals and approval attachments  [AC-22]
-  assert storage.list(tenant/project) is empty                [AC-22]
-  # Backups expire within 30 days, so the data is gone from backups by then.  [AC-22]
+  storage.delete_prefix(tenant/project, all_versions=true)    # originals and approval attachments, incl. noncurrent versions and delete markers  [AC-22]
+  assert storage.list_versions(tenant/project) is empty       # not just current objects (SA-7)  [AC-22]
+  # Backups and Postgres PITR expire within 30 days, so the data is gone from them by then.  [AC-22]
+
+DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
+  account: REMOVE_MEMBER(user) semantics, then delete the user row, IdP user and all linked identities,
+           revoke the Sign in with Apple token, delete device tokens          [AC-22, AC-26]
+  sole owner deleting their account, or contract end: DELETE_PROJECT for every project, then
+           delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
+  end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
-  stores ← {postgres, object_storage, backups, model_provider, logs, error_tracker, queue}
+  stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,
+            vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs),
+            email_sender, ci, mobile_crash_and_analytics}            # SA-7, SA-8
   for s in stores: assert s is in the deletion plan or holds no document content  [AC-23]
+  # The same list is the published sub-processor list and the store privacy declarations (SA-5).
+  # Object versioning stays off; immutability of originals (AC-15) comes from write-once keys and no update path.
 ```
 
 ## P9. Logging, telemetry and push
@@ -328,9 +365,17 @@ NOTIFY(comparison):
 ```
 ON_APP_BACKGROUNDING:
   show a privacy cover before the OS takes its app-switcher snapshot          [AC-25]
+CLIENT_TELEMETRY:                                            # same allow-list as P9 (SA-8)  [AC-23]
+  no HTTP body or header logging (Dio interceptors off in release); crash reports send type,
+  code and stack only (no messages, no breadcrumbs with URLs or bodies); analytics events from ALLOW only
+DEVICE_STORAGE:                                              # SA-11  [AC-25]
+  Keychain: accessible after first unlock, this device only (no iCloud sync)
+  Android: allowBackup=false and data-extraction rules exclude app data; Keystore-backed keys
+  app-group hand-off file: complete file protection
 ON_APP_START:
+  if first launch after install: clear Keychain items left from a previous install  # SA-11
   restore tokens from Keychain / Keystore only               [AC-25]
-  purge(app_group_container, picker_cache, camera_temp)      # leftovers from interrupted imports  [AC-25]
+  purge(app_group_container, picker_cache, camera_temp, android_share_intent_cache)  # leftovers from interrupted imports  [AC-25]
 AFTER_UPLOAD(source):                                        # success or failure
   delete the share-extension hand-off file in the app-group container,
   the file_picker cache copy and any camera temp file         [AC-25]
@@ -341,6 +386,7 @@ OPEN_EVIDENCE(version_id, locator):
   pdfrx.show(page=locator.page, highlight=locator.boxes)
   if highlight cannot be placed: show parsed_text with span highlighted        [AC-9]
 ON_APP_BACKGROUND or LOGOUT: clear in-memory documents        [AC-25]
+LOGOUT: revoke refresh token at the IdP; DELETE /devices/{id}; delete Keychain / Keystore tokens  # SA-11  [AC-26]
 ```
 
 ## Coverage

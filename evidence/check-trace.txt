@@ -1,7 +1,1 @@
 PASS 26 acceptance criteria mapped to 31 backlog tasks; 9 architecture decisions have ADRs
-Mutation: removed AC-17 row -> 'FAIL AC-17 not mapped in traceability.md' exit=1; restored -> PASS exit=0
-Mutation (organic): after removing I-11, check reported 'FAIL AC-11 references unknown task I-11' exit=1 until the mapping was fixed
-Fail-first: before docs/adr existed -> 'FAIL AD-1..AD-9 has no ADR in docs/adr' exit=1
-Mutation: removed ADR 0013 -> 'FAIL AD-6 has no ADR in docs/adr' exit=1; restored -> PASS exit=0
-Fail-first: before 03a existed -> 'FAIL Missing plan document: 03a-pipeline-logic.md' exit=1
-Mutation: replaced AC-12 tags in 03a -> 'FAIL AC-12 not covered in 03a-pipeline-logic.md' exit=1; restored -> PASS exit=0
