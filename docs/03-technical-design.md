@@ -55,7 +55,7 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Stage | Deterministic or AI | Output | Failure handling |
 |---|---|---|---|
 | Import | Deterministic | Validated source version: original bytes stored immutably, plus hash | Reject over-limit or unsupported input with a named reason (AC-20) |
-| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region later), each flagged if a reader can't see it | Pages with no text layer → partial warning (AC-11). Invisible, tiny or off-page text → hidden-text warning, and that text is excluded from findings unless the user includes it (AC-18) |
+| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region later), each flagged if a reader can't see it | Pages with no text layer → partial warning (AC-11). Invisible, tiny, off-page or image-covered text → hidden-text warning (SA-9), and that text is excluded from findings unless the user includes it (AC-18) |
 | Extract | AI (structured output, schema-validated) | Extracted facts: type, raw span, normalised value, locator, confidence | Retry once on schema failure. If it fails again, the block is marked *unextracted* and the comparison becomes partial |
 | Align | Deterministic keys first, AI for remaining candidates | Fact pairs: matched / unmatched-earlier / unmatched-newer / ambiguous | Ambiguous pairs are never forced (AC-7) |
 | Compare | Deterministic for numbers, dates and quantities; AI for meaning, with guards (§4) | Draft findings | Guard violations downgrade the finding to *needs review* |
@@ -165,7 +165,7 @@ Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 | First comparison (both extracted) | 22k / 6k | 10% | ≈ €0.17 | |
 | Heavy (20 pages ≈ 15k words) | 70k / 15k | 20% | ≈ €0.52 | At the input cap |
 | Worst case (heavy, both extracted, every stage retried once) | 100k / 22k | 100% | ≈ €1.26 | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
-| Screenshot vision parse (per image) | 1.5k / 0.5k | 10% | ≈ €0.013 | Charged as 1 allowance unit (03a P2) [U: image token counts vary by provider] |
+| Screenshot vision parse (per image, two independent passes, SA-9) | 3k / 1k | 10% | ≈ €0.026 | Charged as 1 allowance unit (03a P2) [U: image token counts vary by provider] |
 
 **Monthly cost per account (sensitivity):**
 
@@ -256,6 +256,7 @@ Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the to
 | `GET /comparisons/{id}/shares`, `DELETE /shares/{id}` | List and revoke | AC-17 |
 | `GET /s/{token}` | Read-only share page (HTML) | Headers per §6; rate-limited |
 | `POST /devices`, `DELETE /devices/{id}` | Register or remove a push token | — |
+| `POST /session` | Bootstrap after IdP sign-in: runs 03a P1 | The only route outside GUARD; sets no tenant; returns session status, `link_required` or the invite's team name and owner (R1) |
 | `DELETE /me`, `DELETE /team` | Delete own account; delete the whole team (owner) | In-app account deletion (Apple 5.1.1(v)); cascades through 03a P8 incl. the IdP user |
 | `POST /team/invites`, `DELETE /team/members/{id}` | Invite a member; remove a member | Owner (or operator for the owner) only; removal deactivates the membership, revokes IdP sessions, device tokens and the member's shares (03a P1) |
 | `GET /me/usage` | Allowance used and remaining | — |
