@@ -1,8 +1,8 @@
 Scenario                               Cost EUR  Baseline    Gate  Result
-Typical (3k words, earlier cached)        0,130      0,13    0,20  ok
-First comparison (both extracted)         0,172      0,17    0,20  ok
-Heavy (20 pages, at input cap)            0,522      0,52    0,60  ok
-Worst case (heavy, all retried)           1,260      1,26    1,50  ok
+Typical (3k words, earlier cached)        0,130     0,130    0,20  ok
+First comparison (both extracted)         0,172     0,172    0,20  ok
+Heavy (20 pages, at input cap)            0,522     0,522    0,60  ok
+Worst case (heavy, all retried)           1,260     1,260    1,50  ok
 Screenshot vision parse (2 passes)        0,026       n/a    0,13  ok
 
 Unit-economics sensitivity at target price (Gate 4 limit 30%, judged on real usage):

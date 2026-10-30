@@ -55,7 +55,7 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Stage | Deterministic or AI | Output | Failure handling |
 |---|---|---|---|
 | Import | Deterministic | Validated source version: original bytes stored immutably, plus hash | Reject over-limit or unsupported input with a named reason (AC-20) |
-| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region later), each flagged if a reader can't see it | Pages with no text layer → partial warning (AC-11). Invisible, tiny, off-page or image-covered text → hidden-text warning (SA-9), and that text is excluded from findings unless the user includes it (AC-18) |
+| Parse | Deterministic | Text blocks with locators (`page`, `char_start`, `char_end`; image region `bbox` for screenshots), each flagged if a reader can't see it or (screenshots) if the two vision passes disagree | Pages with no text layer → partial warning (AC-11). Invisible, tiny, off-page or image-covered text → hidden-text warning (SA-9), and that text is excluded from findings unless the user includes it (AC-18) |
 | Extract | AI (structured output, schema-validated) | Extracted facts: type, raw span, normalised value, locator, confidence | Retry once on schema failure. If it fails again, the block is marked *unextracted* and the comparison becomes partial |
 | Align | Deterministic keys first, AI for remaining candidates | Fact pairs: matched / unmatched-earlier / unmatched-newer / ambiguous | Ambiguous pairs are never forced (AC-7) |
 | Compare | Deterministic for numbers, dates and quantities; AI for meaning, with guards (§4) | Draft findings | Guard violations downgrade the finding to *needs review* |
@@ -99,7 +99,7 @@ Alignment uses content keys (fact type + normalised subject), not position. Sect
 
 ## 5. Data model
 
-The six logical records from handoff §8, plus two supporting records. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19):
+The six logical records from handoff §8, plus supporting records for review, sharing and accounts. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19):
 - Postgres row-level security applies to the API *and* the worker. The worker runs under a tenant-scoped role per job, not a role that bypasses RLS.
 - Job idempotency keys and fact caches include `tenant_id`.
 - Content-hash (`sha256`) deduplication across tenants is forbidden.
@@ -113,7 +113,11 @@ The six logical records from handoff §8, plus two supporting records. **Every t
 | Finding | id, comparison_id, category, change_type, before, after, evidence[], explanation, uncertainty, priority, revision, supersedes_id | New revision on correction |
 | ReviewEvent | id, finding_id, actor_id, action (confirmed / corrected / dismissed / note), at | Append-only |
 | ClientApprovalRecord | id, finding_id, evidence_text_or_object, stated_by, stated_at, recorded_by | Append-only, separate from review (AC-12) |
-| SharedReport | id, comparison_id, token_hash, snapshot_json, included_finding_ids, expires_at, revoked_at, view_log | Snapshot immutable; revocation state mutable |
+| SharedReport | id, comparison_id, token_hash, snapshot_json, included_finding_ids, expires_at, revoked_at, view_log | Snapshot never edited; set to null on revocation or expiry (03a P7); revocation state mutable |
+| User | id, idp_subjects[], email, deleted_at | Deleted users become a tombstone ID, so `actor_id` and `recorded_by` in append-only records stay valid without personal data (03a P8) |
+| Membership | user_id, tenant_id, role (owner / member), status (active / inactive) | Status and role only; GUARD requires `active` (03a P0) |
+| Invite | id, tenant_id, email, expires_at, consumed_at | Consumed once |
+| Device | id, user_id, push_token, platform | Deleted on logout, removal and account deletion |
 
 Share tokens are stored only as hashes. The share route loads `snapshot_json` alone and has no joins to project data (AC-16).
 
@@ -131,7 +135,7 @@ Share tokens are stored only as hashes. The share route loads `snapshot_json` al
 | Mobile client | Tokens only in Keychain / Keystore (`flutter_secure_storage`). No document content cached on the device; opened PDFs stream from signed URLs into memory. Screenshots taken in-app are not saved to the photo library. The share extension hands the file to the app through the app-group container; the app uploads it and deletes the container copy, picker cache and camera temp files after upload and on start (03a P10). Certificate pinning is optional [A]. App Store privacy labels and the Play data-safety form must match the data inventory | AC-22, AC-23 |
 | Real client data gate | Synthetic or consented data only, until all of these are in place: signed pilot terms that include an **Art. 28 GDPR processor agreement** with each agency (including deletion or return at contract end); the freelancer's obligations to *their* client (confidentiality, disclosure of the AI processor); a published sub-processor list generated from the data inventory (hosting, IdP, model provider, error tracker, email sender, FCM/APNs, CI); transfer assessments for any non-EU processor; and D-7 complete. The D-9 runbook notifies the affected agency without undue delay through a named contact, so the agency can meet its 72-hour Art. 33 deadline. | AC-22, AC-23 |
 | Secrets and supply chain | The LLM key, database and S3 credentials, APNs/FCM keys and signing keys live in a managed secret store or CI environment secrets, each with least privilege and scoped per environment, and never in the repository or the app bundle. GitHub Actions are pinned by commit SHA; lockfiles are committed and dependency-scanned in CI. PDFium (`pypdfium2` on the server, `pdfrx` on the device) and the image decoders parse attacker-authored files, so their security updates ship within 7 days on both server and app. | AC-18, AC-20 |
-| Abuse and cost exhaustion | The per-comparison cost ceiling, per-account and per-IP rate limits, and a cap on signups per IP are built into the app skeleton (I-8), before any external user. MFA is offered, sessions expire, and an incident-response runbook is ready before the pilot. | AC-21 |
+| Abuse and cost exhaustion | The per-tenant monthly spend cap (counting failed runs and screenshot parses) and the global daily kill switch (§8, SA-4), the per-comparison cost ceiling, per-account and per-IP rate limits, and a cap on signups per IP are built into the app skeleton (I-8), before any external user. MFA is offered, sessions expire, and an incident-response runbook is ready before the pilot. | AC-21 |
 | Storage | Encryption at rest (assumed provider default [A]; verify in D-8), originals in a private bucket, signed short-lived URLs for owner download. | — |
 | Retention and deletion | Default: keep until the user deletes [A][O]. Deletion removes primary rows and objects immediately, and backups expire within 30 days. Pilot terms state this. | AC-22 |
 | Upload validation | Check MIME type and magic bytes. Enforce size limits, and check page count from metadata *before* full parsing. Parse in a sandboxed process with no network and caps of 60 s CPU, 512 MB memory and 5 MB extracted text [A]. Never execute PDF JavaScript or extract embedded files. For images, cap decompression and pixel count (≤ 40 MP). | AC-20 |
@@ -180,7 +184,7 @@ These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A])
 **Implications:**
 - Each plan needs a comparison allowance, for example 25 per month for individuals and 100 per month for teams [O].
 - Heavy documents (over 5,000 words) count as **4** comparisons, which matches their roughly 4× cost.
-- Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead. To stop free failed runs from being abused (SA-4), every run's cost, failed or not, counts toward a per-tenant monthly spend cap (default 3× the plan's expected allowance cost), and a global daily spend kill switch pauses new comparisons when exceeded.
+- Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead. To stop free failed runs from being abused (SA-4), every run's cost, failed or not, counts toward a per-tenant monthly spend cap (default 3× the plan's expected allowance cost), and a global daily spend kill switch pauses new comparisons and screenshot parses when exceeded; a screenshot's reserved unit is consumed even if its parse fails.
 - **The pilot's discounted prices (€9 / €39) do not cover full-allowance usage within 30%.** For example, 25 typical comparisons cost €3.25, which is 36% of €9. The pilot is deliberately priced below target to test willingness to pay, so the unit-economics gate (04 §6, Gate 4) is judged against **target** prices.
 - The pilot must measure real token usage per comparison (I-14) and replace these placeholders.
 - `scripts/cost-model.ps1` recomputes this table and fails if a scenario is worse than the reviewed baseline (14748b6) or breaks a cost gate. Benchmark findings: if every comparison is a new project, full-allowance cost reaches ≈ 35% of target price (review ledger REV-19); at 1.5× the placeholder prices, heavy documents and the worst case break their limits (REV-20).
@@ -193,7 +197,7 @@ These are design-level contracts. Names are illustrative; the shapes and boundar
 
 | Module | Responsibility | Depends on | Must not |
 |---|---|---|---|
-| `api` | FastAPI routers, JWT verification against the identity provider, tenant resolution, request validation, problem+json errors | `domain`, `storage`, `metering`, `jobs` | Call the model provider or parse documents in-request |
+| `api` | FastAPI routers, JWT verification against the identity provider, `POST /session` bootstrap, membership and tenant resolution (GUARD), team routes (invite, remove, transfer ownership), request validation, problem+json errors | `domain`, `storage`, `metering`, `jobs` | Call the model provider or parse documents in-request |
 | `share_page` | Server-rendered read-only page for `/s/{token}` | `domain` (SharedReport only) | Join to any table other than SharedReport (AC-16) |
 | `domain` | SQLAlchemy models (03 §5), tenant-scoped session (`SET LOCAL app.tenant_id`), repositories | Postgres | Expose a session without a tenant |
 | `storage` | Object-store adapter: put original, short-lived signed URL, delete by tenant/project prefix | S3-compatible store | Write document content to local disk |
@@ -201,9 +205,9 @@ These are design-level contracts. Names are illustrative; the shapes and boundar
 | `worker` | Runs `parse` and `compare` jobs: loads records, calls `pipeline`, persists results, records cost, triggers `notify` | `domain`, `storage`, `pipeline`, `metering`, `notify` | Run a stage outside the cost ceiling (AC-21) |
 | `pipeline` | Pure stage functions (§9.3). No database, storage or network access except through the `llm` port passed in | `llm` port | Hold state; read ambient config |
 | `llm` | Provider adapter: one structured-output call with a schema, a system prompt and delimited data blocks; no tools; per-call token accounting | Provider SDK | Fetch URLs; enable tool use; log prompts or responses (AC-18, AC-23) |
-| `metering` | Allowance check before enqueue, heavy-document weighting, per-comparison ceiling during a run | `domain` | — |
+| `metering` | Allowance check before enqueue, heavy-document weighting, per-comparison ceiling during a run, per-tenant monthly spend cap and global kill switch (incl. screenshot parses) | `domain` | — |
 | `notify` | Content-free push via FCM / APNs (comparison ID plus generic text) | Device registry | Include document text (AC-25) |
-| `retention` | Project deletion cascade, object-prefix purge, share revocation, data inventory checks | `domain`, `storage` | — |
+| `retention` | Project, account and tenant deletion cascades (incl. IdP user deletion and Apple token revocation), version-aware object purge, share revocation and snapshot purge, data inventory checks | `domain`, `storage` | — |
 
 Reuse: `llm`, the `verify` stage and log scrubbing follow the patterns in `mobile-engineering-intelligence` (06, "Prior art and reuse").
 
@@ -237,7 +241,7 @@ Each stage is a pure function, and the worker persists every output. The same fu
 
 ### 9.4 API surface (REST + JSON, OpenAPI)
 
-Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the token, never from the request body.
+Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the user's active membership (03a P0), never from the request body; `POST /session` is the only authenticated route outside GUARD.
 
 | Method and path | Purpose | Notes |
 |---|---|---|
@@ -256,12 +260,12 @@ Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the to
 | `GET /comparisons/{id}/shares`, `DELETE /shares/{id}` | List and revoke | AC-17 |
 | `GET /s/{token}` | Read-only share page (HTML) | Headers per §6; rate-limited |
 | `POST /devices`, `DELETE /devices/{id}` | Register or remove a push token | — |
-| `POST /session` | Bootstrap after IdP sign-in: runs 03a P1 | The only route outside GUARD; sets no tenant; returns session status, `link_required` or the invite's team name and owner (R1) |
+| `POST /session` | Bootstrap after IdP sign-in: runs 03a P1; a second call carries `invite_choice` (join / own) | The only route outside GUARD; sets no tenant; returns session status, `link_required` or the invite's team name and owner (R1) |
 | `DELETE /me`, `DELETE /team` | Delete own account; delete the whole team (owner) | In-app account deletion (Apple 5.1.1(v)); cascades through 03a P8 incl. the IdP user |
-| `POST /team/invites`, `DELETE /team/members/{id}` | Invite a member; remove a member | Owner (or operator for the owner) only; removal deactivates the membership, revokes IdP sessions, device tokens and the member's shares (03a P1) |
+| `POST /team/invites`, `DELETE /team/members/{id}`, `POST /team/owner` | Invite a member; remove a member; transfer ownership | Owner (or operator for the owner) only; removal deactivates the membership, revokes IdP sessions, device tokens and the member's shares (03a P1) |
 | `GET /me/usage` | Allowance used and remaining | — |
 
-Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`, `allowance_exhausted`, `scope_not_confirmed`, `not_found`. Resources in another tenant return `not_found`, never `forbidden`, so their existence isn't revealed (AC-19).
+Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`, `allowance_exhausted`, `spend_cap_reached`, `scope_not_confirmed`, `not_found`, `unauthenticated`, `unsupported_method`, `link_required`. Resources in another tenant return `not_found`, never `forbidden`, so their existence isn't revealed (AC-19).
 
 ### 9.5 End-to-end data flow
 

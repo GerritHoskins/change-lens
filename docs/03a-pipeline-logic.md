@@ -6,7 +6,7 @@ Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` n
 
 ## P0. Request guard (every authenticated route except `POST /session`)
 
-`POST /session` is the only bootstrap route (R1). It verifies the JWT, runs ON_SIGN_IN (P1) through the narrow `SECURITY DEFINER` functions, sets no tenant, and returns only the session status, the `link_required` methods, or a pending invite's team name and owner. Every other route goes through GUARD.
+`POST /session` is the only bootstrap route (R1). It verifies the JWT, runs ON_SIGN_IN (P1) through the narrow `SECURITY DEFINER` functions, sets no tenant, and returns only the session status, the `link_required` methods, or a pending invite's team name and owner. When an invite is pending, the app shows the choice and calls `POST /session` again with `invite_choice = join | own`; `user_choice(invite)` in P1 reads that field, and no membership exists until it is sent (CR-1). Every other route goes through GUARD.
 
 ```
 GUARD(request):
@@ -58,6 +58,10 @@ REMOVE_MEMBER(user):                                         # review ledger SA-
   delete device push tokens of user; ON_ACCOUNT_OR_MEMBER_REMOVED(user)        [AC-17]
   free the seat; audit(member_removed)
   # Projects and versions belong to the tenant, not the member, so nothing is deleted.
+
+TRANSFER_OWNERSHIP(member):                                  # needed before an owner deletes their account (P8)
+  require caller is the team owner and member is active in the same tenant
+  swap roles: member → owner, caller → member; audit(ownership_transferred)  [AC-19]
 ```
 
 ## P2. Import a version (mobile → API)
@@ -76,7 +80,9 @@ API_UPLOAD_VERSION(project, bytes, kind, label):             # GUARD first
      # text ≤ 15k words; pdf ≤ 20 pages (from metadata, before full parse) and ≤ 10 MB;
      # image ≤ 5 MB, short side ≥ 800 px, ≤ 40 MP
   if kind in {png, jpeg} and allowance_remaining(tenant) < 1: reject(allowance_exhausted)  [AC-21]
-  if kind in {png, jpeg}: reserve_units(tenant, 1)           # the vision parse costs a comparison unit  [AC-21]
+  if kind in {png, jpeg} and (month_spend(tenant) ≥ tenant_spend_cap or global_kill_switch_on()):
+     reject(spend_cap_reached)                               # vision calls fall under the cap too (CR-2)  [AC-21]
+  if kind in {png, jpeg}: reserve_units(tenant, 1)           # consumed even if the parse fails, so failed images are never free (CR-2)  [AC-21]
   key ← storage.put(tenant/project/uuid, bytes)              # immutable original  [AC-15]
   v ← SourceVersion(project, label, kind, key, sha256(bytes), status=uploaded)
   jobs.enqueue(parse, ids={tenant, v.id})                    # IDs only  [AC-23]
@@ -107,8 +113,10 @@ PARSE_JOB(tenant, version_id):
         block.hidden ← true; v.warnings += covered_text(block.locator)        [AC-18]
   for region in result.image_regions_on_text_pages where region.area > 15% of the page:  # logos and header graphics stay below it; PDF parse makes no model call (SA-9, R2)
      v.warnings += unextracted_region(region)                # makes the comparison partial (P5)  [AC-11, AC-18]
+  for smaller image regions on text pages: v.notes += image_region(region)  # listed in the full-difference view, not partial (CR-9)  [AC-11]
   if v.kind in {png, jpeg}:                                  # vision transcript is model output, not ground truth (SA-9)
-     run a second, independent vision pass under the same meter (no OCR, per 02 §2); blocks whose transcripts differ → needs_review
+     pass 1 is the parsed_text; a second, independent vision pass runs under the same meter (no OCR, per 02 §2)
+     blocks whose transcripts differ → block.disputed ← true  # P5.1 marks their facts ambiguous → needs_review (CR-4)
      every finding quoting this version is labelled "transcribed by AI" and the app shows the image region beside the quote  [AC-9, AC-18]
   for page in result.pages_without_text: v.warnings += no_text_layer(page)    [AC-11]
   for region in result.unreadable_regions: v.warnings += unreadable(region)   [AC-11]
@@ -166,7 +174,7 @@ EXTRACT(doc, meter):
      if not valid(out): mark_unextracted(chunk); continue     # comparison becomes partial  [AC-11]
      for f in out: f.raw_text ← doc.text[f.locator]           # keep raw wording
                    f.normalised ← normalise(f)                # dates, numbers, quantities, names
-                   if normalise_ambiguous(f): f.status ← ambiguous            [AC-7]
+                   if normalise_ambiguous(f) or block_of(f).disputed: f.status ← ambiguous   [AC-7, AC-18]
      facts += out
   cache(doc, facts); return facts
 ```
@@ -320,7 +328,8 @@ DELETE_PROJECT(project_id):                                   # GUARD first
   # Backups and Postgres PITR expire within 30 days, so the data is gone from them by then.  [AC-22]
 
 DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
-  account: REMOVE_MEMBER(user) semantics, then delete the user row, IdP user and all linked identities,
+  account (the user deleting themselves; CR-7): set their membership inactive and free the seat, revoke IdP sessions,
+           revoke every share they created, then replace the user row with a tombstone ID, delete the IdP user and all linked identities,
            revoke the Sign in with Apple token, delete device tokens          [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
