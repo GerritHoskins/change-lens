@@ -15,6 +15,8 @@ The original plan seeded the set with ≥ 10 real revision pairs donated by inte
 | **C — donated** | Pairs shared by interviewees with written permission, anonymised | 0–10 pairs | Dual, independent |
 | **D — constructed** | A base brief plus scripted edits (§3); the script writes the gold labels | the rest, ≥ 50 | By construction, then human review (§5) |
 
+Candidate tier A pairs found on 2026-10-30 (44, of which 31 confirmed) are listed in [eval-candidates.md](eval-candidates.md).
+
 Why Tier A fits: an RFP addendum is a real revision written by a real client. Addenda are often email-style partial updates ("Section 4.2 is amended as follows"), and Q&A clarifications often leave scope unclear. Those are the two case types that decide Gate 2.
 
 **Rules for Tier A**
