@@ -83,6 +83,28 @@ Plan section: §13.6. Every entry is tagged:
 | O-10 | Acquisition channel for the pilot | **Decided 2026-10-30:** the owner's own network. Mitigation: a screener blind to revision pain, every eligible respondent kept in the denominator, the relationship to the owner recorded per organisation. If the network can't supply 10 eligible organisations by the D-1 deadline, Gate 1 is *inconclusive*; widening the channel is a logged change | — |
 | O-11 | Pilot pricing and data terms | **Decided 2026-10-30:** €9 / €39 per month, 2 months prepaid. Data terms are still drafted after D-7 | D-4 (terms) |
 
+## Prior art and reuse (searched 2026-10-30)
+
+**Searched:**
+- ruflo memory (`memory_search_unified` over default, claude-memories, auto-memory, patterns, tasks, feedback)
+- the Claude project memory directory
+- every project in `C:\Users\Gerrit\job-search`: Flutter and Python manifests, ADR directories, and planning docs
+
+| Source | What exists | Reuse for ChangeLens | Verdict |
+|---|---|---|---|
+| `mobile-engineering-intelligence/app/llm/citations.py` (HEAD `8531a17`) | Deterministic grounding check: every model sentence must cite a valid ID; failures are returned as `Rejected` and never kept silently; `NothingGrounded` when all fail | The same contract as the 03 §2 Verify stage (AC-9, AC-10). Port the pattern, swapping ID checks for exact-substring-at-locator checks | **Reuse (pattern)** |
+| `mobile-engineering-intelligence/app/llm/` (`client.py`, `config.py`, `schemas.py`, `prompts.py`, `packet.py`) | Anthropic SDK client with Pydantic-validated structured output and a prompt-packet builder | Scaffold for I-2 extraction and the schema check (03 §1.1). Provider-neutral wrapping is still needed until D-7 decides | **Reuse (adapt)** |
+| `mobile-engineering-intelligence/app/privacy.py` | Personal-data minimisation at ingest (for example stripping URL query strings) | Pattern for AC-23 log scrubbing and for limiting what reaches the model provider | **Reuse (pattern)** |
+| `mobile-engineering-intelligence` `app/db.py`, `alembic/`, `compose.yaml` (postgres:16), `Dockerfile`, `app/observability.py` | FastAPI + SQLAlchemy 2 + Alembic + Postgres skeleton with OpenTelemetry | Starting point for I-8. **No** `tenant_id`, RLS or job queue, so those must be added (03 §5) | **Reuse (adapt)** |
+| `mobile-engineering-intelligence/evals/` | Evaluation harness (`repro_narrative`) | Structural pattern for I-7 | Reference |
+| `mobile-engineering-intelligence/infra/` | Terraform for AWS (ECS RunTask jobs) | Not applicable: hosting is OVHcloud or IONOS in Germany | Not reused |
+| `POCs/01-leaklens-plan.md` (Rust) | OCR words with a char→box map; image decode limits; "scanned content is inert data"; coverage accounting | Design input for I-1b screenshot locators, AC-11 partial-coverage warnings and the AC-18 posture. Concepts only, different language | **Reuse (concepts)** |
+| `charge-portal-nuxt/docs/adr/0001–0010` | ADRs in Status / Context / Decision format | Format template if decisions are split into ADRs; content (Nuxt, NestJS) unrelated | Reference |
+| `screenshot-ai` (Electron/TypeScript) | Screenshot annotation desktop app | No overlap with a Flutter client or Python pipeline | Not reused |
+| `POCs/cross-platform-translation-test-app-main` | Capacitor / Ionic app | Capacitor excluded by owner | Not reused |
+| Flutter projects | None in the workspace | D-15 starts from scratch | — |
+| ruflo memory and Claude memory | No entries for ChangeLens, document comparison or this stack | Nothing to reuse; plan outcomes should be stored after the mission | — |
+
 ## Change log
 
 | Date | Change | Reason |
@@ -95,3 +117,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Interview round 2: O-1 web/design niche, O-2 English EU+UK, O-10 own network (with bias mitigation), O-11 €9 / €39 prepaid | Owner interview |
 | 2026-10-30 | Interview round 3: Gate 1 definitions (04 §6.1) and retest budget confirmed and frozen | Owner interview |
 | 2026-10-30 | Interview round 4: O-6 retention until deletion with 30-day backups; O-7 30-day revocable shares; O-8 3 seats; Gate 2 thresholds accepted | Owner interview |
+| 2026-10-30 | Prior-art search (mission t1): reuse candidates recorded from mobile-engineering-intelligence and the LeakLens plan; ruflo and Claude memory empty | Mission t1 |
