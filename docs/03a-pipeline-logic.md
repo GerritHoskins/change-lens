@@ -25,9 +25,13 @@ GUARD(request):
 ```
 ON_SIGN_IN(idp_identity):                                    # email code | Google | Apple  [AC-26]
   if idp_identity.method not in {email_otp, google, apple}: reject(unsupported_method)
-  if idp_identity.method = apple:                            # native flow (ADR-0020)
-     apple_refresh ← encrypt(apple.exchange(authorization_code))  # server-side; client secret from the secret store
   user ← find_user(idp_identity.subject)
+  apple_refresh ← none
+  if idp_identity.method = apple:                            # native flow (ADR-0020)
+     apple_refresh ← take_parked(idp_identity.subject)       # from an earlier call that returned without a user row (AR-5)
+     if apple_refresh is none and authorization_code present and not (user and user.apple_refresh_token_enc):
+        apple_refresh ← encrypt(apple.exchange(authorization_code))  # each code is exchanged at most once: Apple codes
+                                                            # are single-use and expire in 5 min; client secret from the secret store
   if user is none:
      existing ← find_user_by_verified_email(idp_identity.email)
      if existing and idp_identity.email_verified:
@@ -36,13 +40,16 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
         # otherwise by the backend through the Logto Management API after that sign-in. Automatic linking is off.
         # A matching email alone never links.
         # The IdP refuses to link an identity already mapped to a different app user (no orphaned tenant).
-        park apple_refresh (if any) under idp_identity.subject, expiring in 1 h; attach it to `existing` when the
-        link completes, and delete the Logto user created for the unlinked identity then or at expiry  # AR-2, AR-4
+        PARK(apple_refresh, idp_identity.subject); attach it to `existing` when the link completes, and delete the
+        Logto user created for the unlinked identity then or at expiry  # AR-2, AR-4
         reject(link_required, methods = existing.methods)    # app shows "sign in with your usual method to link"
      elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
           and invite not expired and team.seats_used < team.seats:   # 3 seats (O-8)
         # Explicit acceptance (SA-2): the app shows the team name and owner and offers
         # "join this team" or "create my own workspace"; nothing is joined without the choice.
+        if invite_choice absent:                             # first call: no user row yet
+           PARK(apple_refresh, idp_identity.subject)         # the second call takes it instead of re-exchanging (AR-5)
+           return invite_offer(team.name, team.owner)
         if user_choice(invite) = join:
            user ← create_user(invite.tenant); consume(invite)   # joins only the tenant that invited this email  [AC-26]
         else: user ← create_user(new_tenant())
@@ -51,6 +58,11 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   if apple_refresh and user: user.apple_refresh_token_enc ← apple_refresh   # only once a user row exists (AR-2)  [AC-22]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
+
+PARK(apple_refresh, subject):                                # whenever P1 returns without a user row (AR-5)
+  if apple_refresh: store it encrypted in apple_token_park under subject, expiring in 1 h
+  # take_parked(subject) returns and removes it. On expiry: call Apple /auth/revoke with it, then delete it,
+  # so no Apple authorization outlives an abandoned sign-in (AR-5)  [AC-22]
 
 INVITE_MEMBER(email):
   require caller is the team owner, or the operator acting for that owner during the pilot (I-15)  [AC-19, AC-26]
@@ -349,7 +361,7 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,
             vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs),
-            email_sender, ci, mobile_crash_and_analytics}            # SA-7, SA-8
+            email_sender, ci, mobile_crash_and_analytics, apple_token_park}  # SA-7, SA-8, AR-5
   for s in stores: assert s is in the deletion plan or holds no document content  [AC-23]
   # The same list is the published sub-processor list and the store privacy declarations (SA-5).
   # Object versioning stays off; immutability of originals (AC-15) comes from write-once keys and no update path.
