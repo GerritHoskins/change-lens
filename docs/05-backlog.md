@@ -21,8 +21,10 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| D-6 | Build the labelled evaluation set (≥ 60 pairs, case mix from 04 §4, dual labelling) | D-3 | Dataset with labels, inter-annotator notes and a held-out split | 5–8 | Labelling disagreement on "material" |
+| D-6 | Build the labelled evaluation set (≥ 80 pairs plus 10 cross-format, case mix from 04 §4, dual labelling) | D-3 | Dataset with labels, inter-annotator notes and a held-out split | 6–9 | Labelling disagreement on "material" |
+| D-15 | Mobile proof of concept (Flutter), on both platforms: import a PDF through the document picker; receive a passage and locator from a mock API (produced by `pypdfium2`); open the right page and highlight the passage with `pdfrx`; zoom, scroll and switch versions; share a PDF into the app from Mail or Files | — | All five pass on a physical iOS device and an Android device, with highlight boxes matching the backend locators on ≥ 95% of 20 test passages. If not, run the same tests on React Native + Expo before D-8 | 3–5 | Coordinate mismatch between engines; iOS share-extension memory limits |
 | I-1 | Parser with provenance for text and text-based PDFs, plus input-limit checks and sandbox resource caps | D-6 | Locators round-trip exactly on the dataset; over-limit inputs rejected with a reason (AC-20); no-text pages warned (AC-11); hostile-file fixtures (oversized, malformed, JavaScript, embedded files) handled safely | 3–5 | PDF layout quirks (columns, tables) |
+| I-1b | Screenshot input in the pipeline: vision-model text extraction with region locators; unreadable regions reported | I-1, D-7 | Cross-format set passes the Gate 2 thresholds; unreadable regions warned (AC-11) | 4–8 | Vision-model location accuracy [U] |
 | I-2 | Fact extraction with schema validation and per-version caching | I-1, D-7 | Schema-valid output on ≥ 98% of dev pairs; failures marked unextracted | 3–5 | Extraction misses implicit deliverables |
 | I-3 | Alignment (deterministic keys + AI candidates) and comparison guards | I-2 | Reorder pairs yield no scope findings (AC-6); numeric, negation and modality guard tests pass (AC-8); ambiguity preserved (AC-7) | 4–7 | Over-matching hides changes |
 | I-4 | Omission decision table by scope | I-3 | Partial or unknown cases yield zero removal claims (AC-2, AC-3, AC-4) | 1–2 | — |
@@ -36,13 +38,15 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| D-8 | Owner decisions: stack, hosting region, retention and share expiry defaults | D-7, Gate 2 | Decisions recorded in the decision log | 0.5–1 | Blocks I-8 |
-| I-8 | App skeleton: auth (MFA available, session expiry), tenants, Postgres with RLS for app and worker, object storage, worker queue with ID-only payloads, log scrubbing, per-comparison cost ceiling, rate limits, CSP | D-8 | Cross-tenant tests on every route and job are denied (AC-19). No document content in logs or payloads (AC-23). The ceiling aborts runs cleanly (AC-21) | 5–8 | Auth library choice |
-| I-9 | Projects and versions UI; import with explicit order and scope confirmation; immutable sources | I-8, I-1 | Processing blocked until confirmation (AC-14); originals immutable (AC-15) | 3–5 | — |
-| I-10 | Report UI with evidence highlighting, needs-review group, full-difference view, review actions and a separate client-approval record | I-9, I-5 | Review never sets approval (AC-12); corrections create revisions (AC-15) | 4–6 | Evidence highlighting in PDFs |
-| I-12 | Share snapshots: token hashing, expiry, revocation, view log | I-10 | Snapshot contains only selected findings (AC-16); revoked or expired links return no content (AC-17) | 2–3 | — |
+| D-8 | Owner decisions: confirm Flutter (from D-15), auth approach, hosting region, retention and share expiry defaults | D-7, D-15, Gate 2 | Decisions recorded in the decision log | 0.5–1 | Blocks I-8 |
+| I-8 | Backend skeleton (FastAPI): auth (MFA, refresh rotation, session revocation), tenants, Postgres with RLS for API and worker, object storage, Postgres job queue with ID-only payloads, log scrubbing, per-comparison cost ceiling, rate limits, CSP on the share page | D-8 | Cross-tenant tests on every route and job are denied (AC-19). No document content in logs or payloads (AC-23). The ceiling aborts runs cleanly (AC-21) | 5–8 | Auth provider choice |
+| I-9 | Flutter app shell, plus projects and versions screens. Import by paste, PDF picker and camera / photo library, with explicit order and scope confirmation; immutable sources; content-free push notification when a comparison is ready | I-8, I-1 | Processing blocked until confirmation (AC-14); originals immutable (AC-15); no document content stored on the device (AC-23) | 5–8 | — |
+| I-16 | Share-sheet import: iOS Share Extension (Swift) and Android `ACTION_SEND` intent, handing off to the project picker | I-9 | Sharing a PDF, an image or text from Mail and Files lands in a chosen project on both platforms; the extension keeps nothing after hand-off | 2–4 | iOS extension memory limits |
+| I-10 | Report screens: PDF evidence highlighting (`pdfrx`) with a parsed-text fallback, needs-review group, full-difference view, review actions, and a separate client-approval record | I-9, I-5 | Review never sets approval (AC-12); corrections create revisions (AC-15) | 5–8 | Highlight alignment on small screens |
+| I-12 | Share snapshots: token hashing, expiry, revocation, view log, server-rendered read-only share page | I-10 | Snapshot contains only selected findings (AC-16); revoked or expired links return no content (AC-17) | 2–4 | — |
+| I-17 | Pilot distribution: TestFlight and Play closed-testing tracks, App Store privacy labels and Play data-safety form matching the data inventory, release pipeline in GitHub Actions | I-9, I-13 | Pilot testers can install on both platforms; store declarations reviewed against 03 §6 | 1–2 | Review delays |
 | I-13 | Data inventory, plus deletion and retention jobs covering every store on it | I-8 | Project deletion purges primary storage at once and backups within the window (AC-22); inventory covers every content store (AC-23) | 1–2 | Backup tooling |
-| D-9 | Security review: tenancy, share links, injection, logging, provider data flow; write the incident-response runbook. Repeat for every new input path (I-11) and before the pilot (I-14) | I-12, I-13 | No open high-severity finding; runbook exists | 1.5–2.5 | — |
+| D-9 | Security review: tenancy, share links, injection, logging, provider data flow, mobile client and share extension; write the incident-response runbook. Repeat for every new input path and before the pilot (I-14) | I-12, I-13, I-16 | No open high-severity finding; runbook exists | 2–3 | — |
 | D-10 | Usability test with 5 users | I-12 | Gate 3 met | 2–3 | — |
 
 **Gate 3.**
@@ -52,26 +56,24 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
 | I-14 | Metering: comparison allowance, heavy-document weighting, token and cost logging (the ceiling and rate limits already exist from I-8) | I-8 | No unmetered path (AC-21) | 2–3 | — |
-| I-15 | Billing for the pilot (payment links or a simple subscription), no custom billing system | D-4 | Pilot accounts can pay; VAT handling confirmed [U] | 1–2 | Tax setup |
+| I-15 | Pilot billing by direct invoice or payment link, outside the app stores; accounts provisioned by the operator; no in-app purchase | D-4 | Pilot accounts can pay; VAT handling confirmed [U]; in-app purchase rules checked before any public listing [U] | 1–2 | Tax setup; store policy |
 | D-11 | Onboard 5–10 pilot accounts; support process; weekly metric review | I-14, I-15, Gate 3 | Gate 4 metrics collected for 8 weeks | 8 weeks elapsed, 0.5 d/week | Low engagement |
 | D-12 | Pilot readout and next-step decision | D-11 | Go / narrow / stop decision recorded | 1 | — |
 
 **Gate 4.** Then focused expansion only (handoff §12, stage 5).
 
-## Milestone 5 — Focused expansion (conditional, not in totals)
+## Milestone 5 — Focused expansion
 
-| ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
-|---|---|---|---|---|---|
-| I-11 | Screenshot input, only if pilot evidence shows the need | Gate 4, D-12 | Cross-format set (04 §4) passes the Gate 2 thresholds; unreadable regions warned (AC-11); D-9 re-run for the new input path | 4–8 | Vision-model location accuracy [U] |
+Only work justified by pilot evidence. Screenshot input, formerly I-11 here, moved into the MVP as I-1b and I-9 after the owner's mobile-first decision.
 
 ## Totals (rough, milestones 1–4)
 
 | Milestone | Discovery | Implementation |
 |---|---|---|
 | 1 Problem validation | 14.5–25 d | — |
-| 2 Prototype | 5–8 d | 17–30 d |
-| 3 Thin slice | 4–6.5 d | 15–24 d |
+| 2 Prototype | 9–14 d | 21–38 d |
+| 3 Thin slice | 4.5–7 d | 21–36 d |
 | 4 Pilot | 1 d + 8 wk part-time | 3–5 d |
-| **Total** | **24.5–40.5 d** | **35–59 d** — about 60–100 person-days plus the 8-week pilot (excluding D-14 and I-11) |
+| **Total** | **29–47 d** | **45–79 d** — about 74–126 person-days plus the 8-week pilot (excluding D-14) |
 
-Main risk: evidence-location fidelity for PDFs and screenshots, which is why screenshots are gated (I-11). Main assumption: an existing hosted model gives schema-valid extraction at the cost in `03-technical-design.md` §8.
+Main risk: evidence-location fidelity for PDFs and screenshots on a small screen. D-15 tests it before the stack is locked, and Gate 2 measures it. Main assumption: an existing hosted model gives schema-valid extraction at the cost in `03-technical-design.md` §8.

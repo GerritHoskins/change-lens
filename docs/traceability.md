@@ -14,7 +14,7 @@ Checked by `scripts/check-trace.ps1`. Every AC in `02-mvp-spec.md` §7 must appe
 | AC-8 | 03 §4.1 | I-3 | numeric, negation |
 | AC-9 | 03 §3, 03 §2 | I-5 | all |
 | AC-10 | 02 §4, 03 §3 | I-5 | all |
-| AC-11 | 02 §2, 03 §2, 03 §7 | I-1, I-11 | poor quality, cross-format |
+| AC-11 | 02 §2, 03 §2, 03 §7 | I-1, I-1b, I-9 | poor quality, cross-format |
 | AC-12 | 02 §5, 03 §5 | I-10 | — |
 | AC-13 | 02 §4 | I-5, I-10 | — |
 | AC-14 | 02 §1 | I-9 | — |

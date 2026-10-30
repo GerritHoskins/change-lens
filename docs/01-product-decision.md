@@ -42,13 +42,14 @@ The plan treats this as unproven. The validation plan (`04-validation-plan.md`) 
 
 - Consumer use cases: timetables, bookings, event notices.
 - A general document assistant or a general diff tool.
-- Inbox or email ingestion, website crawling or monitoring, calendar integration, mobile share extensions.
+- Inbox or email ingestion, website crawling or monitoring, calendar integration. (Receiving files through the OS share sheet *is* in scope: an owner decision on 2026-10-30.)
+- A web front end. ChangeLens is an iOS and Android app; the only web surface is the read-only page for shared reports.
 - Contract or legal interpretation, and any statement about what a client agreed to.
 - Autonomous client communication.
 - Complex approval workflows and project management features.
 - Multi-document reconciliation into an "authoritative current spec".
 - Agents, a vector database, custom OCR, or custom model training.
-- Unlimited processing, enterprise compliance claims, native mobile apps.
+- Unlimited processing, enterprise compliance claims, offline use.
 
 ## Stop and pivot conditions
 

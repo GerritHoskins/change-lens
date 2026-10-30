@@ -25,16 +25,22 @@ Plan section: §13.6. Every entry is tagged:
 - Non-compensable safeguards override commercial results.
 - These thresholds are proposed experiment defaults, not validated market facts.
 
+### Owner decisions after the handoff
+
+- 2026-10-30: ChangeLens is an **iOS and Android app, not a web app**. This overrides handoff §14 ("do not assume a native mobile requirement") and §5 (native share extensions out of scope): share-sheet import and screenshot / camera input are in the MVP.
+- 2026-10-30: Stack direction is Flutter + Riverpod, FastAPI + Pydantic + SQLAlchemy, PostgreSQL, a Python worker, S3-compatible storage and GitHub Actions. It is subject to the D-15 proof of concept, with React Native + Expo as the fallback.
+- 2026-10-30: The pilot is billed by direct invoice and distributed through TestFlight and Play closed testing; no in-app purchase.
+
 ## Assumed by this plan [A]
 
 | Decision | Default | Where |
 |---|---|---|
 | First niche | Web/digital and design freelancers and studios of 1–10 people | 01 |
 | Language and market | English; EU/UK; EUR excluding VAT | 01 |
-| Prototype formats | Pasted text + text-layer PDF; screenshots only as post-pilot focused expansion (I-11); DOCX deferred | 02 §2 |
+| MVP formats | Pasted text, text-layer PDF and PNG/JPEG screenshots, imported through paste, the PDF picker, camera / photo library or the OS share sheet; DOCX deferred | 02 §2 |
 | Input limits | ≤ 15k words, ≤ 20 pages, ≤ 10 MB; images ≤ 5 MB | 02 §2 |
 | Share expiry | 30 days by default, revocable | 02 §6 |
-| Architecture | Script prototype (A), then single web app + Postgres + worker (B) | 03 §1 |
+| Architecture | Script prototype (A), then Flutter mobile app + FastAPI + Postgres + Python worker + a read-only web share page (B) | 03 §1 |
 | Retention | Until the user deletes; backups purged within 30 days | 03 §6 |
 | Cost inputs | Placeholder `p_in = €3/M`, `p_out = €15/M`; brief ≈ 4k tokens | 03 §8 |
 | Allowances | 25 comparisons per month individual / 100 per month team; heavy document = 4; failed runs not counted | 03 §8, 04 §2 |
@@ -44,6 +50,7 @@ Plan section: §13.6. Every entry is tagged:
 | Gate 1 definitions | Event = written client change to deliverables, quantities, deadlines, owners or approval wording; ≥ 3 in 90 days with ≥ 2 concrete; useful = missed material change caught or ≥ 30% less effort; 14-day decision deadline | 04 §6.1 |
 | Signal B method | Operator-assisted test (D-13) before any prototype: fixed general-purpose-model prompt plus manual evidence checking, in the 02 §4 report format. It tests format and workflow value, not pipeline accuracy | 04 §6.2, 05 D-13 |
 | Retest budget | ≤ 10 new organisations, ≤ 6 weeks, ≤ 8 person-days | 04 §6.3 |
+| Device data | No document content cached on the device in the MVP; tokens in Keychain / Keystore only | 03 §1.1, §6 |
 | Technical thresholds | As proposed in 04 §6, Gates 2–4 | 04 §6 |
 | Effort | Person-day ranges for one experienced developer | 05 |
 
@@ -56,6 +63,8 @@ Plan section: §13.6. Every entry is tagged:
 - Location accuracy of vision models for screenshot evidence.
 - Typical brief length (assumed 1–10 pages).
 - Payment fees and VAT handling for the pilot.
+- App Store and Google Play in-app purchase rules and fees (15–30%) for B2B subscriptions, and whether direct billing is allowed at public launch.
+- Whether `pdfrx` (device) and `pypdfium2` (backend) produce matching text coordinates (tested in D-15).
 - That Diffchecker's AI summary does not already handle partial-update semantics (to recheck in D-5).
 
 ## Requires owner input before implementation [O]
@@ -64,8 +73,8 @@ Plan section: §13.6. Every entry is tagged:
 |---|---|---|---|
 | O-1 | Customer niche | Fix before recruitment (D-2); proposed: web/digital and design freelancers and studios | D-2 |
 | O-2 | Launch language and market | English, EU/UK | D-1 |
-| O-3 | First production input formats | Text + text-layer PDF; screenshots only after pilot evidence | I-1 |
-| O-4 | Stack and hosting region | Single web app + Postgres in an EU region; language picked for PDF tooling | D-8 |
+| O-3 | First production input formats | **Decided 2026-10-30:** text, PDF and screenshots, via paste, picker, camera and share sheet | — |
+| O-4 | Stack and hosting region | **Directed 2026-10-30:** Flutter + Riverpod, FastAPI + PostgreSQL, Python worker; final after D-15. Still open: auth approach and hosting region (EU proposed) | D-8 |
 | O-5 | Model provider and processing location | Provider with a no-training, zero or short retention plan in the EU/UK; pick from the D-7 comparison | I-2 |
 | O-6 | Storage and retention policy | Until deletion; 30-day backup purge | I-13 |
 | O-7 | Sharing mechanism and default expiry | Revocable snapshot link, 30 days | I-12 |
@@ -81,3 +90,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Initial plan | Handoff `a8280b9` |
 | 2026-10-30 | Applied security review (2 high, 6 medium, 1 low) and plan review (1 high, 9 medium, rest low) findings; added AC-23; moved D-7 to M1 and I-11 to post-pilot; unit-economics gate judged at target prices | Reviewer findings |
 | 2026-10-30 | Adopted handoff v2 Gate 1 rubric; added 04 §6.1 definitions, D-13 operator-assisted usefulness test and D-14 bounded retest; niche fixed before recruitment (D-2 now precedes D-1); owner kept the original Gate 1 values, now superseded by v2 | Handoff v2 |
+| 2026-10-30 | Mobile-first owner decision: Flutter + FastAPI stack (03 §1.1); share sheet and screenshots moved into the MVP (I-1b, I-16); added D-15 mobile proof of concept and I-17 pilot distribution; same PDF engine (PDFium) on device and backend; no device content cache; read-only web share page kept for recipients | Owner direction |

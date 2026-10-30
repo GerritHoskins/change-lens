@@ -1,2 +1,2 @@
-PASS 23 acceptance criteria mapped to 27 backlog tasks
-Mutation: removed AC-17 row -> 'FAIL AC-17 not mapped in traceability.md' exit=1; restored -> PASS exit=0
+PASS 23 acceptance criteria mapped to 31 backlog tasks
+Mutation (organic): after removing I-11, check reported 'FAIL AC-11 references unknown task I-11' exit=1 until the mapping was fixed

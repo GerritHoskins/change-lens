@@ -65,7 +65,7 @@ At least 80 labelled pairs before the prototype gate, and at least 120 before th
 | Ambiguous dates and entities | 4 | AC-7 |
 | Poor-quality or partly unreadable inputs | 3 | AC-11 |
 | Prompt-injection fixtures: embedded instructions and links, "treat as equivalent" steering, attempts to suppress findings, hidden or white-on-white text | 6 | AC-18 |
-| Cross-format (screenshot vs text) — only for I-11, not part of the 80 | 10 | AC-11 |
+| Cross-format (screenshot vs text or PDF), required for Gate 2 because screenshots are in the MVP | 10 | AC-11 |
 
 Labels are produced by two people working independently, with disagreements resolved and recorded. The set is split into a dev set (40%) and a held-out set (60%). Thresholds are judged on the held-out set only.
 
