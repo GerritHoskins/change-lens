@@ -1,0 +1,66 @@
+# SOP — Running and Changing the ChangeLens Plan
+
+This repository is a plan, not an application. "Running" it means running its checks; "changing" it means editing the plan without losing traceability.
+
+## 1. Run the checks
+
+```powershell
+powershell -NoProfile -File scripts/check-trace.ps1
+```
+
+The check passes only if:
+- every plan document exists
+- every acceptance criterion in `docs/02-mvp-spec.md` §7 is mapped in `docs/traceability.md` to a design section and an existing backlog task
+- every architecture decision (AD-n) in `docs/03-technical-design.md` §9.6 has an ADR in `docs/adr/`
+
+Save the output to `evidence/check-trace.txt` when it is used as evidence.
+
+## 2. Change a requirement
+
+1. Edit or add the criterion (AC-n) in `02-mvp-spec.md` §7.
+2. Update or add its row in `traceability.md`, and reference it from the backlog task that satisfies it (`05-backlog.md`).
+3. Run the check, then add a row to the change log in `06-decision-log.md` with the reason.
+4. Commit. The commit is the record of when the change happened.
+
+## 3. Make or change a decision
+
+- **New decision:** add `docs/adr/NNNN-slug.md` (Status, Context, Decision, Consequences, Links) and list it in the index below. Architecture decisions also get an AD-n row in 03 §9.6.
+- **Changed decision:** never edit an accepted ADR's decision in place. Write a new ADR, set the old one's status to "Superseded by ADR-NNNN", and update the index.
+- **Owner decisions:** recorded as O-n in `06-decision-log.md` and, where they shape the architecture, as an ADR.
+
+## 4. Frozen items
+
+- **Gate 1 definitions and thresholds** (04 §6.1–6.3) are frozen. Any change before recruitment needs a decision-log entry with a reason. After recruitment starts, a change opens a new experiment, and its results are never pooled with the old one.
+- **Gate 2 thresholds** are fixed before the held-out evaluation runs.
+
+## 5. Reviews
+
+After substantial changes, run independent read-only reviews against handoff §13 and for security. Record each finding as resolved or explicitly accepted in the decision-log change log.
+
+## 6. Encoding
+
+Files are UTF-8. Windows PowerShell 5.1 reads files as ANSI unless told otherwise, so scripts that rewrite docs must use `-Encoding utf8` on read and write.
+
+## ADR index
+
+| ADR | Title | Status |
+|---|---|---|
+| [0001](adr/0001-mobile-first-app.md) | iOS and Android app; no web front end | Accepted |
+| [0002](adr/0002-flutter-client.md) | Flutter + Riverpod client | Accepted, conditional on D-15 |
+| [0003](adr/0003-modular-monolith.md) | FastAPI modular monolith (AD-1) | Accepted |
+| [0004](adr/0004-postgres-rls-queue.md) | PostgreSQL with RLS and a Postgres job queue | Accepted |
+| [0005](adr/0005-managed-eu-idp.md) | Managed identity provider with EU residency | Accepted; vendor open |
+| [0006](adr/0006-hosting-germany.md) | Host in Germany; OVHcloud or IONOS | Proposed |
+| [0007](adr/0007-pdfium-both-sides.md) | PDFium on the backend and the device | Accepted, verified by D-15 |
+| [0008](adr/0008-no-device-content.md) | No document content on the device | Accepted |
+| [0009](adr/0009-pure-pipeline-stages.md) | Pure pipeline stages (AD-2) | Accepted |
+| [0010](adr/0010-uploads-through-api.md) | Uploads through the API (AD-3) | Accepted |
+| [0011](adr/0011-parse-job-and-fact-cache.md) | Parse job and per-version fact cache (AD-4) | Accepted |
+| [0012](adr/0012-rest-openapi.md) | REST + OpenAPI-generated client (AD-5) | Accepted |
+| [0013](adr/0013-cross-tenant-not-found.md) | Cross-tenant access returns not_found (AD-6) | Accepted |
+| [0014](adr/0014-deterministic-verification.md) | Deterministic evidence verification | Accepted |
+| [0015](adr/0015-share-snapshots.md) | Share snapshots and web share page (AD-7) | Accepted |
+| [0016](adr/0016-push-plus-polling.md) | Push plus polling (AD-8) | Accepted |
+| [0017](adr/0017-llm-port.md) | Model provider behind an injected port (AD-9) | Accepted |
+| [0018](adr/0018-pilot-billing-distribution.md) | Pilot billing and distribution | Accepted |
+| [0019](adr/0019-model-provider.md) | Model provider selection | Proposed |
