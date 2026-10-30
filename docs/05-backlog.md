@@ -7,7 +7,7 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
 | D-2 | Freeze the experiment: niche (O-1), eligibility, revision-event definition and lookback, materiality, useful-outcome test method, commitment definition, decision deadline (04 §6.1) | — | Definitions committed to git before the first recruitment message. **Frozen by the owner on 2026-10-30** (04 §6.1) | 0.5–1 | Pressure to loosen definitions later → changes logged with reason |
-| D-1 | Write the interview guide; recruit and interview 10 eligible organisations in the frozen niche; exploratory interviews logged separately | D-2 | Per-organisation event counts and examples, current method, cost of the last miss, buyer; signal A scored with its denominator | 5–8 | Recruiting is slow; assumes access to the owner's network |
+| D-1 | Write the interview guide and a 3-question screener (team size, country, briefs per month); build a list of about 150–250 studios of 1–10 people from directories; send about 40 personal research-only invites a week (email to UK companies, LinkedIn for sole traders and Germany), plus community posts; interview 10 eligible organisations in the frozen niche (04 §1); exploratory interviews logged separately | D-2 | Per-organisation event counts and examples, current method, cost of the last miss, buyer, channel and prior relationship; signal A scored with its denominator; actual reply and booking rates recorded in week 1 and volume adjusted | 6–10 | Booking rate unverified (assumed 5–12% with no incentive); if fewer than 7 are booked by week 3, fill at most 3 places through Malt, reported separately |
 | D-3 | Collect ≥ 10 permissioned, anonymised or synthetic revision pairs | D-1 | Pairs stored with consent records; no client PII | 2–4 | Clients unwilling to share → synthesise from patterns |
 | D-4 | Draft the pilot offer and data terms (an Art. 28 GDPR processor agreement with deletion at contract end, the freelancer's obligations to their client, disclosure of the AI processor, and the sub-processor list from the data inventory); present the documented offer to all 10 cohort organisations, ideally the budget holder | D-1, D-7 | Signal C scored: offer exposure, price, scope, decision-maker, accepted / rejected / pending / no response by deadline; no real client documents until terms are signed | 2–3 | Terms depend on provider retention (D-7) |
 | D-5 | Recheck competitors (S1–S3) and test the generic-diff and AI-chat baselines on 5 pairs | D-3 | Dated notes; baseline outputs saved | 1–2 | Competitor features change |
@@ -72,10 +72,10 @@ Only work justified by pilot evidence. Screenshot input, formerly I-11 here, mov
 
 | Milestone | Discovery | Implementation |
 |---|---|---|
-| 1 Problem validation | 14.5–25 d | — |
+| 1 Problem validation | 15.5–27 d | — |
 | 2 Prototype | 12–19 d (incl. D-16) | 21–38 d |
 | 3 Thin slice | 4.5–7 d | 24–42 d |
 | 4 Pilot | 1 d + 8 wk part-time | 3–5 d |
-| **Total** | **32–52 d** | **48–85 d** — about 80–137 person-days plus the 8-week pilot (excluding D-14) |
+| **Total** | **33–54 d** | **48–85 d** — about 81–139 person-days plus the 8-week pilot (excluding D-14) |
 
 Main risk: evidence-location fidelity for PDFs and screenshots on a small screen. D-15 tests it before the stack is locked, and Gate 2 measures it. Main assumption: an existing hosted model gives schema-valid extraction at the cost in `03-technical-design.md` §8.

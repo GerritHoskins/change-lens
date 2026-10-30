@@ -7,7 +7,8 @@ Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O]
 - **Cohort (handoff v2 §11) [E].** **10 independent customer organisations** within one niche chosen *before* recruitment (O-1).
   - A freelancer counts as one organisation.
   - Several people at one agency are one organisation: extra qualitative evidence, not extra votes.
-  - Recruit through the owner's network, freelancer communities and agency directories [O].
+  - Recruit by direct, research-only outreach (O-10, changed 2026-10-30): personal invites to about 150–250 studios of 1–10 people listed in Clutch, Webflow Certified Partners, Framer Experts and Dribbble, plus posts in 3–4 communities. Email only UK companies and LLPs; reach sole traders and German studios through LinkedIn or communities (PECR; UWG §7 needs prior consent). No interview incentive. Research panels are excluded, because their terms forbid selling to recruits, so the pilot offer could not be made. Freelance-marketplace hires may fill at most 3 places and are reported separately for signal C [O].
+  - The invite names no product, price or pilot. Signal A questions come before ChangeLens is shown. At the end of the interview, ask permission to send a pilot offer; send it as a separate email 48–72 h later. No reply counts as no. Per organisation, record the channel, any prior relationship, B participation, offer date, response and payment.
 - **Eligibility, frozen before recruitment [A][O]:**
   - Works as a freelancer or at an agency of ≤ 10 people in the chosen niche.
   - Personally responsible for delivering client work against a written brief.
