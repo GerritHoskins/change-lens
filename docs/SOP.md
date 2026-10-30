@@ -16,6 +16,14 @@ The check passes only if:
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
+Mission completion check (fails until independent verification and review closure are recorded):
+
+```powershell
+powershell -NoProfile -File scripts/check-verification.ps1
+```
+
+It passes only if every AC has a row in `docs/verification.md` from a verifier who is not the author, with a result of `pass` or `accepted-gap` and evidence, and every finding in `docs/review-ledger.md` is `resolved` (with a reference) or `accepted` (with a reason).
+
 ## 2. Change a requirement
 
 1. Edit or add the criterion (AC-n) in `02-mvp-spec.md` §7.
@@ -36,7 +44,7 @@ Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
 ## 5. Reviews
 
-After substantial changes, run independent read-only reviews against handoff §13 and for security. Record each finding as resolved or explicitly accepted in the decision-log change log.
+After substantial changes, run independent read-only reviews against handoff §13 and for security. Record each finding in `docs/review-ledger.md` as resolved or explicitly accepted, and record per-AC verification in `docs/verification.md`.
 
 ## 6. Encoding
 

@@ -1,0 +1,31 @@
+Baseline before independent verification and ledger (expected to fail):
+FAIL AC-1 has no independent verification record
+FAIL AC-2 has no independent verification record
+FAIL AC-3 has no independent verification record
+FAIL AC-4 has no independent verification record
+FAIL AC-5 has no independent verification record
+FAIL AC-6 has no independent verification record
+FAIL AC-7 has no independent verification record
+FAIL AC-8 has no independent verification record
+FAIL AC-9 has no independent verification record
+FAIL AC-10 has no independent verification record
+FAIL AC-11 has no independent verification record
+FAIL AC-12 has no independent verification record
+FAIL AC-13 has no independent verification record
+FAIL AC-14 has no independent verification record
+FAIL AC-15 has no independent verification record
+FAIL AC-16 has no independent verification record
+FAIL AC-17 has no independent verification record
+FAIL AC-18 has no independent verification record
+FAIL AC-19 has no independent verification record
+FAIL AC-20 has no independent verification record
+FAIL AC-21 has no independent verification record
+FAIL AC-22 has no independent verification record
+FAIL AC-23 has no independent verification record
+FAIL AC-24 has no independent verification record
+FAIL AC-25 has no independent verification record
+FAIL AC-26 has no independent verification record
+FAIL No review findings recorded in docs/review-ledger.md
+exit=1
+
+Rule probes with temporary rows (then removed): author verifier -> FAIL; result=fail -> FAIL; invalid result -> FAIL; open finding without resolution -> FAIL x2; valid AC-2 and PLAN-1 rows -> no error
