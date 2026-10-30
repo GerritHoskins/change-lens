@@ -119,3 +119,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Interview round 4: O-6 retention until deletion with 30-day backups; O-7 30-day revocable shares; O-8 3 seats; Gate 2 thresholds accepted | Owner interview |
 | 2026-10-30 | Prior-art search (mission t1): reuse candidates recorded from mobile-engineering-intelligence and the LeakLens plan; ruflo and Claude memory empty | Mission t1 |
 | 2026-10-30 | Spec gap check (mission t2): added AC-24 (mobile import paths), AC-25 (no document content on device or in push), AC-26 (auth behaviour); mapped in traceability.md | Mission t2 |
+| 2026-10-30 | Architecture (mission t3): added 03 §9 modules, pipeline stage interfaces, API surface, end-to-end data flow and decisions AD-1 to AD-9 | Mission t3 |
