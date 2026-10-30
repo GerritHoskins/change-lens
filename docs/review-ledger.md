@@ -2,7 +2,7 @@
 
 Every review finding, with its status. Checked by `scripts/check-verification.ps1`.
 
-- **IDs:** `SEC-n` (security review), `PLAN-n` (§13 plan review), `REV-n` (later reviews).
+- **IDs:** `SEC-n` (security review), `PLAN-n` (§13 plan review), `REV-n` (later reviews), `SA-n` (security audit, mission t9). Any uppercase prefix is checked.
 - **Status:** `resolved` (with a commit or section reference) or `accepted` (with a reason).
 
 | ID | Source | Finding | Severity | Status | Resolution |
@@ -55,3 +55,16 @@ Every review finding, with its status. Checked by `scripts/check-verification.ps
 | REV-18 | ac-verifier (note) | INVITE_MEMBER comment allowed the operator; the body required the team owner | low | resolved | P1 body now permits the owner or the operator acting for that owner during the pilot |
 | REV-19 | benchmark t8, 2026-10-30 | If every comparison is a new project (both versions extracted), full-allowance cost is ≈ 35% of target price, above the Gate 4 limit of 30% | medium | accepted | Gate 4 is judged on observed usage, and repeat revisions (the paid differentiator) cost ≈ 27%. I-14 measures the real new-project share; if it exceeds ≈ 50%, lower the allowance or weight first comparisons higher before launch pricing |
 | REV-20 | benchmark t8 | At 1.5x the placeholder model prices, heavy documents exceed the €0.60 Gate 2 limit and the worst case exceeds the €1.50 ceiling | medium | accepted | Prices are placeholders until D-7. After D-7, rerun scripts/cost-model.ps1 with the real prices; if it fails, lower the input cap or re-derive the limits before Gate 2 |
+| SA-1 | sec-auditor (t9), 2026-10-30 | No way to remove a member; GUARD has no membership check, so a removed member keeps full access | high | resolved | t9: 03a P0 active-membership check, P1 REMOVE_MEMBER (IdP session revocation, device tokens, shares); 03 §9.4 route, §6 Tenant isolation; I-8 acceptance |
+| SA-2 | sec-auditor (t9) | Invite is joined silently on first sign-in, so an outsider's uploads land in the inviter's tenant | medium | resolved | t9: 03a P1 explicit "join this team / create my own workspace" choice showing team and owner |
+| SA-3 | sec-auditor (t9) | Linking by verified email lets a second identity bypass MFA set on the first | medium | resolved | t9: 03a P1 no automatic linking; link only inside the IdP after signing in with an existing method and its MFA |
+| SA-4 | sec-auditor (t9) | Failed runs are free and there is no spend cap, so crafted documents allow unbounded cost | medium | resolved | t9: 03 §8 per-tenant monthly spend cap counting failed runs plus global kill switch; 03a P4 check |
+| SA-5 | sec-auditor (t9) | GDPR processor duties unspecified: no Art. 28 DPA, partial sub-processor list, no transfer assessment, no breach-notification timeline | medium | resolved | t9: 03 §6 Real client data gate (Art. 28, sub-processor list from inventory, transfer assessment, notification for Art. 33); D-4, D-9 |
+| SA-6 | sec-auditor (t9) | No account or tenant deletion, no end-of-contract purge, IdP records and Apple tokens kept | medium | resolved | t9: 03a P8 DELETE_TENANT / DELETE_ACCOUNT; 03 §9.4 DELETE /me, DELETE /team; I-13 acceptance |
+| SA-7 | sec-auditor (t9) | Deletion assert sees current objects only; versioning, replicas and VPS snapshots would keep originals | medium | resolved | t9: 03a P8 delete all versions, list_versions assert, versioning off, inventory adds PITR, versions, replicas, snapshots; I-13 |
+| SA-8 | sec-auditor (t9) | Logging allow-list and inventory cover only the backend; mobile crash and analytics can carry content | medium | resolved | t9: 03a P10 CLIENT_TELEMETRY; P8 inventory adds mobile crash and analytics |
+| SA-9 | sec-auditor (t9) | Evidence verified against extracted text, not what a reader sees: covered PDF text, image-drawn text, vision transcripts | medium | resolved | t9: 03a P3 covered-text flag, unextracted image regions make the run partial, screenshot OCR cross-check and "transcribed by AI" label with image region; I-6 fixtures |
+| SA-10 | sec-auditor (t9) | Pre-tenant lookups and operator access undefined; RLS could be bypassed by the owner role | low | resolved | t9: 03 §6 Tenant isolation (FORCE RLS, non-owner app role, SECURITY DEFINER pre-tenant functions, audited content-free operator path) |
+| SA-11 | sec-auditor (t9) | Device at-rest controls unspecified (Keychain sync and reinstall, logout, Android backup, share-intent cache) | low | resolved | t9: 03a P10 DEVICE_STORAGE, first-launch Keychain clear, LOGOUT, Android share-intent cache purge |
+| SA-12 | sec-auditor (t9) | Raw share tokens in access logs; snapshot_json kept after revoke or expiry | low | resolved | t9: 03a P7 path redaction for /s/*, snapshot_json nulled on revoke and daily for expired shares |
+| SA-13 | sec-auditor (t9) | No secrets-management, CI supply-chain or PDFium patch policy | medium | resolved | t9: 03 §6 Secrets and supply chain row (secret store, SHA-pinned actions, lockfile scanning, 7-day PDFium/decoder patch SLA) |

@@ -26,7 +26,7 @@ if (-not (Test-Path $vfile)) { $errors += 'Missing docs/verification.md' } else 
 # 2. Review ledger: | ID | Source | Finding | Severity | Status | Resolution |
 $lfile = Join-Path $docs 'review-ledger.md'
 if (-not (Test-Path $lfile)) { $errors += 'Missing docs/review-ledger.md' } else {
-    $lrows = Get-Content $lfile | Where-Object { $_ -match '^\| (SEC|PLAN|REV)-\d+ \|' }
+    $lrows = Get-Content $lfile | Where-Object { $_ -match '^\| [A-Z]+-\d+ \|' }
     if (-not $lrows) { $errors += 'No review findings recorded in docs/review-ledger.md' }
     foreach ($r in $lrows) {
         $c = ($r -split '\|') | ForEach-Object { $_.Trim() }
