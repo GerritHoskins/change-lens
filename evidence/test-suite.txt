@@ -1,0 +1,43 @@
+# Full test suite run (mission t11)
+commit: d1ff480  worktree clean: yes
+date: 2026-10-30T13:35:26Z
+shell: Windows PowerShell 5.1.26100.9711
+
+## scripts/check-trace.ps1
+PASS 26 acceptance criteria mapped to 32 backlog tasks; 9 architecture decisions have ADRs
+exit=0
+
+## scripts/check-verification.ps1
+PASS 26 acceptance criteria independently verified; 77 review findings closed
+exit=0
+
+## scripts/cost-model.ps1
+Scenario                               Cost EUR  Baseline    Gate  Result
+Typical (3k words, earlier cached)        0,130     0,130    0,20  ok
+First comparison (both extracted)         0,172     0,172    0,20  ok
+Heavy (20 pages, at input cap)            0,522     0,522    0,60  ok
+Worst case (heavy, all retried)           1,260     1,260    1,50  ok
+Screenshot vision parse (2 passes)        0,026       n/a    0,13  ok
+
+Unit-economics sensitivity at target price (Gate 4 limit 30%, judged on real usage):
+  Individual full allowance, follow-up revisions:  27,2%   every comparison a new project:  35,8%
+  Team       full allowance, follow-up revisions:  26,6%   every comparison a new project:  35,0%
+PASS cost model no worse than baseline 14748b6 and within cost gates
+exit=0
+
+SUITE RESULT: PASS (3/3 green)
+
+## Negative controls (each must FAIL; files restored from git afterwards)
+- check-trace with the AC-14 row removed from traceability.md:
+FAIL AC-14 not mapped in traceability.md
+  exit=1
+- check-verification with AC-1 verified by its author:
+FAIL AC-1 verifier is missing or is the author
+  exit=1
+- cost-model at 1.5x placeholder prices:
+FAIL First comparison (both extracted) exceeds gate 0.2
+FAIL Heavy (20 pages, at input cap) exceeds gate 0.6
+FAIL Worst case (heavy, all retried) exceeds gate 1.5
+  exit=1
+
+worktree clean after controls: yes
