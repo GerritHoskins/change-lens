@@ -63,6 +63,7 @@ PARK(apple_refresh, subject):                                # whenever P1 retur
   if apple_refresh: store it encrypted in apple_token_park under subject, expiring in 1 h
   # take_parked(subject) returns and removes it. On expiry: call Apple /auth/revoke with it, then delete it,
   # so no Apple authorization outlives an abandoned sign-in (AR-5)  [AC-22]
+  # A failed revoke (here or in P8) is retried with backoff and the token kept until Apple confirms (AR-6).
 
 INVITE_MEMBER(email):
   require caller is the team owner, or the operator acting for that owner during the pilot (I-15)  [AC-19, AC-26]
@@ -348,7 +349,8 @@ DELETE_PROJECT(project_id):                                   # GUARD first
 
 DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
   account (the user deleting themselves; CR-7): set their membership inactive and free the seat, revoke IdP sessions,
-           revoke every share they created; call Apple /auth/revoke with the stored Apple refresh token (AR-1: first,
+           revoke every share they created; call Apple /auth/revoke with the stored Apple refresh token, retried until it
+           succeeds (AR-1: first,
            while the row still holds it); then replace the user row with a tombstone ID (apple_refresh_token_enc ← null),
            delete the IdP user and all linked identities, delete device tokens  [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either

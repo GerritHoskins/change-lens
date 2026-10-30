@@ -1,20 +1,5 @@
-# CI run (mission t12)
-commit base: d692b61 + staged CI files; date: 2026-10-30T13:37:43Z
-
-$ powershell -NoProfile -File scripts/ci.ps1
-PASS build: 36 files within size, UTF-8, link and secret checks
-PASS 26 acceptance criteria mapped to 32 backlog tasks; 9 architecture decisions have ADRs
-PASS 26 acceptance criteria independently verified; 77 review findings closed
+PASS build: 37 files within size, UTF-8, link and secret checks
+PASS 26 acceptance criteria mapped to 34 backlog tasks; 9 architecture decisions have ADRs
+PASS 26 acceptance criteria independently verified; 84 review findings closed
 PASS cost model no worse than baseline 14748b6 and within cost gates
 CI PASS
-exit=0
-
-Negative controls (temporary tracked file, removed afterwards), each gave CI FAIL:
-- broken relative link -> FAIL BUILD ... links to missing missing.md
-- AWS-style key -> FAIL BUILD possible secret
-- mojibake -> FAIL BUILD ... contains mojibake (UTF-8 read as ANSI)
-- invalid byte 0xFF -> FAIL BUILD ... is not valid UTF-8
-- 501-line file -> FAIL BUILD ... has 501 lines (limit 500)
-- .env file -> FAIL BUILD env file committed: .env
-
-Not run: the GitHub Actions workflow itself. The repo has no remote (local only by owner decision), and act/gh are not installed. The workflow calls the same scripts/ci.ps1 under Windows PowerShell on windows-latest.
