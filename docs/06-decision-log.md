@@ -74,7 +74,7 @@ Plan section: §13.6. Every entry is tagged:
 | O-1 | Customer niche | Fix before recruitment (D-2); proposed: web/digital and design freelancers and studios | D-2 |
 | O-2 | Launch language and market | English, EU/UK | D-1 |
 | O-3 | First production input formats | **Decided 2026-10-30:** text, PDF and screenshots, via paste, picker, camera and share sheet | — |
-| O-4 | Stack and hosting region | **Directed 2026-10-30:** Flutter + Riverpod, FastAPI + PostgreSQL, Python worker; final after D-15. Still open: auth approach and hosting region (EU proposed) | D-8 |
+| O-4 | Stack, auth and hosting | **Decided 2026-10-30:** Flutter + FastAPI stack (final after D-15); managed IdP with EU residency, using email one-time code + Google + Sign in with Apple; Germany region; Hetzner excluded; minimum spec in 03 §1.2. **Open:** IdP vendor and OVHcloud vs IONOS, both priced in D-8 | D-8 |
 | O-5 | Model provider and processing location | Provider with a no-training, zero or short retention plan in the EU/UK; pick from the D-7 comparison | I-2 |
 | O-6 | Storage and retention policy | Until deletion; 30-day backup purge | I-13 |
 | O-7 | Sharing mechanism and default expiry | Revocable snapshot link, 30 days | I-12 |
@@ -91,3 +91,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Applied security review (2 high, 6 medium, 1 low) and plan review (1 high, 9 medium, rest low) findings; added AC-23; moved D-7 to M1 and I-11 to post-pilot; unit-economics gate judged at target prices | Reviewer findings |
 | 2026-10-30 | Adopted handoff v2 Gate 1 rubric; added 04 §6.1 definitions, D-13 operator-assisted usefulness test and D-14 bounded retest; niche fixed before recruitment (D-2 now precedes D-1); owner kept the original Gate 1 values, now superseded by v2 | Handoff v2 |
 | 2026-10-30 | Mobile-first owner decision: Flutter + FastAPI stack (03 §1.1); share sheet and screenshots moved into the MVP (I-1b, I-16); added D-15 mobile proof of concept and I-17 pilot distribution; same PDF engine (PDFium) on device and backend; no device content cache; read-only web share page kept for recipients | Owner direction |
+| 2026-10-30 | O-4 interview: managed EU IdP; email one-time code + Google + Sign in with Apple; Germany; Hetzner excluded; OVHcloud vs IONOS shortlist; minimum hosting spec (03 §1.2) | Owner interview |
