@@ -68,5 +68,4 @@ Plan section: §13.6. Every entry is tagged:
 | Date | Change | Reason |
 |---|---|---|
 | 2026-10-30 | Initial plan | Handoff `a8280b9` |
-
 | 2026-10-30 | Applied security review (2 high, 6 medium, 1 low) and plan review (1 high, 9 medium, rest low) findings; added AC-23; moved D-7 to M1 and I-11 to post-pilot; unit-economics gate judged at target prices | Reviewer findings |
