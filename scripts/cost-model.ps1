@@ -2,8 +2,9 @@
 # with the reviewed baseline (commit 14748b6) and the cost gates. Fails (exit 1) if any scenario is
 # worse than its baseline or breaks a gate. The baseline is stored as token counts and priced at the
 # same rates as the current design, so a price change alone tests only the gates (CR-8).
-# Prices are placeholders until D-7. See docs/SOP.md.
-param([double]$PIn = 3, [double]$POut = 15)   # EUR per million input / output tokens
+# Default prices: Claude Sonnet 5.5 on AWS Bedrock, EU geo profile from eu-central-1 (D-7, 2026-10-30):
+# USD 2.20 / 11.00 at ECB EUR 1 = USD 1.1172. The old placeholders were -PIn 3 -POut 15. See docs/SOP.md.
+param([double]$PIn = 1.97, [double]$POut = 9.85, [double]$TokenFactor = 1.3)   # EUR per million tokens; sensitivity token multiplier
 $ErrorActionPreference = 'Stop'
 
 function Cost($in, $out, $retry) { (($in * $PIn) + ($out * $POut)) / 1e6 * (1 + $retry) }
@@ -40,6 +41,15 @@ Write-Host 'Unit-economics sensitivity at target price (Gate 4 limit 30%, judged
 foreach ($p in @(@{ Plan = 'Individual'; Units = 25; Price = 12 }, @{ Plan = 'Team'; Units = 100; Price = 49 })) {
     $a = $p.Units * $typ / $p.Price * 100; $b = $p.Units * $first / $p.Price * 100
     Write-Host ('  {0,-10} full allowance, follow-up revisions: {1,5:N1}%   every comparison a new project: {2,5:N1}%' -f $p.Plan, $a, $b)
+}
+
+# Tokenizer sensitivity (informational): token estimates in 03 §8 were not measured with Claude's
+# tokenizer, which counts up to ~30% more tokens for the same text (D-7).
+Write-Host ''
+Write-Host ("Tokenizer sensitivity: tokens x{0} (informational, same gates):" -f $TokenFactor)
+foreach ($s in $scenarios) {
+    $t = [math]::Round((Cost ($s.In * 1000 * $TokenFactor) ($s.Out * 1000 * $TokenFactor) $s.Retry), 3)
+    Write-Host ('  {0,-38} {1,8:N3}  {2}' -f $s.Name, $t, $(if ($t -le $s.Gate) { 'within gate' } else { 'EXCEEDS gate' }))
 }
 
 if ($fail) { $fail | ForEach-Object { Write-Host "FAIL $_" }; exit 1 }
