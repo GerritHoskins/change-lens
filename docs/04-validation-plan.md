@@ -114,7 +114,7 @@ A signal is **inconclusive** if its minimum evidence is incomplete: fewer than 1
 
 | Result | Decision | Authorises |
 |---|---|---|
-| 3 of 3 pass | **Proceed to a limited paid pilot** | Milestone 2 and onward, with the pilot bounded by Gate 4. Not a full platform build |
+| 3 of 3 pass | **Proceed to a limited paid pilot** | First an operator-assisted paid pilot with no app (D-16), starting on the committed dates; Milestone 2 runs in parallel, and the app pilot (Milestone 4) is bounded by Gate 4. Not a full platform build (O-12) |
 | 2 of 3 pass | **Narrow and retest once** (D-14) | Change one explicit hypothesis tied to the failed signal (v2 §11 guidance) and run a single predeclared experiment |
 | 0–1 of 3 pass | **Stop or reposition** this niche/offer hypothesis | Record what failed and what a different hypothesis would need to show |
 

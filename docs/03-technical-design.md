@@ -30,7 +30,7 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Database / queue | PostgreSQL with row-level security; Postgres-backed job queue (for example `procrastinate`) | RLS is set per request and per job with `SET LOCAL app.tenant_id` |
 | Object storage | S3-compatible, Germany, same provider as hosting | Private bucket; short-lived signed URLs |
 | Auth | **Managed identity provider with EU (Germany preferred) data residency** [O, decided 2026-10-30]. Sign-in by email one-time code, Google and Sign in with Apple (Apple requires the last whenever Google is offered). MFA, refresh-token rotation and session revocation are handled by the provider; FastAPI only verifies JWTs. Vendor chosen in D-8 (candidates: Auth0 EU, AWS Cognito Frankfurt, Supabase Auth EU) after checking the DPA, sub-processors and region [U] | Linking accounts across the three sign-in methods by verified email must not merge tenants by accident |
-| Hosting | **Germany** [O, decided 2026-10-30]; Hetzner excluded by the owner. Shortlist OVHcloud and IONOS Cloud; D-8 prices the bundle below at both and picks the cheaper [U] | See 1.2 |
+| Hosting | **Germany** [O, decided 2026-10-30]; Hetzner excluded by the owner. **IONOS** (Germany), chosen and provisioned by the owner on 2026-10-30; D-8 checks it against the minimum spec below, PITR retention and the IONOS DPA | See 1.2 |
 | Mobile CI | GitHub Actions macOS runners or Codemagic for iOS builds | Not on the application server; may add CI cost |
 
 ### 1.2 Minimum hosting spec (pilot: 5–10 accounts, ≤ ~1,000 comparisons per month, 2–3 concurrent)
