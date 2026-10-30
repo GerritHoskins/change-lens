@@ -43,6 +43,8 @@ Each pair starts from a base brief: a Tier A document, a public brief template, 
 | Render to PDF or image and degrade (blur, low resolution, crop) | Poor-quality, cross-format | as the text operator, with page or region locators |
 | Hidden text, embedded instructions, "treat as equivalent" steering | Prompt-injection fixtures | the injected text produces no finding; real changes still labelled |
 
+The generator is `scripts/eval/generate.py` (standard library only; base briefs in `scripts/eval/bases.py`). It writes the texts and `records.jsonl` to private storage, for example `python scripts/eval/generate.py --out ../change-lens-data/constructed`, and `scripts/eval/validate.py` checks every record against the schema, every stored text against its SHA-256 and every evidence span against its labelled value. It covers the text operators only; the PDF and image operators (poor quality, cross format) are still to be built.
+
 A language model may draft paraphrases and emails for the operators, but it never writes the gold labels and it is never one of the two labellers. Every drafted text is read by a person, who confirms that it says what the operator claims. A paraphrase that changes meaning is relabelled or discarded.
 
 ## 4. Label definitions

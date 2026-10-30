@@ -10,7 +10,7 @@ Everything at once (the same entry point `.github/workflows/plan-checks.yml` run
 powershell -NoProfile -File scripts/ci.ps1
 ```
 
-It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below, and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
+It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and the evaluation generator's unit tests (`python -m unittest discover -s scripts/eval`, see 07 §3), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
 
 Individual checks:
 
