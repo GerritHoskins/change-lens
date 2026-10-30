@@ -48,5 +48,14 @@ foreach ($s in 'check-trace', 'check-verification', 'cost-model') {
     if ($LASTEXITCODE -ne 0) { $errors += "TEST $s exit $LASTEXITCODE" }
 }
 
+# Evaluation generator tests (docs/07-eval-dataset.md, D-6); standard library only
+$env:PYTHONDONTWRITEBYTECODE = '1'
+$ErrorActionPreference = 'Continue'   # unittest reports on stderr; PowerShell 5.1 would treat that as an error
+$out = & python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') 2>&1 | ForEach-Object { "$_" }
+$code = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
+Write-Host "eval unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
+if ($code -ne 0) { $errors += "TEST eval unittest exit $code" }
+
 if ($errors) { Write-Host "CI FAIL ($($errors.Count) problems)"; exit 1 }
 Write-Host 'CI PASS'
