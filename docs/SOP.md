@@ -76,7 +76,7 @@ Files are UTF-8. Windows PowerShell 5.1 reads files as ANSI unless told otherwis
 | [0002](adr/0002-flutter-client.md) | Flutter + Riverpod client | Accepted, conditional on D-15 |
 | [0003](adr/0003-modular-monolith.md) | FastAPI modular monolith (AD-1) | Accepted |
 | [0004](adr/0004-postgres-rls-queue.md) | PostgreSQL with RLS and a Postgres job queue | Accepted |
-| [0005](adr/0005-managed-eu-idp.md) | Managed identity provider with EU residency | Accepted; vendor open |
+| [0005](adr/0005-managed-eu-idp.md) | Managed identity provider with EU residency | Superseded by 0020 |
 | [0006](adr/0006-hosting-germany.md) | Host in Germany on IONOS | Accepted |
 | [0007](adr/0007-pdfium-both-sides.md) | PDFium on the backend and the device | Accepted, verified by D-15 |
 | [0008](adr/0008-no-device-content.md) | No document content on the device | Accepted |
@@ -91,3 +91,4 @@ Files are UTF-8. Windows PowerShell 5.1 reads files as ANSI unless told otherwis
 | [0017](adr/0017-llm-port.md) | Model provider behind an injected port (AD-9) | Accepted |
 | [0018](adr/0018-pilot-billing-distribution.md) | Pilot billing and distribution | Accepted |
 | [0019](adr/0019-model-provider.md) | Model provider selection | Proposed |
+| [0020](adr/0020-self-hosted-logto.md) | Self-hosted Logto on IONOS for sign-in | Accepted |

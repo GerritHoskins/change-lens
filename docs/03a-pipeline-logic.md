@@ -25,12 +25,17 @@ GUARD(request):
 ```
 ON_SIGN_IN(idp_identity):                                    # email code | Google | Apple  [AC-26]
   if idp_identity.method not in {email_otp, google, apple}: reject(unsupported_method)
+  if idp_identity.method = apple:                            # native flow (ADR-0020)
+     apple_refresh ← apple.exchange(authorization_code)       # server-side; client secret from the secret store
+     store encrypt(apple_refresh) on the user                 # needed to revoke at deletion (Apple rule)  [AC-22]
   user ← find_user(idp_identity.subject)
   if user is none:
      existing ← find_user_by_verified_email(idp_identity.email)
      if existing and idp_identity.email_verified:
         # No silent linking (SA-3): the user first signs in with an existing method and passes
-        # its MFA, then the IdP links the new identity. A matching email alone never links.
+        # its MFA, then the link is made: by Logto's link prompt only if it enforces this (checked in D-8),
+        # otherwise by the backend through the Logto Management API after that sign-in. Automatic linking is off.
+        # A matching email alone never links.
         # The IdP refuses to link an identity already mapped to a different app user (no orphaned tenant).
         reject(link_required, methods = existing.methods)    # app shows "sign in with your usual method to link"
      elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
@@ -330,7 +335,8 @@ DELETE_PROJECT(project_id):                                   # GUARD first
 DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
   account (the user deleting themselves; CR-7): set their membership inactive and free the seat, revoke IdP sessions,
            revoke every share they created, then replace the user row with a tombstone ID, delete the IdP user and all linked identities,
-           revoke the Sign in with Apple token, delete device tokens          [AC-22, AC-26]
+           call Apple /auth/revoke with the stored Apple refresh token (before deleting the IdP user),
+           delete device tokens                                             [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
   tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,
