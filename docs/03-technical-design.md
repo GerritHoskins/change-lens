@@ -270,6 +270,8 @@ Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`,
 
 ### 9.6 Architecture decisions
 
+Each AD-n has an ADR in `docs/adr/` (index and change process in `docs/SOP.md`). `scripts/check-trace.ps1` fails if one is missing.
+
 | ID | Decision | Alternatives rejected | Why |
 |---|---|---|---|
 | AD-1 | Modular monolith: one Python package, two process types (`api`, `worker`) | Microservices; serverless functions | Pilot scale; one deployment and one database to secure (§1) |

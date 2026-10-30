@@ -1,5 +1,6 @@
 # Fails (exit 1) if any acceptance criterion is unmapped, maps to a missing backlog task,
-# or a required §13 plan document is missing.
+# a required §13 plan document is missing, or an architecture decision (AD-n) has no ADR.
+# How to run and change the plan: docs/SOP.md. Decision records: docs/adr/ (index in docs/SOP.md).
 $ErrorActionPreference = 'Stop'
 $docs = Join-Path $PSScriptRoot '..\docs'
 $errors = @()
@@ -30,5 +31,13 @@ foreach ($ac in $acs) {
     foreach ($t in $refs) { if ($tasks -notcontains $t) { $errors += "$ac references unknown task $t" } }
 }
 
+$design = Get-Content (Join-Path $docs '03-technical-design.md') -Raw
+$adrDir = Join-Path $docs 'adr'
+$adrText = if (Test-Path $adrDir) { (Get-ChildItem $adrDir -Filter '*.md' | Get-Content -Raw) -join "`n" } else { '' }
+$decisions = [regex]::Matches($design, '(?m)^\| (AD-\d+) \|') | ForEach-Object { $_.Groups[1].Value }
+foreach ($ad in $decisions) {
+    if ($adrText -notmatch "\($ad\)") { $errors += "$ad has no ADR in docs/adr" }
+}
+
 if ($errors) { $errors | ForEach-Object { Write-Host "FAIL $_" }; exit 1 }
-Write-Host "PASS $($acs.Count) acceptance criteria mapped to $($tasks.Count) backlog tasks"
+Write-Host "PASS $($acs.Count) acceptance criteria mapped to $($tasks.Count) backlog tasks; $($decisions.Count) architecture decisions have ADRs"

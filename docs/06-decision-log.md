@@ -120,3 +120,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Prior-art search (mission t1): reuse candidates recorded from mobile-engineering-intelligence and the LeakLens plan; ruflo and Claude memory empty | Mission t1 |
 | 2026-10-30 | Spec gap check (mission t2): added AC-24 (mobile import paths), AC-25 (no document content on device or in push), AC-26 (auth behaviour); mapped in traceability.md | Mission t2 |
 | 2026-10-30 | Architecture (mission t3): added 03 §9 modules, pipeline stage interfaces, API surface, end-to-end data flow and decisions AD-1 to AD-9 | Mission t3 |
+| 2026-10-30 | ADRs and SOP (mission t4): 19 ADRs in docs/adr (AD-1 to AD-9 plus owner and security decisions; 0006 and 0019 Proposed); docs/SOP.md; check-trace.ps1 links the SOP and fails on any AD-n without an ADR | Mission t4 |
