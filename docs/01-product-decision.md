@@ -17,7 +17,7 @@ Test one question before building a product: **is client-brief change tracking u
 | Launch language and market | English-language briefs; EU/UK buyers; prices in EUR excluding VAT | [A], [O] |
 | Buyer | The freelancer themself; at an agency, the owner or account/project lead | [A], [U] |
 
-The niche should be chosen by evidence, not taste. Discovery task D-2 (see `05-backlog.md`) compares the niches on revision frequency and cost of missed changes before recruiting continues.
+Under handoff v2, the niche is **fixed before recruitment** (D-2 in `05-backlog.md`), and only that niche's 10-organisation cohort counts toward Gate 1. Fallback-niche interviews are exploratory, recorded separately and never pooled. If Gate 1 points to a different niche, that niche is tested as a new hypothesis with a new cohort.
 
 ## Job to be done
 

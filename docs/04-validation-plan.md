@@ -4,9 +4,19 @@ Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 ## 1. Customer research (problem validation)
 
-- **Who.** 12–15 interviews from the first niche (`01-product-decision.md`), plus 5 from a fallback niche for contrast. Recruit through the owner's network, freelancer communities and agency directories [O].
-- **What to learn (per interviewee):**
-  - revisions per active project per month
+- **Cohort (handoff v2 §11) [E].** **10 independent customer organisations** within one niche chosen *before* recruitment (O-1).
+  - A freelancer counts as one organisation.
+  - Several people at one agency are one organisation: extra qualitative evidence, not extra votes.
+  - Recruit through the owner's network, freelancer communities and agency directories [O].
+- **Eligibility, frozen before recruitment [A][O]:**
+  - Works as a freelancer or at an agency of ≤ 10 people in the chosen niche.
+  - Personally responsible for delivering client work against a written brief.
+  - Has had at least one active client project in the last 90 days.
+  - Screening must not ask about revision pain, so the cohort isn't pre-selected for the problem.
+  - Eligible respondents with few revisions or little pain stay in the denominator.
+- **Exploratory interviews** in other niches, or extra people at the same agency, are recorded separately. They are never pooled into the gate.
+- **What to learn (per organisation):**
+  - qualifying revision events in the last 90 days (§6.1), with concrete examples where possible
   - the channels revisions arrive through (document, email, chat, screenshot)
   - how they compare versions today, and how long it takes
   - the last time a missed change caused rework, and roughly what it cost in hours or money
@@ -73,15 +83,51 @@ Labels are produced by two people working independently, with disagreements reso
 
 These must be agreed and committed before the held-out evaluation and the pilot start. Changing them afterwards must be logged in `06-decision-log.md` with a reason.
 
-### Gate 1 — Problem validation
+### Gate 1 — Problem validation (three-signal rubric, handoff v2 §11)
 
-<!-- TODO(human): confirm or replace the proposed commercial thresholds below (tracked as O-9 in 06-decision-log.md). -->
+The thresholds are the v2 proposed defaults [E]. They are experiment defaults, not market benchmarks. The definitions in §6.1 are this plan's proposals [A][O]. All of it must be frozen and committed before recruitment starts.
 
-| Signal | Go if | Tag |
+#### 6.1 Frozen definitions [A][O]
+
+| Term | Definition |
+|---|---|
+| Qualifying revision event | A client-originated change, received in writing after work on the project started, to deliverables, quantities, deadlines, responsibilities or approval wording. It can be a revised brief or a written partial update (email, message, document). Internal edits, verbal-only changes and purely cosmetic edits don't count. |
+| Revision-frequency criterion | **≥ 3 qualifying events in the last 90 days** across the organisation's client projects, with **≥ 2 described concretely** (approximate date, channel, what changed). Rationale: about one per month is the least use that makes a monthly subscription feel worth it. A lower rate belongs to a separately tested occasional-use hypothesis. |
+| Material change (signal B) | A change to deliverables, quantities, deadlines, responsibilities or approval wording that would alter the work delivered or its acceptance. Two people label it before the test. |
+| Useful outcome (signal B) | Either the ChangeLens report surfaces a material change the participant's normal process missed, or total review-and-correction time is ≥ 30% lower with no additional material errors. |
+| Valid buying commitment (signal C) | Written acceptance of a specific pilot offer naming budget holder, price, scope and a start date or window, **plus** a concrete next step (permitted documents supplied, or onboarding booked). "Would probably pay", waitlist sign-ups, free-trial interest and conditional interest do not count. Payments, deposits and unpaid written commitments are reported separately. |
+| Decision deadline | 14 days after the offer is presented. No response by then is recorded as *no commitment*. A response still pending inside its window is *pending* and is not counted as a pass. |
+
+#### 6.2 Signals
+
+| Signal | Pass if | Evidence |
 |---|---|---|
-| Recurring need | ≥ 60% of interviewees in the niche get ≥ 2 brief revisions per active project per month | [A][O] |
-| Cost of misses | ≥ 50% describe a missed-change incident in the last 6 months that cost ≥ 2 hours | [A][O] |
-| Buying decision | ≥ 3 of ≥ 10 qualified prospects commit to paying for the pilot | [A][O] |
+| **A. Recurring need** | ≥ **6 of 10** cohort organisations meet the revision-frequency criterion | Interview event counts and examples (D-1) |
+| **B. Observed usefulness** | ≥ **3 of 5** cohort organisations show a useful outcome against their normal process | Operator-assisted comparison test (D-13). The 5 participants are chosen before any outcome is seen. Refusals, unusable inputs and failures are reported |
+| **C. Buying commitment** | ≥ **2 of 10** accept the pilot offer. **3 of 10** is the strong target | Documented offer made to all 10 (D-4), with exposure, price, scope, decision-maker role and outcome recorded |
+
+Denominators are always reported. Missing evidence is never counted as a pass or dropped. The three signals can come from the same customers, so three passes are not three independent confirmations, and they are not proof of product–market fit.
+
+#### 6.3 Verdict
+
+A signal is **inconclusive** if its minimum evidence is incomplete: fewer than 10 organisations assessed for A or C, or fewer than 5 completed tests for B. The verdict is not issued while any signal is inconclusive.
+
+| Result | Decision | Authorises |
+|---|---|---|
+| 3 of 3 pass | **Proceed to a limited paid pilot** | Milestone 2 and onward, with the pilot bounded by Gate 4. Not a full platform build |
+| 2 of 3 pass | **Narrow and retest once** (D-14) | Change one explicit hypothesis tied to the failed signal (v2 §11 guidance) and run a single predeclared experiment |
+| 0–1 of 3 pass | **Stop or reposition** this niche/offer hypothesis | Record what failed and what a different hypothesis would need to show |
+
+**Retest budget (D-14):**
+- One experiment, with its end date, success condition and budget set before it starts.
+- Budget: ≤ 10 new independent organisations, ≤ 6 weeks and ≤ 8 person-days [A][O].
+- Reused participants may join product retests but are not counted as new demand observations.
+- Original and retest results are reported separately and never pooled.
+- If the same signal fails again: stop or reposition.
+
+**Non-compensable safeguards (all gates).** No commercial result overrides unresolved privacy exposure, fabricated source evidence or systematic material comparison errors. Any of these blocks use of live client material until corrected.
+
+Two written commitments justify only a bounded, possibly operator-assisted pilot. Gate 4 still requires actual payment, repeat use, an acceptable correction burden and viable costs.
 
 ### Gate 2 — Comparison prototype (held-out set)
 

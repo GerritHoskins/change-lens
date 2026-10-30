@@ -6,14 +6,16 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| D-1 | Write the interview guide; recruit and run 12–15 niche interviews plus 5 fallback interviews | — | Notes for each interview, with revision frequency, channels, current method, cost of the last miss, and the buyer | 6–10 | Recruiting is slow; assumes access to the owner's network |
-| D-2 | Pick the niche by scoring interview evidence | D-1 | One niche selected, with evidence recorded in the decision log | 0.5–1 | Evidence may be split across niches → choose narrower |
+| D-2 | Freeze the experiment: niche (O-1), eligibility, revision-event definition and lookback, materiality, useful-outcome test method, commitment definition, decision deadline (04 §6.1) | — | Definitions committed to git before the first recruitment message | 0.5–1 | Pressure to loosen definitions later → changes logged with reason |
+| D-1 | Write the interview guide; recruit and interview 10 eligible organisations in the frozen niche; exploratory interviews logged separately | D-2 | Per-organisation event counts and examples, current method, cost of the last miss, buyer; signal A scored with its denominator | 5–8 | Recruiting is slow; assumes access to the owner's network |
 | D-3 | Collect ≥ 10 permissioned, anonymised or synthetic revision pairs | D-1 | Pairs stored with consent records; no client PII | 2–4 | Clients unwilling to share → synthesise from patterns |
-| D-4 | Draft the pilot offer and data terms (including the freelancer's obligations to their client and disclosure of the AI processor); sound out ≥ 10 prospects | D-1, D-7 | Commitment count recorded against Gate 1; no real client documents until terms are signed | 2–3 | Terms depend on provider retention (D-7) |
+| D-4 | Draft the pilot offer and data terms (including the freelancer's obligations to their client and disclosure of the AI processor); present the documented offer to all 10 cohort organisations, ideally the budget holder | D-1, D-7 | Signal C scored: offer exposure, price, scope, decision-maker, accepted / rejected / pending / no response by deadline; no real client documents until terms are signed | 2–3 | Terms depend on provider retention (D-7) |
 | D-5 | Recheck competitors (S1–S3) and test the generic-diff and AI-chat baselines on 5 pairs | D-3 | Dated notes; baseline outputs saved | 1–2 | Competitor features change |
 | D-7 | Shortlist 2 model providers; verify retention (including abuse-monitoring retention), training use, region, DPA, sub-processors and pricing | — | Written comparison in the decision log; placeholder cost inputs replaced | 1–2 | Terms may not support EU processing |
+| D-13 | Operator-assisted usefulness test (signal B): with 5 pre-selected cohort organisations, run one permissioned, redacted real pair each. The participant uses their normal process. The operator produces a report in the 02 §4 format using a fixed general-purpose-model prompt plus manual evidence checking. Both are compared against frozen material-change labels | D-2, D-3, D-7 | Signal B scored with its denominator; refusals, unusable inputs and failures reported; method and prompt fixed before the first session | 3–5 | Tests the report *format and workflow*, not the eventual pipeline's accuracy; that is Gate 2's job [A] |
+| D-14 | Bounded retest (only on a 2-of-3 verdict): one predeclared experiment that changes one hypothesis | Gate 1 verdict | Fixed end date, success condition and budget (04 §6.3) recorded before start; results reported separately | ≤ 8 (not in totals) | Temptation to pool samples |
 
-**Gate 1** (see `04-validation-plan.md` §6).
+**Gate 1** (three-signal rubric, `04-validation-plan.md` §6). Only a 3-of-3 verdict opens Milestone 2.
 
 ## Milestone 2 — Comparison prototype (architecture option A)
 
@@ -66,10 +68,10 @@ Plan section: §13.5. Effort is in person-days for one experienced developer or 
 
 | Milestone | Discovery | Implementation |
 |---|---|---|
-| 1 Problem validation | 12.5–22 d | — |
+| 1 Problem validation | 14.5–25 d | — |
 | 2 Prototype | 5–8 d | 17–30 d |
 | 3 Thin slice | 4–6.5 d | 15–24 d |
 | 4 Pilot | 1 d + 8 wk part-time | 3–5 d |
-| **Total** | **22.5–37.5 d** | **35–59 d** — about 58–97 person-days plus the 8-week pilot |
+| **Total** | **24.5–40.5 d** | **35–59 d** — about 60–100 person-days plus the 8-week pilot (excluding D-14 and I-11) |
 
 Main risk: evidence-location fidelity for PDFs and screenshots, which is why screenshots are gated (I-11). Main assumption: an existing hosted model gives schema-valid extraction at the cost in `03-technical-design.md` §8.
