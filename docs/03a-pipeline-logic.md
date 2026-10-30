@@ -26,8 +26,14 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
      existing ← find_user_by_verified_email(idp_identity.email)
      if existing and idp_identity.email_verified:
         link(existing, idp_identity)                         # same user, same tenant
+     elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
+          and invite not expired and team.seats_used < team.seats:   # 3 seats (O-8)
+        user ← create_user(invite.tenant); consume(invite)   # joins only the tenant that invited this email  [AC-26]
      else:
         user ← create_user(new_tenant())                     # never attach to someone else's tenant  [AC-26]
+
+INVITE_MEMBER(email):                                         # team owner, or the operator during the pilot (I-15)
+  require caller is the team owner; create invite(tenant, email, expires = now + 7 days)  [AC-19, AC-26]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
 ```
@@ -300,6 +306,15 @@ ON_EXCEPTION(e):
   error_tracker.send(type, code, stack_frames_without_locals,
                      request_body=none, default_pii=off)      [AC-23]
 
+METRIC(name, value, labels):                                  # metrics use the same allow-list
+  labels ← keep_only(labels, ALLOW)                           [AC-23]
+
+TRACING_CONFIG (OpenTelemetry, incl. the setup reused from mobile-engineering-intelligence):
+  span attributes ← keep_only(attributes, ALLOW)              # span processor drops the rest  [AC-23]
+  http instrumentation: capture request/response bodies = off; headers = none   [AC-23]
+  db instrumentation: capture statement parameters = off      # SQL parameters can contain text  [AC-23]
+  llm calls: record token counts and cost only, never prompts or completions    [AC-23]
+
 NOTIFY(comparison):
   push(device_tokens(owner), title="Comparison ready", data={comparison_id})
   # never document text or finding content                    [AC-25]
@@ -308,6 +323,8 @@ NOTIFY(comparison):
 ## P10. Mobile client rules
 
 ```
+ON_APP_BACKGROUNDING:
+  show a privacy cover before the OS takes its app-switcher snapshot          [AC-25]
 ON_APP_START:
   restore tokens from Keychain / Keystore only               [AC-25]
   purge(app_group_container, picker_cache, camera_temp)      # leftovers from interrupted imports  [AC-25]
