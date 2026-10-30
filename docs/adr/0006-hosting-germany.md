@@ -1,6 +1,6 @@
-# ADR 0006: Host in Germany; OVHcloud or IONOS
+# ADR 0006: Host in Germany on IONOS
 
-**Status:** Proposed: region decided, vendor open (D-8) (2026-10-30)
+**Status:** Accepted (2026-10-30): IONOS, chosen by the owner and already provisioned
 
 ## Context
 
@@ -8,7 +8,7 @@ Client briefs are confidential and pilot terms promise a processing location. Th
 
 ## Decision
 
-Host the API, worker, managed Postgres and S3-compatible storage in Germany. D-8 prices the minimum bundle (03 §1.2) at OVHcloud and IONOS and picks the cheaper.
+Host the API, worker, managed Postgres and S3-compatible storage in Germany. The owner chose IONOS in Germany and has provisioned it. D-8 still checks the IONOS bundle against the 03 §1.2 minimum spec, the managed-Postgres PITR retention (≤ 30 days, SA-7) and the IONOS DPA and sub-processors.
 
 ## Consequences
 

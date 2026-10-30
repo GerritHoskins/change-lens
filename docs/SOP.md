@@ -77,7 +77,7 @@ Files are UTF-8. Windows PowerShell 5.1 reads files as ANSI unless told otherwis
 | [0003](adr/0003-modular-monolith.md) | FastAPI modular monolith (AD-1) | Accepted |
 | [0004](adr/0004-postgres-rls-queue.md) | PostgreSQL with RLS and a Postgres job queue | Accepted |
 | [0005](adr/0005-managed-eu-idp.md) | Managed identity provider with EU residency | Accepted; vendor open |
-| [0006](adr/0006-hosting-germany.md) | Host in Germany; OVHcloud or IONOS | Proposed |
+| [0006](adr/0006-hosting-germany.md) | Host in Germany on IONOS | Accepted |
 | [0007](adr/0007-pdfium-both-sides.md) | PDFium on the backend and the device | Accepted, verified by D-15 |
 | [0008](adr/0008-no-device-content.md) | No document content on the device | Accepted |
 | [0009](adr/0009-pure-pipeline-stages.md) | Pure pipeline stages (AD-2) | Accepted |
