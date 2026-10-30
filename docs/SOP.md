@@ -11,6 +11,7 @@ powershell -NoProfile -File scripts/check-trace.ps1
 The check passes only if:
 - every plan document exists
 - every acceptance criterion in `docs/02-mvp-spec.md` §7 is mapped in `docs/traceability.md` to a design section and an existing backlog task
+- every acceptance criterion is covered by a step in `docs/03a-pipeline-logic.md`
 - every architecture decision (AD-n) in `docs/03-technical-design.md` §9.6 has an ADR in `docs/adr/`
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
@@ -18,7 +19,7 @@ Save the output to `evidence/check-trace.txt` when it is used as evidence.
 ## 2. Change a requirement
 
 1. Edit or add the criterion (AC-n) in `02-mvp-spec.md` §7.
-2. Update or add its row in `traceability.md`, and reference it from the backlog task that satisfies it (`05-backlog.md`).
+2. Update or add its row in `traceability.md`, reference it from the backlog task that satisfies it (`05-backlog.md`), and tag the step that satisfies it in `03a-pipeline-logic.md`.
 3. Run the check, then add a row to the change log in `06-decision-log.md` with the reason.
 4. Commit. The commit is the record of when the change happened.
 
