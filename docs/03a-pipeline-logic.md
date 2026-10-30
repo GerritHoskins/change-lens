@@ -26,8 +26,7 @@ GUARD(request):
 ON_SIGN_IN(idp_identity):                                    # email code | Google | Apple  [AC-26]
   if idp_identity.method not in {email_otp, google, apple}: reject(unsupported_method)
   if idp_identity.method = apple:                            # native flow (ADR-0020)
-     apple_refresh ← apple.exchange(authorization_code)       # server-side; client secret from the secret store
-     store encrypt(apple_refresh) on the user                 # needed to revoke at deletion (Apple rule)  [AC-22]
+     apple_refresh ← encrypt(apple.exchange(authorization_code))  # server-side; client secret from the secret store
   user ← find_user(idp_identity.subject)
   if user is none:
      existing ← find_user_by_verified_email(idp_identity.email)
@@ -37,6 +36,8 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
         # otherwise by the backend through the Logto Management API after that sign-in. Automatic linking is off.
         # A matching email alone never links.
         # The IdP refuses to link an identity already mapped to a different app user (no orphaned tenant).
+        park apple_refresh (if any) under idp_identity.subject, expiring in 1 h; attach it to `existing` when the
+        link completes, and delete the Logto user created for the unlinked identity then or at expiry  # AR-2, AR-4
         reject(link_required, methods = existing.methods)    # app shows "sign in with your usual method to link"
      elif invite ← pending_invite(idp_identity.email) and idp_identity.email_verified
           and invite not expired and team.seats_used < team.seats:   # 3 seats (O-8)
@@ -47,6 +48,7 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
         else: user ← create_user(new_tenant())
      else:
         user ← create_user(new_tenant())                     # never attach to someone else's tenant  [AC-26]
+  if apple_refresh and user: user.apple_refresh_token_enc ← apple_refresh   # only once a user row exists (AR-2)  [AC-22]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
 
@@ -334,9 +336,9 @@ DELETE_PROJECT(project_id):                                   # GUARD first
 
 DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.1.1(v)); end of contract (SA-6)
   account (the user deleting themselves; CR-7): set their membership inactive and free the seat, revoke IdP sessions,
-           revoke every share they created, then replace the user row with a tombstone ID, delete the IdP user and all linked identities,
-           call Apple /auth/revoke with the stored Apple refresh token (before deleting the IdP user),
-           delete device tokens                                             [AC-22, AC-26]
+           revoke every share they created; call Apple /auth/revoke with the stored Apple refresh token (AR-1: first,
+           while the row still holds it); then replace the user row with a tombstone ID (apple_refresh_token_enc ← null),
+           delete the IdP user and all linked identities, delete device tokens  [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
   tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,
