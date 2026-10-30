@@ -21,8 +21,9 @@ Checked by `scripts/check-trace.ps1`. Every AC in `02-mvp-spec.md` §7 must appe
 | AC-15 | 02 §5, 03 §5 | I-9, I-10 | — |
 | AC-16 | 02 §6, 03 §5, 03 §6 | I-12 | — |
 | AC-17 | 02 §6, 03 §6 | I-12 | — |
-| AC-18 | 03 §6 | I-6 | injection fixtures |
+| AC-18 | 03 §2, 03 §6 | I-6 | injection fixtures |
 | AC-19 | 03 §5, 03 §6 | I-8, D-9 | — |
 | AC-20 | 02 §2, 03 §6 | I-1 | — |
 | AC-21 | 03 §8 | I-14 | — |
 | AC-22 | 03 §6 | I-13 | — |
+| AC-23 | 03 §6 | I-8, I-13 | — |
