@@ -181,3 +181,103 @@ These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A])
 - Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead.
 - **The pilot's discounted prices (€9 / €39) do not cover full-allowance usage within 30%.** For example, 25 typical comparisons cost €3.25, which is 36% of €9. The pilot is deliberately priced below target to test willingness to pay, so the unit-economics gate (04 §6, Gate 4) is judged against **target** prices.
 - The pilot must measure real token usage per comparison (I-14) and replace these placeholders.
+
+## 9. Modules, interfaces and data flow
+
+These are design-level contracts. Names are illustrative; the shapes and boundaries are what the decisions in §9.6 fix.
+
+### 9.1 Backend modules (one Python package, two process types: `api` and `worker`)
+
+| Module | Responsibility | Depends on | Must not |
+|---|---|---|---|
+| `api` | FastAPI routers, JWT verification against the identity provider, tenant resolution, request validation, problem+json errors | `domain`, `storage`, `metering`, `jobs` | Call the model provider or parse documents in-request |
+| `share_page` | Server-rendered read-only page for `/s/{token}` | `domain` (SharedReport only) | Join to any table other than SharedReport (AC-16) |
+| `domain` | SQLAlchemy models (03 §5), tenant-scoped session (`SET LOCAL app.tenant_id`), repositories | Postgres | Expose a session without a tenant |
+| `storage` | Object-store adapter: put original, short-lived signed URL, delete by tenant/project prefix | S3-compatible store | Write document content to local disk |
+| `jobs` | Enqueue and consume Postgres-queue jobs with ID-only payloads; idempotency key `(tenant_id, kind, ids, pipeline_version, model_config_id)` | Postgres | Carry document content in payloads (AC-23) |
+| `worker` | Runs `parse` and `compare` jobs: loads records, calls `pipeline`, persists results, records cost, triggers `notify` | `domain`, `storage`, `pipeline`, `metering`, `notify` | Run a stage outside the cost ceiling (AC-21) |
+| `pipeline` | Pure stage functions (§9.3). No database, storage or network access except through the `llm` port passed in | `llm` port | Hold state; read ambient config |
+| `llm` | Provider adapter: one structured-output call with a schema, a system prompt and delimited data blocks; no tools; per-call token accounting | Provider SDK | Fetch URLs; enable tool use; log prompts or responses (AC-18, AC-23) |
+| `metering` | Allowance check before enqueue, heavy-document weighting, per-comparison ceiling during a run | `domain` | — |
+| `notify` | Content-free push via FCM / APNs (comparison ID plus generic text) | Device registry | Include document text (AC-25) |
+| `retention` | Project deletion cascade, object-prefix purge, share revocation, data inventory checks | `domain`, `storage` | — |
+
+Reuse: `llm`, the `verify` stage and log scrubbing follow the patterns in `mobile-engineering-intelligence` (06, "Prior art and reuse").
+
+### 9.2 Mobile modules (Flutter, feature-first)
+
+| Module | Responsibility |
+|---|---|
+| `core/api` | Dio client generated from the backend OpenAPI schema; attaches the access token; maps problem+json errors to typed failures |
+| `core/auth` | Identity-provider SDK (email code, Google, Apple), token refresh, `flutter_secure_storage` |
+| `features/projects` | Project list, create, delete |
+| `features/import` | Paste, PDF picker, camera / photo library; receives share-intent hand-offs; uploads; keeps no local copies (AC-25) |
+| `features/compare` | Pick the earlier and newer version, confirm scope (AC-14), start the comparison, show status (push plus polling fallback) |
+| `features/report` | Prioritised findings, needs-review group, withheld count, unexplained differences, full-difference view (AC-10, AC-13, AC-18) |
+| `features/evidence` | `pdfrx` page view with highlight overlays from locators; parsed-text fallback; image region view for screenshots |
+| `features/review` | Confirm / correct / dismiss, notes, separate client-approval record (AC-12) |
+| `features/share` | Select findings, create link (shown once), list and revoke shares |
+| iOS `ShareExtension` (Swift) / Android `ACTION_SEND` | Receive a file or text from another app, hand it to `features/import` through an app-group container or intent, then delete it (AC-24, AC-25) |
+
+### 9.3 Pipeline stage interfaces
+
+Each stage is a pure function, and the worker persists every output. The same functions therefore run in the script prototype (option A) and in the product (option B).
+
+| Stage | Input | Output | Kind |
+|---|---|---|---|
+| `parse` | original bytes, kind (text / pdf / image), limits | `ParsedDocument`: parsed text, blocks with locators and a visibility flag, warnings | Deterministic (`pypdfium2`); vision-model call for images through the `llm` port |
+| `extract` | `ParsedDocument`, `llm` port | list of `ExtractedFact` (type, raw span, normalised value, locator, status, confidence) | AI, schema-validated |
+| `align` | earlier facts, newer facts, `llm` port | list of `FactPair` (matched / unmatched-earlier / unmatched-newer / ambiguous) | Deterministic keys, then AI candidates |
+| `compare` | pairs, newer-version scope, `llm` port | list of `DraftFinding` | Deterministic guards (§4.1), omission table (§4.2), AI for meaning only |
+| `verify` | drafts, both `ParsedDocument`s, block-level diff | verified findings, withheld count, unexplained differences | Deterministic |
+| `report` | verified findings, `llm` port | findings with explanations and priority | AI wording, template fallback |
+
+### 9.4 API surface (REST + JSON, OpenAPI)
+
+Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the token, never from the request body.
+
+| Method and path | Purpose | Notes |
+|---|---|---|
+| `POST /projects`, `GET /projects`, `GET /projects/{id}` | Create, list, read projects | — |
+| `DELETE /projects/{id}` | Delete project | Triggers `retention` (AC-22) |
+| `POST /projects/{id}/versions` | Upload a version (multipart file or text, plus label) | Limits and magic bytes checked before storing (AC-20); enqueues `parse` |
+| `GET /versions/{id}` | Version metadata, parse status and warnings | — |
+| `GET /versions/{id}/original` | Short-lived signed URL for the original | Streamed into memory by the app (AC-25) |
+| `GET /versions/{id}/text` | Parsed text with block locators | Evidence fallback |
+| `POST /projects/{id}/comparisons` | Body: `earlier_id`, `later_id`, `scope` | This call *is* the user's order and scope confirmation (AC-14); allowance check (AC-21); returns 202 with an ID |
+| `GET /comparisons/{id}` | Status (queued / running / complete / partial / failed), warnings | Polling fallback |
+| `GET /comparisons/{id}/findings` | Prioritised, needs-review, all differences, withheld count, unexplained differences | — |
+| `POST /findings/{id}/reviews` | Confirm / correct / dismiss / note | A correction creates a new finding revision (AC-15) |
+| `POST /findings/{id}/client-approvals` | Record external approval evidence | Separate record; never set by a review (AC-12) |
+| `POST /comparisons/{id}/shares` | Create a snapshot from selected finding IDs, with expiry | Token returned once; only its hash is stored |
+| `GET /comparisons/{id}/shares`, `DELETE /shares/{id}` | List and revoke | AC-17 |
+| `GET /s/{token}` | Read-only share page (HTML) | Headers per §6; rate-limited |
+| `POST /devices`, `DELETE /devices/{id}` | Register or remove a push token | — |
+| `GET /me/usage` | Allowance used and remaining | — |
+
+Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`, `allowance_exhausted`, `scope_not_confirmed`, `not_found`. Resources in another tenant return `not_found`, never `forbidden`, so their existence isn't revealed (AC-19).
+
+### 9.5 End-to-end data flow
+
+1. **Import.** The app calls `POST /projects/{id}/versions` (from paste, picker, camera or the share extension). The API checks limits and type, stores the original under a tenant-prefixed key, writes `SourceVersion(status=uploaded)` and enqueues `parse(version_id)`.
+2. **Parse.** The worker runs the sandboxed parse, producing parsed text, blocks, locators and warnings. Status becomes `parsed`, or `rejected` with a reason.
+3. **Confirm.** The user picks the pair and scope, and the app calls `POST /comparisons`. `metering` checks the allowance, a `Comparison(queued)` row is written, and `compare(comparison_id)` is enqueued.
+4. **Compare.** The worker uses cached facts or runs `extract`, then `align`, `compare`, `verify` and `report`, all under the cost ceiling. It persists findings, cost and the final status; `notify` then sends a content-free push.
+5. **Inspect.** The app fetches the findings, the original's signed URL and the locators. `pdfrx` highlights the passages, with the parsed text as fallback.
+6. **Review.** Review events are appended, corrections create new revisions, and client approval is recorded separately.
+7. **Share.** The API builds an immutable snapshot of the selected findings and their excerpts and returns the token once. The recipient opens `GET /s/{token}`.
+8. **Delete.** `DELETE /projects/{id}` cascades, purges the object prefix and revokes shares; backups expire within 30 days.
+
+### 9.6 Architecture decisions
+
+| ID | Decision | Alternatives rejected | Why |
+|---|---|---|---|
+| AD-1 | Modular monolith: one Python package, two process types (`api`, `worker`) | Microservices; serverless functions | Pilot scale; one deployment and one database to secure (§1) |
+| AD-2 | Pipeline stages are pure functions; the worker owns persistence | Stages reading and writing the database directly | The same code runs on the evaluation set (Gate 2) and in production; stages can be tested in isolation |
+| AD-3 | Uploads go through the API, not presigned straight to storage | Presigned S3 uploads | Limits, magic bytes and type are checked before anything is stored (AC-20); volumes are small |
+| AD-4 | Parse is a separate job from compare, and facts are cached per version | Parsing inside each comparison | Lowers cost per revision (§8); parse warnings reach the user before the comparison |
+| AD-5 | REST + JSON with an OpenAPI-generated Dart client | GraphQL; gRPC | Simple to test and document; a typed client with no extra infrastructure |
+| AD-6 | Cross-tenant access returns `not_found` | Returning `forbidden` | Doesn't reveal that a resource exists (AC-19) |
+| AD-7 | Share tokens shown once and stored only as hashes; the share page reads snapshots only | Reusable stored tokens; a live project view | A database leak doesn't expose links; snapshot isolation (AC-16, AC-17) |
+| AD-8 | Push notification plus polling fallback for comparison status | WebSockets; polling only | Push is battery-friendly; polling covers notifications that are disabled or delayed |
+| AD-9 | `llm` port injected into stages; provider adapter swappable | Calling a provider SDK directly inside stages | The provider is still open (O-5); fixtures can stub it for deterministic tests |
