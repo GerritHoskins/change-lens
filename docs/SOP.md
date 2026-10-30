@@ -26,11 +26,13 @@ The check passes only if:
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
-Cost-model benchmark (rerun after D-7 with real prices, e.g. `-PIn 3 -POut 15`):
+Cost-model benchmark. The defaults are the placeholder prices (€3 / €15 per million input / output tokens); after D-7, rerun with the real ones by passing `-PIn` and `-POut`:
 
 ```powershell
-powershell -NoProfile -File scripts/cost-model.ps1
+powershell -NoProfile -File scripts/cost-model.ps1 [-PIn <EUR> -POut <EUR>]
 ```
+
+It recomputes the 03 §8 scenarios and fails if a scenario uses more tokens than the reviewed baseline (stored as the 14748b6 token counts and priced at the same rates, so a price change alone never fails this part) or costs more than its gate (typical and first comparison €0.20, heavy €0.60, worst case €1.50, screenshot parse €0.13). It also prints the Gate 4 unit-economics sensitivity, which is informational. If the token estimates in 03 §8 change, update the scenario in the script in the same commit.
 
 Mission completion check (fails until independent verification and review closure are recorded):
 
@@ -38,7 +40,7 @@ Mission completion check (fails until independent verification and review closur
 powershell -NoProfile -File scripts/check-verification.ps1
 ```
 
-It passes only if every AC has a row in `docs/verification.md` from a verifier who is not the author, with a result of `pass` or `accepted-gap` and evidence, and every finding in `docs/review-ledger.md` is `resolved` (with a reference) or `accepted` (with a reason).
+It passes only if every AC has a row in `docs/verification.md` from a verifier who is not the author (the names `author`, `planner`, `claude-main` and `self` are rejected), with a result of `pass` or `accepted-gap` (a `fail` row fails the check) and evidence, and every finding in `docs/review-ledger.md` is `resolved` (with a reference) or `accepted` (with a reason). Ledger rows are recognised by an ID with an uppercase prefix, a hyphen and a number (`SEC-1`, `REV-20`, `SA-3`, `CR-13`); any new review may use a new prefix.
 
 ## 2. Change a requirement
 
@@ -60,7 +62,7 @@ It passes only if every AC has a row in `docs/verification.md` from a verifier w
 
 ## 5. Reviews
 
-After substantial changes, run independent read-only reviews against handoff §13 and for security. Record each finding in `docs/review-ledger.md` as resolved or explicitly accepted, and record per-AC verification in `docs/verification.md`.
+After substantial changes, run independent read-only reviews against handoff §13 and for security. When a change alters the logic an AC row cites, that row must be re-verified by a non-author and its Method marked `re-verified <commit>`; `check-verification` cannot detect a stale row on its own. Record each finding in `docs/review-ledger.md` as resolved or explicitly accepted, and record per-AC verification in `docs/verification.md`.
 
 ## 6. Encoding
 
