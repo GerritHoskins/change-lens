@@ -76,7 +76,7 @@ Plan section: §13.6. Every entry is tagged:
 | O-2 | Launch language and market | **Decided 2026-10-30:** English; EU + UK | — |
 | O-3 | First production input formats | **Decided 2026-10-30:** text, PDF and screenshots, via paste, picker, camera and share sheet | — |
 | O-4 | Stack, auth and hosting | **Decided 2026-10-30:** Flutter + FastAPI stack (final after D-15); managed IdP with EU residency, using email one-time code + Google + Sign in with Apple; Germany region; Hetzner excluded; minimum spec in 03 §1.2. **Decided 2026-10-30:** hosting on IONOS in Germany, already provisioned. **Open:** IdP vendor (D-8) | D-8 |
-| O-5 | Model provider and processing location | Provider with a no-training, zero or short retention plan in the EU/UK; pick from the D-7 comparison | I-2 |
+| O-5 | Model provider and processing location | **Recommended by D-7 (2026-10-30), awaiting owner confirmation:** Claude Sonnet 5.5 on AWS Bedrock, EU geo profile from eu-central-1, zero retention enforced; fallback Mistral Large 4 (after zero-retention approval) or IONOS AI Model Hub. See the D-7 comparison below and ADR-0019 | I-2, D-4 |
 | O-6 | Storage and retention policy | **Decided 2026-10-30:** kept until the user deletes; immediate primary deletion; backups expire within 30 days | — |
 | O-7 | Sharing mechanism and default expiry | **Decided 2026-10-30:** revocable snapshot link, 30-day default expiry | — |
 | O-8 | Team seats and usage limits | **Decided 2026-10-30:** 3 seats per team plan; 25 comparisons per month individual, 100 per month team; heavy document = 4 | — |
@@ -85,6 +85,22 @@ Plan section: §13.6. Every entry is tagged:
 | O-11 | Pilot pricing and data terms | **Decided 2026-10-30:** €9 / €39 per month, 2 months prepaid. Data terms are still drafted after D-7 | D-4 (terms) |
 | O-12 | What a Gate 1 pass authorises | **Decided 2026-10-30 (owner approved the recommendation):** a 3-of-3 verdict starts an operator-assisted paid pilot with no app (D-16) on the committed dates; Milestone 2 runs in parallel; the app pilot stays bounded by Gate 4. 04 §6.3 updated | — |
 | O-13 | Thin-slice scope | **Decided 2026-10-30 (owner approved the recommendation):** pilot workspaces have one owner, and the operator manages extra seats (I-15). Self-service team screens (invite choice, member list, ownership transfer) are deferred; I-18 keeps only the `link_required` prompt and in-app account deletion. Removal, account deletion and the GUARD membership check stay, because they are security- or store-required. The backend team routes stay, operator-only | — |
+
+## D-7 model provider comparison (2026-10-30)
+
+Checked against provider documentation on 2026-10-30 by a read-only research agent; prices at the ECB rate EUR 1 = USD 1.1172. [U] marks what the sources did not confirm.
+
+| Candidate | Training on inputs | Retention, incl. abuse monitoring | Region | DPA | Fit (schema JSON, vision, context) | Price per M tokens in / out |
+|---|---|---|---|---|---|---|
+| **Bedrock, Claude Sonnet 5.5** (EU geo from eu-central-1) | No; Anthropic has no access ([AWS data protection](https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html)) | Not on AWS's abuse-retention list (only Fable 5 / 5.1); `data_retention_mode: none` at account level; CSAM-flagged images excepted ([abuse detection](https://docs.aws.amazon.com/bedrock/latest/userguide/abuse-detection.html), [retention](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html)). That `none` is allowed for this model [U] | EU-wide: Frankfurt, Stockholm, Milan, Spain, Ireland, Paris; not Germany-only | AWS GDPR DPA + SCCs + UK addendum, automatic ([DPA](https://d1.awsstatic.com/legal/aws-gdpr/AWS_GDPR_DPA.pdf), [sub-processors](https://aws.amazon.com/compliance/sub-processors/)) | Yes / yes / 1M; no batch tier | USD 2.20 / 11.00 = **€1.97 / €9.85** (AWS Price List, eu-central-1, 2026-10-12) |
+| Vertex AI, Claude Sonnet 5.5 (EU multi-region) | No | 24 h implicit cache (can disable); partner-model abuse retention [U] | EU multi-region only | Google Cloud DPA [U] | Yes / yes / 1M | ≈ USD 2.20 / 11.00 [U] |
+| Anthropic API (first-party) | No | ZDR needs sales approval; flagged content kept up to 2 years | **US or global only** ([data residency](https://platform.claude.com/docs/en/manage-claude/data-residency)) | Not checked | Yes | USD 2 / 10 |
+| Mistral La Plateforme, Large 4 | Allowed unless opted out ([DPA](https://legal.mistral.ai/terms/data-processing-addendum)); API default [U] | Abuse monitoring unless ZDR; ZDR on request at Mistral's discretion ([ZDR](https://docs.mistral.ai/admin/monitor-comply/zero-data-retention)); 30-day default [U] | EU by default [U] | DPA with SCCs; self-serve coverage [U] | Yes / [U] / 1M | USD 0.70 / 2.10 = €0.63 / €1.88 |
+| Azure OpenAI, GPT-5.4 (EU Data Zone) | No | Flagged content stored for human review; opt-out by Limited Access application | Any EU member state | Microsoft DPA | [U] | USD 2.75 / 16.50 |
+| Vertex AI, Gemini (EU) | No | Abuse logging, period and opt-out [U] | EU regional | Google Cloud DPA | Not checked | Not checked |
+| IONOS AI Model Hub, Qwen3.5-397B | No | Prompts and outputs never logged ([data handling](https://docs.ionos.com/cloud/ai/ai-model-hub/data-handling)) | Germany only | Accepted electronically; no sub-processors | Vision yes; schema JSON [U]; ≈262k [U] | €0.60 / €3.60 |
+
+**Shortlist:** primary Bedrock Claude Sonnet 5.5, fallback Mistral Large 4 (only after ZDR approval and training opt-out), then IONOS AI Model Hub (after a structured-output and quality spike). Ruled out: Anthropic first-party (no EU residency), Azure (default human review of flagged content), Vertex Claude (abuse retention unverified). Placeholder prices in 03 §8 and `scripts/cost-model.ps1` replaced.
 
 ## Prior art and reuse (searched 2026-10-30)
 
@@ -134,3 +150,4 @@ Plan section: §13.6. Every entry is tagged:
 | 2026-10-30 | Goal validation (mission t14): goal-validator found all six handoff §13 deliverables met and re-verified 18 stale AC rows at 16beb12 (all pass); all 26 ACs now have a current non-author check. Its goal-level gaps are logged as O-12 (what a Gate 1 pass authorises) and O-13 (thin-slice scope), plus the AC-11 small-image residual as an assumption; G3 (signal B close to the general-AI baseline) was already flagged [A] in D-13 | Mission t14 |
 | 2026-10-30 | Owner decisions: O-12 and O-13 approved as recommended (new D-16 operator-assisted paid pilot; I-18 reduced to account screens); hosting is IONOS, already provisioned (ADR-0006 accepted); Gate 1 definitions (04 §6.1, D-2) frozen as of this commit. Totals now 80–137 person-days | Owner |
 | 2026-10-30 | Recruitment channel changed (O-10): direct outreach by the owner, no incentive; research panels excluded; D-1 re-estimated at 6–10 d. Totals now about 81–139 person-days | Owner |
+| 2026-10-30 | D-7 done: provider comparison recorded; Bedrock Claude Sonnet 5.5 recommended (O-5 awaiting owner confirmation); cost-model defaults set to €1.97 / €9.85 with a +30% tokenizer sensitivity; all gates pass, REV-19 and REV-20 resolved | Mission follow-up |

@@ -131,7 +131,7 @@ Share tokens are stored only as hashes. The share route loads `snapshot_json` al
 | Link fetching or actions | The pipeline never dereferences URLs found in documents. The worker has no outbound network except the model API and storage. | AC-18 |
 | Tenant isolation | `tenant_id` on every row, a scoped data-access layer, row-level security in Postgres as a second layer, and object keys prefixed by tenant. Authorisation tests cover every route. The app role does not own the tables and RLS is `FORCE`d. Pre-tenant lookups (user by subject or email, invites, share token, queue dequeue) go through narrow `SECURITY DEFINER` functions, never the migration role. The tenant comes from an active membership, and removed members are rejected on every request (03a P0, P1). Operator access for the pilot is an audited admin path that manages accounts and cannot read document content. | AC-19, AC-26 |
 | Share links | Hashed random token, snapshot-only route, expiry and revocation checked on every request. Share pages send these headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`. No third-party scripts, fonts or analytics. The share route is rate-limited per IP. Shares are revoked automatically when the owning account or member is removed. Share creation, revocation and views are audit-logged. | AC-16, AC-17 |
-| Model provider | Choose a provider and plan that contractually excludes training on inputs and offers zero or short retention, with processing in the EU or UK. Check abuse-monitoring retention, which often still applies under "zero retention", plus the DPA and sub-processors. Verify all of this before any real client document [U][O]. Send only the parsed text blocks needed, never original files or account data. The AI processor is disclosed to users in the pilot terms. | — |
+| Model provider | D-7 recommends Claude Sonnet 5.5 on AWS Bedrock (EU geo profile from eu-central-1): no training on inputs, no Anthropic access, outside AWS's abuse-retention list, zero retention enforced at account level (`data_retention_mode: none`), AWS GDPR DPA with SCCs applied automatically. Processing is EU-wide across six AWS regions, not Germany-only, and AWS is a US company, so the pilot terms disclose this and a transfer impact assessment covers it. Before any real client document, confirm that `none` is in the model's `allowed_modes` [U][O]. Send only the parsed text blocks needed, never original files or account data. The AI processor is disclosed to users in the pilot terms. | — |
 | Mobile client | Tokens only in Keychain / Keystore (`flutter_secure_storage`). No document content cached on the device; opened PDFs stream from signed URLs into memory. Screenshots taken in-app are not saved to the photo library. The share extension hands the file to the app through the app-group container; the app uploads it and deletes the container copy, picker cache and camera temp files after upload and on start (03a P10). Certificate pinning is optional [A]. App Store privacy labels and the Play data-safety form must match the data inventory | AC-22, AC-23 |
 | Real client data gate | Synthetic or consented data only, until all of these are in place: signed pilot terms that include an **Art. 28 GDPR processor agreement** with each agency (including deletion or return at contract end); the freelancer's obligations to *their* client (confidentiality, disclosure of the AI processor); a published sub-processor list generated from the data inventory (hosting, IdP, model provider, error tracker, email sender, FCM/APNs, CI); transfer assessments for any non-EU processor; and D-7 complete. The D-9 runbook notifies the affected agency without undue delay through a named contact, so the agency can meet its 72-hour Art. 33 deadline. | AC-22, AC-23 |
 | Secrets and supply chain | The LLM key, database and S3 credentials, APNs/FCM keys and signing keys live in a managed secret store or CI environment secrets, each with least privilege and scoped per environment, and never in the repository or the app bundle. GitHub Actions are pinned by commit SHA; lockfiles are committed and dependency-scanned in CI. PDFium (`pypdfium2` on the server, `pdfrx` on the device) and the image decoders parse attacker-authored files, so their security updates ship within 7 days on both server and app. | AC-18, AC-20 |
@@ -148,9 +148,9 @@ Share tokens are stored only as hashes. The share route loads `snapshot_json` al
 - Jobs are idempotent and keyed by `(earlier_id, later_id, pipeline_version, model_config_id)`. A retry never duplicates findings.
 - If model output fails verification, that finding is withheld. The comparison still completes and shows the withheld count.
 
-## 8. Cost model [A][U]
+## 8. Cost model [A]
 
-Model prices are **placeholders** until a provider is chosen (D-7). `p_in` and `p_out` are € per million input and output tokens. Illustrative values: `p_in = 3`, `p_out = 15`. These are not a quote.
+Prices from D-7 (2026-10-30): Claude Sonnet 5.5 on AWS Bedrock, EU geo profile from eu-central-1, USD 2.20 / 11.00 per million input / output tokens, so `p_in = €1.97`, `p_out = €9.85` at the ECB rate of EUR 1 = USD 1.1172 (06, D-7 comparison). The earlier placeholders were €3 / €15. Token counts are still estimates [A], not measured with Claude's tokenizer, which can count up to ~30% more tokens; the script prints that case too.
 
 Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 
@@ -165,19 +165,19 @@ Assume a typical brief of about 3,000 words ≈ 4,000 tokens per version.
 
 | Scenario | Tokens in / out | Retry rate | Model cost | Notes |
 |---|---|---|---|---|
-| Typical (3k words, earlier cached) | 17k / 4.5k | 10% | **≈ €0.13** | |
-| First comparison (both extracted) | 22k / 6k | 10% | ≈ €0.17 | |
-| Heavy (20 pages ≈ 15k words) | 70k / 15k | 20% | ≈ €0.52 | At the input cap |
-| Worst case (heavy, both extracted, every stage retried once) | 100k / 22k | 100% | ≈ €1.26 | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
-| Screenshot vision parse (per image, two independent passes, SA-9) | 3k / 1k | 10% | ≈ €0.026 | Charged as 1 allowance unit (03a P2) [U: image token counts vary by provider] |
+| Typical (3k words, earlier cached) | 17k / 4.5k | 10% | **≈ €0.086** (≈ €0.11 at +30% tokens) | |
+| First comparison (both extracted) | 22k / 6k | 10% | ≈ €0.11 (≈ €0.15) | |
+| Heavy (20 pages ≈ 15k words) | 70k / 15k | 20% | ≈ €0.34 (≈ €0.45) | At the input cap |
+| Worst case (heavy, both extracted, every stage retried once) | 100k / 22k | 100% | ≈ €0.83 (≈ €1.08) | The hard ceiling (AC-21) should stop beyond ≈ €1.50 |
+| Screenshot vision parse (per image, two independent passes, SA-9) | 3k / 1k | 10% | ≈ €0.017 | Charged as 1 allowance unit (03a P2) [U: image token counts vary by provider] |
 
 **Monthly cost per account (sensitivity):**
 
 | Usage | Comparisons per month | Mix | Model cost per month | vs €12 individual / €49 team |
 |---|---|---|---|---|
-| Light freelancer | 10 | typical | ≈ €1.3 | 11% of €12 |
-| Heavy freelancer | 40 | 75% typical / 25% heavy | ≈ €9.1 | 76% of €12 — needs an allowance |
-| Small team | 120 | 75 / 25 | ≈ €27 | 55% of €49 |
+| Light freelancer | 10 | typical | ≈ €0.9 | 7% of €12 |
+| Heavy freelancer | 40 | 75% typical / 25% heavy | ≈ €6.0 | 50% of €12 — needs an allowance |
+| Small team | 120 | 75 / 25 | ≈ €18 | 37% of €49 — needs an allowance |
 
 These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A]), storage (originals plus parsed text ≈ 1–5 MB per version, so under €0.10 per account per month at object-storage rates [A]), payment fees (≈ 1.5–3% + fixed fee [U]), support time and acquisition.
 
@@ -185,9 +185,9 @@ These figures exclude hosting (≈ €20–60 per month flat at pilot scale [A])
 - Each plan needs a comparison allowance, for example 25 per month for individuals and 100 per month for teams [O].
 - Heavy documents (over 5,000 words) count as **4** comparisons, which matches their roughly 4× cost.
 - Failed comparisons do not count against the allowance. Partial ones do. Failed-run cost is tracked as overhead. To stop free failed runs from being abused (SA-4), every run's cost, failed or not, counts toward a per-tenant monthly spend cap (default 3× the plan's expected allowance cost), and a global daily spend kill switch pauses new comparisons and screenshot parses when exceeded; a screenshot's reserved unit is consumed even if its parse fails.
-- **The pilot's discounted prices (€9 / €39) do not cover full-allowance usage within 30%.** For example, 25 typical comparisons cost €3.25, which is 36% of €9. The pilot is deliberately priced below target to test willingness to pay, so the unit-economics gate (04 §6, Gate 4) is judged against **target** prices.
-- The pilot must measure real token usage per comparison (I-14) and replace these placeholders.
-- `scripts/cost-model.ps1` recomputes this table and fails if a scenario is worse than the reviewed baseline (14748b6) or breaks a cost gate. Benchmark findings: if every comparison is a new project, full-allowance cost reaches ≈ 35% of target price (review ledger REV-19); at 1.5× the placeholder prices, heavy documents and the worst case break their limits (REV-20).
+- **At D-7 prices the pilot's discounted prices (€9 / €39) cover full-allowance usage within 30%:** 25 typical comparisons cost about €2.15, 24% of €9 (about 31% at +30% tokens, so borderline). The unit-economics gate (04 §6, Gate 4) is still judged against **target** prices.
+- The pilot must measure real token usage per comparison (I-14) and replace these token estimates.
+- `scripts/cost-model.ps1` recomputes this table and fails if a scenario is worse than the reviewed baseline (14748b6) or breaks a cost gate. At D-7 prices, a full allowance costs about 18% of target price for follow-up revisions and about 23% if every comparison is a new project (REV-19, REV-20 resolved).
 
 ## 9. Modules, interfaces and data flow
 

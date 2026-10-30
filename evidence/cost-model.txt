@@ -1,11 +1,18 @@
 Scenario                               Cost EUR  Baseline    Gate  Result
-Typical (3k words, earlier cached)        0,130     0,130    0,20  ok
-First comparison (both extracted)         0,172     0,172    0,20  ok
-Heavy (20 pages, at input cap)            0,522     0,522    0,60  ok
-Worst case (heavy, all retried)           1,260     1,260    1,50  ok
-Screenshot vision parse (2 passes)        0,026       n/a    0,13  ok
+Typical (3k words, earlier cached)        0,086     0,086    0,20  ok
+First comparison (both extracted)         0,113     0,113    0,20  ok
+Heavy (20 pages, at input cap)            0,343     0,343    0,60  ok
+Worst case (heavy, all retried)           0,827     0,827    1,50  ok
+Screenshot vision parse (2 passes)        0,017       n/a    0,13  ok
 
 Unit-economics sensitivity at target price (Gate 4 limit 30%, judged on real usage):
-  Individual full allowance, follow-up revisions:  27,2%   every comparison a new project:  35,8%
-  Team       full allowance, follow-up revisions:  26,6%   every comparison a new project:  35,0%
+  Individual full allowance, follow-up revisions:  17,8%   every comparison a new project:  23,5%
+  Team       full allowance, follow-up revisions:  17,5%   every comparison a new project:  23,0%
+
+Tokenizer sensitivity: tokens x1,3 (informational, same gates):
+  Typical (3k words, earlier cached)        0,111  within gate
+  First comparison (both extracted)         0,146  within gate
+  Heavy (20 pages, at input cap)            0,446  within gate
+  Worst case (heavy, all retried)           1,076  within gate
+  Screenshot vision parse (2 passes)        0,023  within gate
 PASS cost model no worse than baseline 14748b6 and within cost gates

@@ -26,7 +26,7 @@ The check passes only if:
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
-Cost-model benchmark. The defaults are the placeholder prices (€3 / €15 per million input / output tokens); after D-7, rerun with the real ones by passing `-PIn` and `-POut`:
+Cost-model benchmark. The defaults are the D-7 prices for Claude Sonnet 5.5 on AWS Bedrock (€1.97 / €9.85 per million input / output tokens); if the provider or prices change, pass `-PIn` and `-POut` and update the defaults in the same commit. `-TokenFactor` (default 1.3) sets the informational tokenizer sensitivity:
 
 ```powershell
 powershell -NoProfile -File scripts/cost-model.ps1 [-PIn <EUR> -POut <EUR>]
