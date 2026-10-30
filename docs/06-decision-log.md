@@ -37,6 +37,7 @@ Plan section: §13.6. Every entry is tagged:
 |---|---|---|
 | First niche | Web/digital and design freelancers and studios of 1–10 people | 01 |
 | Language and market | English; EU/UK; EUR excluding VAT | 01 |
+| Evaluation data sourcing | Public tender and RFP amendments (≥ 25 real pairs) plus constructed pairs with labels by construction; interview donations optional, because freelancers are unlikely to share client briefs (owner, 2026-10-30) | 07, 04 §4 |
 | MVP formats | Pasted text, text-layer PDF and PNG/JPEG screenshots, imported through paste, the PDF picker, camera / photo library or the OS share sheet; DOCX deferred | 02 §2 |
 | Input limits | ≤ 15k words, ≤ 20 pages, ≤ 10 MB; images ≤ 5 MB | 02 §2 |
 | Share expiry | 30 days by default, revocable — owner-confirmed 2026-10-30 | 02 §6 |
@@ -174,3 +175,4 @@ Checked against vendor documentation on 2026-10-30 by a read-only research agent
 | 2026-10-30 | D-8 identity provider: Logto, self-hosted on IONOS (ADR-0020 supersedes ADR-0005); native Apple sign-in with the backend storing the Apple refresh token encrypted, revoked at deletion; I-8 7–12 d; totals now about 85–146 person-days. Correction: 03 §1.1 had listed three earlier candidates (Auth0 EU, Cognito, Supabase), none chosen | Owner |
 | 2026-10-30 | Logto re-verification: ac-reverifier passed AC-22 and AC-26 at d18f0cc and found 3 defects plus 1 note (AR-1..AR-4: Apple token revoke order, token stored before a user row existed, unnamed credentials, orphan Logto user); all resolved | Review |
 | 2026-10-30 | Correction to the row above: AR-2 was only partly resolved at 99fc61b (pending-invite path and repeat Apple code exchange). Completed as AR-5, with parked tokens revoked at Apple on expiry | Review |
+| 2026-10-30 | Evaluation data: freelancers are unlikely to donate client briefs, so D-3 now sources ≥ 25 real pairs from public tender and RFP amendments and no longer depends on D-1; D-6 adds constructed pairs with labels by construction (07, `eval-schema.json`). D-3 1–3 d, D-6 7–10 d; totals unchanged | Owner |

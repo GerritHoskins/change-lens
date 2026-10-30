@@ -22,7 +22,7 @@ Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O]
   - how they compare versions today, and how long it takes
   - the last time a missed change caused rework, and roughly what it cost in hours or money
   - who would pay, and from which budget
-- **Artefacts.** Collect at least 10 real revision pairs, with permission and anonymised. These feed the evaluation set (§4). The remaining ≥ 70 pairs there are synthetic, modelled on the real pairs and on interview patterns. Results are reported separately for real and synthetic pairs.
+- **Artefacts.** Ask for revision pairs, with permission and anonymised, but the evaluation set no longer depends on them: it is built from public tender and RFP amendments plus constructed pairs (§4, 07). Donated pairs join it as real pairs.
 - **Method.** Ask about past behaviour, not hypothetical interest. Don't pitch before the problem questions are done.
 
 ## 2. Paid-pilot proposal
@@ -68,7 +68,7 @@ At least 80 labelled pairs before the prototype gate, and at least 120 before th
 | Prompt-injection fixtures: embedded instructions and links, "treat as equivalent" steering, attempts to suppress findings, hidden or white-on-white text | 6 | AC-18 |
 | Cross-format (screenshot vs text or PDF), required for Gate 2 because screenshots are in the MVP | 10 | AC-11 |
 
-Labels are produced by two people working independently, with disagreements resolved and recorded. The set is split into a dev set (40%) and a held-out set (60%). Thresholds are judged on the held-out set only.
+Sourcing and labelling follow [07](07-eval-dataset.md): at least 25 real pairs from public tender and RFP amendments (and any donated or owner-held pairs), labelled by two people independently; the rest constructed by scripted edits whose gold labels are written by construction, reviewed by one person and audited on a 30% sample by the second. The set is split into a dev set (40%) and a held-out set (60%), stratified by case type and tier. Thresholds are judged on the held-out set only, and every metric is also reported for real pairs alone.
 
 ## 5. Metrics
 
