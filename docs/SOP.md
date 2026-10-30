@@ -4,6 +4,16 @@ This repository is a plan, not an application. "Running" it means running its ch
 
 ## 1. Run the checks
 
+Everything at once (the same entry point `.github/workflows/plan-checks.yml` runs on push and pull request):
+
+```powershell
+powershell -NoProfile -File scripts/ci.ps1
+```
+
+It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below, and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
+
+Individual checks:
+
 ```powershell
 powershell -NoProfile -File scripts/check-trace.ps1
 ```
