@@ -28,8 +28,20 @@ Plan section: §13.3. Tags: [E] established, [A] assumption, [U] unverified, [O]
 | Backend API | FastAPI + Pydantic; SQLAlchemy + Alembic | Pydantic models double as the schema check on model structured output |
 | PDF parsing | **`pypdfium2` (PDFium)** for text, character boxes and page geometry | The same engine as `pdfrx` on the device, so backend locators and on-device text coordinates come from one implementation. This is the main lever for the alignment risk D-15 tests |
 | Database / queue | PostgreSQL with row-level security; Postgres-backed job queue (for example `procrastinate`) | RLS is set per request and per job with `SET LOCAL app.tenant_id` |
-| Object storage | S3-compatible, EU region | Private bucket; short-lived signed URLs |
-| Auth | **Open, decided in D-8 [O]**. Must support MFA, refresh-token rotation and session revocation. Options: a managed identity provider with an EU region, or FastAPI-native auth | Missing from the owner's stack list; blocks I-8 |
+| Object storage | S3-compatible, Germany, same provider as hosting | Private bucket; short-lived signed URLs |
+| Auth | **Managed identity provider with EU (Germany preferred) data residency** [O, decided 2026-10-30]. Sign-in by email one-time code, Google and Sign in with Apple (Apple requires the last whenever Google is offered). MFA, refresh-token rotation and session revocation are handled by the provider; FastAPI only verifies JWTs. Vendor chosen in D-8 (candidates: Auth0 EU, AWS Cognito Frankfurt, Supabase Auth EU) after checking the DPA, sub-processors and region [U] | Linking accounts across the three sign-in methods by verified email must not merge tenants by accident |
+| Hosting | **Germany** [O, decided 2026-10-30]; Hetzner excluded by the owner. Shortlist OVHcloud and IONOS Cloud; D-8 prices the bundle below at both and picks the cheaper [U] | See 1.2 |
+| Mobile CI | GitHub Actions macOS runners or Codemagic for iOS builds | Not on the application server; may add CI cost |
+
+### 1.2 Minimum hosting spec (pilot: 5–10 accounts, ≤ ~1,000 comparisons per month, 2–3 concurrent)
+
+| Component | Minimum | Rationale |
+|---|---|---|
+| Application VPS (API + worker + share page) | 2 vCPU, 4 GB RAM, 40 GB SSD, public IPv4, Ubuntu 24.04 LTS, x86_64 or ARM64 | 2 concurrent jobs × 512 MB parse cap, plus API, OS and headroom for 40 MP image decoding. No documents on local disk; temporary parse files in `tmpfs` |
+| Managed PostgreSQL | 1–2 vCPU, 2 GB RAM, 10–20 GB storage, automated backups with point-in-time recovery, private network only | Avoids self-managed backups and patching for confidential data |
+| Object storage | S3-compatible, < 10 GB during the pilot | Originals and screenshots |
+| Must-haves | German region, private networking, firewall, snapshots, DPA | Data residency (03 §6) |
+| Not recommended | Postgres on the same VPS (would need 4 vCPU / 8 GB / 80 GB plus self-run backups and restore drills) | Ops and security burden |
 | Push notifications | FCM (Android) + APNs (iOS), sending only "comparison ready" with an ID, never content | Comparisons are asynchronous |
 | Share page | One server-rendered HTML page from FastAPI, showing the snapshot only | A recipient (the client) may not have the app. This is the only web surface, not a web front end |
 | AI | Hosted LLM with structured output; provider decided in D-7 | — |
