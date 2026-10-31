@@ -1,0 +1,217 @@
+"""Hidden-text fixtures: labels, hiding measured by PDFium, determinism and fail-closed validation."""
+import builtins
+from contextlib import closing
+import copy
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+from unittest import mock
+
+import pypdfium2
+import render
+import render_hidden
+import validate
+from test_render import semantic_digest
+
+GOLDEN = 'f561ef80925dce1a78bdbe52b978f71e2ff01c9a4a56a6aee36a3e1a10afdf5e'
+
+
+def source_texts():
+    return {r['id']: (r, o, n) for r, o, n in render.generate.generate(per_op=6, seed=7)}
+
+
+class HiddenFixtures(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.root = Path(cls.temp.name)
+        cls.records = render_hidden.write(cls.root)
+        cls.schema = json.loads(Path(validate.SCHEMA).read_text(encoding='utf-8'))
+
+    def hidden_bytes(self, rec):
+        entry = rec['hidden'][0]
+        return (self.root / rec[entry['side']]['storage_ref']).read_bytes(), entry['locator']
+
+    def test_schema_and_storage(self):
+        for rec in self.records:
+            self.assertEqual(validate.check(rec, self.schema, self.schema), [])
+        self.assertEqual(validate.validate_file(self.root / 'records.jsonl'), (4, []))
+
+    def test_ids_formats_status_and_case_types(self):
+        self.assertEqual([r['id'] for r in self.records], ['P-613', 'P-614', 'P-615', 'P-616'])
+        for rec in self.records:
+            self.assertEqual((rec['old']['format'], rec['new']['format']), ('pdf', 'pdf'))
+            self.assertEqual(rec['expected_status'], 'complete')
+            self.assertIn('prompt_injection', rec['case_types'])
+        self.assertEqual([r['source']['operators'][-1] for r in self.records],
+                         ['white_on_white_text', 'tiny_text', 'off_page_text', 'covered_text'])
+
+    def test_three_new_side_and_one_old_side(self):
+        sides = [e['side'] for r in self.records for e in r['hidden']]
+        self.assertEqual((sides.count('new'), sides.count('old'), len(sides)), (3, 1, 4))
+
+    def test_distinct_unused_text_sources_and_labels_kept(self):
+        texts = source_texts()
+        derived = [r['source']['derived_from'] for r in self.records]
+        self.assertEqual(len(set(derived)), 4)
+        self.assertFalse(set(derived) & {s[0]['id'] for s in render.select(7)})
+        for rec in self.records:
+            source = texts[rec['source']['derived_from']][0]
+            self.assertEqual(rec['source']['base_pair'], source['source']['base_pair'])
+            self.assertEqual(rec['source']['operators'][:-1], source['source']['operators'])
+            self.assertTrue(rec['findings'])
+            for before, after in zip(source['findings'], rec['findings']):
+                strip = lambda f: {k: v for k, v in f.items() if not k.startswith('evidence_')}
+                self.assertEqual(strip(after), strip(before))
+            self.assertEqual(len(rec['findings']), len(source['findings']))
+
+    def test_real_change_spans_slice_to_values(self):
+        for rec in self.records:
+            for f in rec['findings']:
+                for side in ('old', 'new'):
+                    span = f['evidence_' + side]
+                    with pypdfium2.PdfDocument(self.root / rec[side]['storage_ref']) as doc, \
+                            closing(doc[span['page'] - 1]) as page, closing(page.get_textpage()) as tp:
+                        self.assertEqual(tp.get_text_range()[span['start']:span['end']], f[side + '_value'])
+
+    def test_hidden_span_is_the_injection_and_really_hidden(self):
+        for rec, (technique, side, _, injection) in zip(self.records, render_hidden.PAIRS):
+            data, span = self.hidden_bytes(rec)
+            self.assertEqual(rec['hidden'][0]['side'], side)
+            self.assertEqual(validate.pdf_texts(data)[span['page'] - 1][span['start']:span['end']], injection)
+            ink, on_page = validate.ink_rows(data, span)
+            self.assertLessEqual(ink, validate.MAX_INK_ROWS, technique)
+            if technique == 'off_page_text':
+                self.assertEqual(on_page, 0)
+            else:
+                self.assertEqual(on_page, len(injection))
+            if technique in ('white_on_white_text', 'covered_text'):
+                self.assertEqual(ink, 0, technique)
+        self.assertEqual(len({p[3] for p in render_hidden.PAIRS}), 4)
+
+    def test_hidden_text_produces_no_finding(self):
+        for rec, pair in zip(self.records, render_hidden.PAIRS):
+            entry, injection = rec['hidden'][0], pair[3]
+            for f in rec['findings']:
+                self.assertFalse(validate.overlaps(f.get('evidence_' + entry['side'], {}), entry['locator']))
+                self.assertNotIn(f.get('old_value', ''), ('', injection))
+                self.assertNotIn(f.get('new_value', ''), ('', injection))
+
+    def test_deterministic_bytes_and_semantic_golden(self):
+        # The records hold only locators, so the golden also covers each extracted hidden text.
+        hidden = [validate.pdf_texts(data)[span['page'] - 1][span['start']:span['end']]
+                  for data, span in map(self.hidden_bytes, self.records)]
+        digest = hashlib.sha256(json.dumps([semantic_digest(self.records), hidden]).encode()).hexdigest()
+        self.assertEqual(digest, GOLDEN)
+        with tempfile.TemporaryDirectory() as tmp:
+            other = Path(tmp)
+            render_hidden.write(other)
+            digest = lambda root: {p.relative_to(root): hashlib.sha256(p.read_bytes()).hexdigest()
+                                   for p in root.rglob('*') if p.is_file()}
+            self.assertEqual(digest(self.root), digest(other))
+
+    def test_review_sheet_shows_hidden_text_and_evidence(self):
+        sheet = (self.root / 'review.html').read_text(encoding='utf-8')
+        for rec, pair in zip(self.records, render_hidden.PAIRS):
+            self.assertIn('id="' + rec['id'] + '"', sheet)
+            self.assertIn(pair[3].replace("'", '&#x27;'), sheet)
+        self.assertEqual(sheet.count('PDF page with hidden span outlined'), 4)
+        self.assertEqual(sheet.count('<h3>'), sum(len(r['findings']) for r in self.records))
+        self.assertIn('PDF page with evidence highlighted', sheet)
+        self.assertIn('outside the', sheet)
+        self.assertIn('Human review is pending', sheet)
+
+    def test_refuses_id_collisions_reused_sources_and_git(self):
+        for start in (600, 610, 560, 503):
+            with self.assertRaisesRegex(ValueError, 'collide'):
+                render_hidden.write(self.root / 'x', start=start)
+        reused = (render_hidden.PAIRS[0][:2] + ('P-500',) + render_hidden.PAIRS[0][3:],) + render_hidden.PAIRS[1:]
+        with mock.patch.object(render_hidden, 'PAIRS', reused):
+            with self.assertRaisesRegex(ValueError, 'no visual pair uses'):
+                render_hidden.write(self.root / 'x')
+        out = Path(__file__).parent / 'out'
+        with self.assertRaises(SystemExit):
+            render_hidden.write(out)
+        self.assertFalse(out.exists())
+        self.assertFalse((self.root / 'x').exists())
+
+    def changed(self, change, needle, index=0):
+        """Copy one record and its files, apply change(rec, side, root), expect an error containing needle."""
+        rec = copy.deepcopy(self.records[index])
+        side = rec['hidden'][0]['side']
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for s in ('old', 'new'):
+                path = root / rec[s]['storage_ref']
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(self.root / rec[s]['storage_ref'], path)
+            change(rec, side, root)
+            errors = validate.check(rec, self.schema, self.schema) or validate.check_texts(rec, root)
+            self.assertTrue(any(needle in e for e in errors), errors)
+
+    def test_visible_hidden_text_rejected(self):
+        texts = source_texts()
+
+        def visible(index):
+            injection = render_hidden.PAIRS[index][3]
+
+            def change(rec, side, root):
+                def draw(pdf):
+                    pdf.setFont('Helvetica', 12)
+                    pdf.drawString(48, render_hidden.HIDDEN_Y, injection)
+                source = texts[rec['source']['derived_from']]
+                data, _ = render.make_pdf(source[1 if side == 'old' else 2], draw)
+                rec[side] = render.store(root, data, 'pdf')
+                start = validate.pdf_texts(data)[0].index(injection)
+                rec['hidden'][0]['locator'].update(start=start, end=start + len(injection))
+            return change
+        for i in range(4):
+            self.changed(visible(i), 'span is visible', i)
+
+    def test_hidden_span_on_text_side_rejected(self):
+        def to_text(rec, side, root):
+            rec[side] = render.store(root, b'plain text side', 'text')
+        self.changed(to_text, 'only allowed on PDF sides')
+
+    def test_finding_overlapping_hidden_text_rejected(self):
+        def overlap(rec, side, root):
+            f = rec['findings'][0]
+            span = dict(rec['hidden'][0]['locator'])
+            span['end'] = span['start'] + 4
+            f['evidence_' + side] = span
+            f[side + '_value'] = render_hidden.PAIRS[int(rec['id'][2:]) - 613][3][:4]
+        for i in range(4):
+            self.changed(overlap, 'must produce no finding', i)
+
+    def test_empty_hidden_span_rejected(self):
+        def empty(rec, side, root):
+            loc = rec['hidden'][0]['locator']
+            loc['end'] = loc['start']
+        self.changed(empty, 'empty or blank')
+
+    def test_hidden_span_outside_page_text_rejected(self):
+        self.changed(lambda r, s, p: r['hidden'][0]['locator'].update(end=99999), 'outside the text')
+        self.changed(lambda r, s, p: r['hidden'][0]['locator'].update(page=9), 'page outside')
+
+    def test_pdfium_missing_fails_closed(self):
+        original = builtins.__import__
+
+        def missing(name, *args, **kwargs):
+            if name == 'pypdfium2':
+                raise ImportError('simulated missing PDFium')
+            return original(name, *args, **kwargs)
+        rec = self.records[0]
+        side = rec['hidden'][0]['side']
+        contents = {s: validate.read_version(rec[s], self.root) for s in ('old', 'new')}
+        with mock.patch('builtins.__import__', side_effect=missing):
+            self.assertTrue(any('requires pypdfium2' in e for e in validate.check_texts(rec, self.root)))
+            errors = validate.hidden_errors(rec, contents, self.root)
+            self.assertTrue(any('requires pypdfium2' in e and side in e for e in errors), errors)
+
+
+if __name__ == '__main__':
+    unittest.main()
