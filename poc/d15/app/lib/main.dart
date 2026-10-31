@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdfrx/pdfrx.dart';
 
-const apiBase = String.fromEnvironment('API', defaultValue: 'http://127.0.0.1:8765');
+// USB + adb reverse: 127.0.0.1. TestFlight or Wi-Fi: set the PC's LAN address in the app (dns icon).
+const defaultApiBase = String.fromEnvironment('API', defaultValue: 'http://127.0.0.1:8765');
 const matchIoU = 0.9; // a highlight matches when the two boxes overlap this much
 
 Future<void> main() async {
@@ -105,6 +106,7 @@ class _HighlightPageState extends State<HighlightPage> {
   int current = 0;
   Passage? selected;
   String? status;
+  String apiBase = defaultApiBase;
 
   Version? get version => versions[current];
 
@@ -129,6 +131,22 @@ class _HighlightPageState extends State<HighlightPage> {
     } catch (e) {
       setState(() => status = 'Failed: $e');
     }
+  }
+
+  Future<void> editApi() async {
+    final field = TextEditingController(text: apiBase);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mock API address'),
+        content: TextField(controller: field, keyboardType: TextInputType.url, autocorrect: false),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, field.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (value != null && value.isNotEmpty) setState(() => apiBase = value);
   }
 
   Future<void> show(Passage p) async {
@@ -165,6 +183,7 @@ class _HighlightPageState extends State<HighlightPage> {
         title: Text(all.isEmpty ? 'D-15 highlight test' : 'Match $ok/${all.length} '
             '(${(100 * ok / all.length).toStringAsFixed(0)}%, target ≥ 95%)'),
         actions: [
+          IconButton(tooltip: 'Mock API address', onPressed: editApi, icon: const Icon(Icons.dns)),
           IconButton(tooltip: 'Pick older PDF', onPressed: () => pick(0), icon: const Icon(Icons.history)),
           IconButton(tooltip: 'Pick newer PDF', onPressed: () => pick(1), icon: const Icon(Icons.upload_file)),
         ],
