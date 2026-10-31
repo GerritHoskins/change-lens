@@ -14,15 +14,10 @@ from changelens import MODEL_CONFIG_ID, jobs
 from changelens.config import Settings
 from changelens.domain import Database, DbFactCache
 from changelens.domain.models import Finding
-from changelens.llm import FakeLlm, LlmPort, MeteredLlm
-from changelens.metering import CeilingReached, CostMeter
-from changelens.pipeline.align import align
-from changelens.pipeline.compare import compare
-from changelens.pipeline.extract import extract_cached
-from changelens.pipeline.report import report
+from changelens.llm import FakeLlm, LlmPort
 from changelens.pipeline.sandbox import parse_sandboxed
-from changelens.pipeline.types import PARTIAL_WARNINGS, Evidence, ParsedDocument, ParseRejected, VerifyResult
-from changelens.pipeline.verify import verify
+from changelens.pipeline.run import run_comparison
+from changelens.pipeline.types import Evidence, ParsedDocument, ParseRejected, VerifyResult
 from changelens.storage import ObjectStore
 
 log = logging.getLogger("changelens.worker")
@@ -126,42 +121,15 @@ class Worker:
             later = ParsedDocument.from_stored(l.kind, l.parsed_pages, l.blocks, l.page_count, l.parse_warnings)
             sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
             ceiling, scope = c.cost_ceiling, c.scope_snapshot
-        meter = CostMeter(ceiling)
-        llm = MeteredLlm(self.llm, meter)
-        warnings = []
-        # Hidden blocks are never sent to the model nor diffed, and are reported; unread or
-        # unchecked content makes the result partial (AC-11, AC-18).
-        codes = {w.code for w in earlier.warnings + later.warnings}
-        if "hidden_text" in codes:
-            warnings.append({"code": "hidden_text"})
-        if codes & PARTIAL_WARNINGS:
-            warnings.append({"code": "parse_warnings"})
         config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
-        facts, unextracted, stage = [], 0, "extract"
-        try:
-            for version_id, sha, doc in sides:  # facts per version, cached (I-2)
-                res = extract_cached(doc, sha, config_id, DbFactCache(self.db, tenant_id, version_id), llm)
-                facts.append(res.facts)
-                unextracted += len(res.unextracted)
-            stage = "compare"
-            drafts = compare(align(facts[0], facts[1], llm), scope, llm)  # I-3, I-4
-        except CeilingReached:
-            log.warning("comparison %s stopped at the cost ceiling during %s", comparison_id, stage)
-            self._finish(tenant_id, comparison_id, VerifyResult([], 0, []), "failed",
-                         warnings + [{"code": "cost_ceiling", "stage": stage}], meter.total)
-            return
-        if unextracted:
-            warnings.append({"code": "unextracted", "chunks": unextracted})  # AC-11
-        checked = verify(drafts, earlier, later)  # I-5: exact quotes, needs review, block cross-check
-        checked.findings, templated = report(checked.findings, llm)
-        if templated:  # verified findings are kept with template wording, never dropped (AC-21)
-            warnings.append({"code": "cost_ceiling", "stage": "report", "templated_findings": templated})
-            log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, meter.calls)
-        partial = {"code": "parse_warnings"} in warnings or unextracted > 0 or templated > 0
-        status = "partial" if partial else "complete"
-        self._finish(tenant_id, comparison_id, checked, status, warnings, meter.total)
+        out = run_comparison([(sha, doc, DbFactCache(self.db, tenant_id, vid)) for vid, sha, doc in sides],
+                             scope, self.llm, ceiling, config_id)
+        if any(w.get("code") == "cost_ceiling" for w in out.warnings):
+            log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, out.calls)
+        self._finish(tenant_id, comparison_id, out.checked, out.status, out.warnings, out.cost)
         log.info("comparison %s %s: %d findings, %d withheld, %d unexplained, cost %s of %s", comparison_id,
-                 status, len(checked.findings), checked.withheld_count, len(checked.unexplained), meter.total, ceiling)
+                 out.status, len(out.checked.findings), out.checked.withheld_count, len(out.checked.unexplained),
+                 out.cost, ceiling)
 
     def _finish(self, tenant_id, comparison_id, checked: VerifyResult, status, warnings, cost) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
