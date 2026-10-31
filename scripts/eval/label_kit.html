@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root { --bg: #fff; --fg: #1d1d1f; --muted: #6b6b70; --line: #d9d9de; --panel: #f6f6f8; --accent: #1f5fbf; --bad: #b3261e; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+header { padding: 6px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 12px 0; }
+.pane { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; }
+.bar { padding: 4px 8px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.doc { height: 52vh; overflow: auto; font: 13px/1.45 Consolas, ui-monospace, monospace; padding: 4px 0; }
+.row { display: flex; min-height: 1.45em; }
+.ln { flex: 0 0 4.2em; text-align: right; padding-right: .7em; color: var(--muted); user-select: none; }
+.ln::before { content: attr(data-n); }
+.tx { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chunk { overflow-anchor: none; }
+section.work { padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; }
+fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 8px; }
+label { display: inline-block; margin: 2px 8px 2px 0; }
+textarea { width: 100%; font: 12px Consolas, monospace; }
+textarea[readonly] { background: var(--panel); }
+#sel { font: 12px Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 6em; overflow: auto; }
+#msg { color: var(--bad); min-height: 1.2em; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+td, th { border-bottom: 1px solid var(--line); padding: 3px 4px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+button { font: inherit; }
+.muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header><b id="hdr"></b><span class="muted">Select text in either pane, check it, then use it as evidence. This page shows the documents only; it suggests no labels.</span></header>
+<main>
+  <section class="pane"><div class="bar"><b>Old</b>
+    <input id="go-old" size="6" placeholder="line"><button data-go="old">Go</button>
+    <input id="find-old" size="18" placeholder="find text"><button data-find="old">Find next</button>
+    <span class="muted" id="info-old"></span></div><div class="doc" id="doc-old"></div></section>
+  <section class="pane"><div class="bar"><b>New</b>
+    <input id="go-new" size="6" placeholder="line"><button data-go="new">Go</button>
+    <input id="find-new" size="18" placeholder="find text"><button data-find="new">Find next</button>
+    <span class="muted" id="info-new"></span></div><div class="doc" id="doc-new"></div></section>
+</main>
+<section class="work">
+  <div>
+    <fieldset><legend>Current selection</legend>
+      <div id="sel" class="muted">Nothing selected.</div>
+      <button id="use" disabled>Use as evidence</button>
+      <div id="msg"></div>
+    </fieldset>
+    <fieldset><legend id="formtitle">New finding</legend>
+      <label>Category <select id="category"></select></label>
+      <label>Change type <select id="change_type"></select></label><br>
+      Material: <label><input type="radio" name="material" value="true"> yes</label>
+      <label><input type="radio" name="material" value="false"> no</label><br>
+      Old value (from the old pane) <button id="clear-old">Clear</button>
+      <textarea id="old_value" rows="2" readonly></textarea>
+      New value (from the new pane) <button id="clear-new">Clear</button>
+      <textarea id="new_value" rows="2" readonly></textarea>
+      Note <textarea id="note" rows="2"></textarea>
+      <button id="save">Save finding</button> <button id="reset">Discard form</button>
+    </fieldset>
+  </div>
+  <div>
+    <table><thead><tr><th>ID</th><th>Category</th><th>Type</th><th>Mat.</th><th>Old</th><th>New</th><th>Note</th><th></th></tr></thead>
+      <tbody id="list"></tbody></table>
+    <p><label><input type="checkbox" id="reviewed"> I have read both documents in full and recorded every change (or that there is none).</label></p>
+    <button id="export">Export labels</button>
+    <label>Import a previous export <input type="file" id="import" accept=".json,application/json"></label>
+    <div class="muted" id="status"></div>
+  </div>
+</section>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+// CORE-BEGIN: pure functions, also run under Node by test_label_kit.py
+var CHUNK = 200;
+function buildLines(text) {
+  // Lines split on CRLF, CR or LF only; s = start in code points, u = start in UTF-16 units.
+  var lines = [], i = 0, cp = 0, su = 0, sc = 0, n = text.length;
+  while (i < n) {
+    var c = text.charCodeAt(i);
+    if (c === 13 || c === 10) {
+      lines.push({s: sc, u: su, t: text.slice(su, i)});
+      var w = (c === 13 && text.charCodeAt(i + 1) === 10) ? 2 : 1;
+      i += w; cp += w; su = i; sc = cp;
+      continue;
+    }
+    i += isPair(text, i) ? 2 : 1;
+    cp += 1;
+  }
+  lines.push({s: sc, u: su, t: text.slice(su)});
+  return {lines: lines, total: cp};
+}
+function isPair(s, i) {
+  var c = s.charCodeAt(i);
+  return c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length && (s.charCodeAt(i + 1) & 0xFC00) === 0xDC00;
+}
+function cpCount(s, u) {
+  // Code points in s before UTF-16 offset u (a split surrogate pair counts as included).
+  var k = 0, i = 0;
+  while (i < u && i < s.length) { i += isPair(s, i) ? 2 : 1; k += 1; }
+  return k;
+}
+function display(t) {
+  // Control characters become their visible "control picture": one UTF-16 unit for one.
+  return t.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, function (c) {
+    var k = c.charCodeAt(0);
+    return String.fromCharCode(k === 127 ? 0x2421 : 0x2400 + k);
+  });
+}
+function lineAt(lines, key, v) {
+  var lo = 0, hi = lines.length - 1;
+  while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (lines[mid][key] <= v) lo = mid; else hi = mid - 1; }
+  return lo;
+}
+function checkFinding(f, categories, types) {
+  // Mirrors reconcile.rule_errors; reconcile.py is the gate, this only catches mistakes early.
+  var e = [];
+  if (categories.indexOf(f.category) < 0) e.push('choose a category');
+  if (types.indexOf(f.change_type) < 0) e.push('choose a change type');
+  if (typeof f.material !== 'boolean') e.push('choose material yes or no');
+  if (!f.evidence_old && !f.evidence_new) e.push('select evidence in the old or the new pane');
+  if (f.change_type === 'added' && !f.evidence_new) e.push('"added" needs evidence in the new version');
+  if ((f.change_type === 'removed' || f.change_type === 'not_addressed') && !f.evidence_old)
+    e.push('"' + f.change_type + '" needs evidence in the old version');
+  if ((f.category === 'structure' || f.change_type === 'equivalent') && f.material === true)
+    e.push('structure and equivalent findings are never material');
+  return e;
+}
+// CORE-END
+var D = JSON.parse(document.getElementById('data').textContent);
+var KEY = 'changelens:' + D.pair + ':' + D.labeller + ':' + D.texts.old.sha256 + ':' + D.texts.new.sha256;
+var P = {}, findings = [], draft = null, editing = null, current = null, finds = {old: -1, new: -1};
+var $ = function (id) { return document.getElementById(id); };
+document.title = D.pair + ' · labeller ' + D.labeller;
+$('hdr').textContent = D.pair + ' · labeller ' + D.labeller;
+
+function setupPane(side) {
+  var text = D.texts[side].text, b = buildLines(text), el = $('doc-' + side), chunks = [];
+  var perRow = Math.max(20, Math.floor((el.clientWidth || 600) / 7.5) - 6);
+  P[side] = {text: text, lines: b.lines, cps: null, el: el, chunks: chunks};
+  $('info-' + side).textContent = b.lines.length + ' lines, ' + b.total + ' characters';
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (x) { if (x.isIntersecting) { render(side, +x.target.dataset.k); io.unobserve(x.target); } });
+  }, {root: el, rootMargin: '1500px 0px'});
+  for (var k = 0; k * CHUNK < b.lines.length; k++) {
+    var div = document.createElement('div'), rows = 0;
+    for (var i = k * CHUNK; i < Math.min((k + 1) * CHUNK, b.lines.length); i++)
+      rows += Math.max(1, Math.ceil(b.lines[i].t.length / perRow));
+    div.className = 'chunk'; div.dataset.k = k; div.style.height = (rows * 1.45) + 'em';
+    el.appendChild(div); chunks.push({el: div, done: false}); io.observe(div);
+  }
+}
+function render(side, k) {
+  var p = P[side], c = p.chunks[k];
+  if (c.done) return;
+  c.done = true;
+  var frag = document.createDocumentFragment();
+  for (var i = k * CHUNK; i < Math.min((k + 1) * CHUNK, p.lines.length); i++) {
+    var row = document.createElement('div'), ln = document.createElement('span'), tx = document.createElement('span');
+    row.className = 'row'; row.dataset.i = i; ln.className = 'ln'; ln.dataset.n = i + 1;
+    tx.className = 'tx'; tx.dataset.i = i; tx.textContent = display(p.lines[i].t);
+    row.appendChild(ln); row.appendChild(tx); frag.appendChild(row);
+  }
+  c.el.style.height = ''; c.el.appendChild(frag);
+}
+function rowEl(side, i) {
+  render(side, Math.floor(i / CHUNK));
+  return P[side].chunks[Math.floor(i / CHUNK)].el.children[i % CHUNK];
+}
+function cps(side) { return P[side].cps || (P[side].cps = Array.from(P[side].text)); }
+function lineEdge(side, row, end) {
+  var L = P[side].lines[+row.dataset.i];
+  return end ? L.s + cpCount(L.t, L.t.length) : L.s;
+}
+function posOf(side, node, off) {
+  var el = node.nodeType === 3 ? node.parentElement : node;
+  if (!el || !el.closest) return null;
+  var tx = el.closest('.tx'), row = el.closest('.row'), ch = el.closest('.chunk');
+  if (tx && node.nodeType === 3) { var L = P[side].lines[+tx.dataset.i]; return L.s + cpCount(L.t, off); }
+  if (tx) return lineEdge(side, tx.parentElement, off > 0);
+  if (row) return lineEdge(side, row, off > 1);
+  if (ch && ch.children.length) return off < ch.children.length ? lineEdge(side, ch.children[off], false)
+    : lineEdge(side, ch.children[ch.children.length - 1], true);
+  return null;
+}
+function paneOf(node) {
+  var el = node.nodeType === 3 ? node.parentElement : node, d = el && el.closest && el.closest('.doc');
+  return d ? d.id.slice(4) : null;
+}
+function onSelect() {
+  var s = window.getSelection();
+  if (!s.rangeCount || s.isCollapsed) return;
+  var r = s.getRangeAt(0), side = paneOf(r.startContainer);
+  if (!side) return;
+  if (paneOf(r.endContainer) !== side) return msg('Select within one pane.');
+  var a = posOf(side, r.startContainer, r.startOffset), b = posOf(side, r.endContainer, r.endOffset);
+  if (a === null || b === null || b <= a) return msg('Could not read that selection; select the text again.');
+  current = {side: side, start: a, end: b, value: cps(side).slice(a, b).join('')};
+  var line = lineAt(P[side].lines, 's', a) + 1;
+  $('sel').textContent = side.toUpperCase() + ' characters ' + a + '-' + b + ' (line ' + line + '):\n' + JSON.stringify(current.value);
+  $('sel').className = ''; $('use').disabled = false; $('use').textContent = 'Use as ' + side + ' evidence'; msg('');
+}
+function msg(t) { $('msg').textContent = t; }
+function blank() { return {evidence: {old: null, new: null}}; }
+function fillForm() {
+  $('category').value = draft.category || ''; $('change_type').value = draft.change_type || '';
+  document.querySelectorAll('input[name=material]').forEach(function (r) { r.checked = draft.material !== undefined && r.value === String(draft.material); });
+  ['old', 'new'].forEach(function (side) { var ev = draft.evidence[side]; $(side + '_value').value = ev ? JSON.stringify(ev.value) + '  [' + ev.start + '-' + ev.end + ']' : ''; });
+  $('note').value = draft.note || ''; $('formtitle').textContent = editing ? 'Editing ' + editing : 'New finding';
+}
+function readForm() {
+  var m = document.querySelector('input[name=material]:checked'), f = {id: editing};
+  f.category = $('category').value; f.change_type = $('change_type').value;
+  if (m) f.material = m.value === 'true';
+  ['old', 'new'].forEach(function (side) {
+    var ev = draft.evidence[side];
+    if (ev) { f[side + '_value'] = ev.value; f['evidence_' + side] = {start: ev.start, end: ev.end}; }
+  });
+  if ($('note').value.trim()) f.note = $('note').value.trim();
+  return f;
+}
+function nextId() {
+  var n = 0;
+  findings.forEach(function (f) { n = Math.max(n, +f.id.split('-')[1]); });
+  return D.labeller + '-' + (n + 1);
+}
+function evOf(f, side) { return f['evidence_' + side] ? {start: f['evidence_' + side].start, end: f['evidence_' + side].end, value: f[side + '_value']} : null; }
+function cell(tr, t) { var td = document.createElement('td'); td.textContent = t; tr.appendChild(td); return td; }
+function short(v) { return v === undefined ? '' : JSON.stringify(v.length > 80 ? v.slice(0, 77) + '...' : v); }
+function show() {
+  var tb = $('list'); tb.textContent = '';
+  findings.forEach(function (f, i) {
+    var tr = document.createElement('tr');
+    [f.id, f.category, f.change_type, f.material ? 'yes' : 'no', short(f.old_value), short(f.new_value), f.note || ''].forEach(function (t) { cell(tr, t); });
+    var td = cell(tr, '');
+    [['Go', function () { ['old', 'new'].forEach(function (s) { if (f['evidence_' + s]) go(s, lineAt(P[s].lines, 's', f['evidence_' + s].start)); }); }],
+     ['Edit', function () { editing = f.id; draft = {evidence: {old: evOf(f, 'old'), new: evOf(f, 'new')}, category: f.category, change_type: f.change_type, material: f.material, note: f.note}; fillForm(); }],
+     ['Delete', function () { if (confirm('Delete ' + f.id + '?')) { findings.splice(i, 1); persist(); show(); } }]].forEach(function (b) {
+      var btn = document.createElement('button'); btn.textContent = b[0]; btn.onclick = b[1]; td.appendChild(btn);
+    });
+    tb.appendChild(tr);
+  });
+  $('status').textContent = findings.length + ' finding(s). Saved in this browser; export to hand in.';
+}
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify({findings: findings, reviewed: $('reviewed').checked})); } catch (e) { /* storage unavailable */ }
+}
+function go(side, i) { rowEl(side, i).scrollIntoView({block: 'center'}); }
+function find(side) {
+  var q = $('find-' + side).value, p = P[side];
+  if (!q) return;
+  var at = p.text.indexOf(q, finds[side] + 1);
+  if (at < 0) at = p.text.indexOf(q);
+  if (at < 0) return msg('Not found in the ' + side + ' text.');
+  finds[side] = at;
+  var i = lineAt(p.lines, 'u', at), row = rowEl(side, i), node = row.lastChild.firstChild, r = document.createRange();
+  if (!node || at + q.length > p.lines[i].u + p.lines[i].t.length) return go(side, i);
+  r.setStart(node, at - p.lines[i].u); r.setEnd(node, at - p.lines[i].u + q.length);
+  var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  row.scrollIntoView({block: 'center'}); onSelect();
+}
+function exportLabels() {
+  var out = {format: 'change-lens-labels/1', pair: D.pair, labeller: D.labeller,
+    texts: {old: {storage_ref: D.texts.old.storage_ref, sha256: D.texts.old.sha256}, new: {storage_ref: D.texts.new.storage_ref, sha256: D.texts.new.sha256}},
+    reviewed_fully: $('reviewed').checked, exported: new Date().toISOString(), findings: findings};
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type: 'application/json'}));
+  a.download = 'labels-' + D.pair + '-' + D.labeller + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  if (!out.reviewed_fully) msg('Exported as a draft: tick the review box before the final export.');
+}
+function importLabels(file) {
+  var rd = new FileReader();
+  rd.onload = function () {
+    try {
+      var d = JSON.parse(rd.result);
+      if (d.pair !== D.pair || d.labeller !== D.labeller || d.texts.old.sha256 !== D.texts.old.sha256 || d.texts.new.sha256 !== D.texts.new.sha256)
+        return msg('That file belongs to another pair, labeller or text version.');
+      if (!confirm('Replace the ' + findings.length + ' finding(s) on this page with ' + d.findings.length + ' from the file?')) return;
+      findings = d.findings; $('reviewed').checked = d.reviewed_fully === true; persist(); show();
+    } catch (e) { msg('Not a labels file.'); }
+  };
+  rd.readAsText(file);
+}
+function init() {
+  ['category', 'change_type'].forEach(function (k) {
+    var sel = $(k), opts = [''].concat(k === 'category' ? D.categories : D.change_types);
+    opts.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v || '(choose)'; sel.appendChild(o); });
+  });
+  setupPane('old'); setupPane('new');
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) { findings = saved.findings; $('reviewed').checked = saved.reviewed; } } catch (e) { /* none */ }
+  draft = blank(); fillForm(); show();
+  ['old', 'new'].forEach(function (s) { P[s].el.addEventListener('mouseup', onSelect); P[s].el.addEventListener('keyup', onSelect); });
+  document.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () {
+    var s = b.dataset.go, n = parseInt($('go-' + s).value, 10);
+    if (n >= 1 && n <= P[s].lines.length) go(s, n - 1); else msg('No such line in the ' + s + ' text.');
+  }; });
+  document.querySelectorAll('[data-find]').forEach(function (b) { b.onclick = function () { find(b.dataset.find); }; });
+  $('use').onclick = function () { if (current) { draft.evidence[current.side] = current; fillForm(); } };
+  $('clear-old').onclick = function () { draft.evidence.old = null; fillForm(); };
+  $('clear-new').onclick = function () { draft.evidence.new = null; fillForm(); };
+  $('reset').onclick = function () { editing = null; draft = blank(); fillForm(); msg(''); };
+  $('save').onclick = function () {
+    var f = readForm(), e = checkFinding(f, D.categories, D.change_types);
+    if (e.length) return msg(e.join('; '));
+    if (!f.id) { f.id = nextId(); findings.push(f); }
+    else findings[findings.findIndex(function (x) { return x.id === f.id; })] = f;
+    editing = null; draft = blank(); fillForm(); persist(); show(); msg('');
+  };
+  $('reviewed').onchange = persist;
+  $('export').onclick = exportLabels;
+  $('import').onchange = function () { if (this.files[0]) importLabels(this.files[0]); this.value = ''; };
+}
+init();
+</script>
+</body>
+</html>
