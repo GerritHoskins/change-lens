@@ -25,10 +25,14 @@ DPI = 144
 SCALE = DPI / 72
 PAGE = (842, 842)
 OPS = ('value_change', 'qualifier_flip', 'partial_update', 'no_change', 'replacement')
+PAIRS = 13
 
 
-def make_pdf(text):
-    """Keep each source line intact; return bytes and source-line/page mapping."""
+def make_pdf(text, overlay=None):
+    """Keep each source line intact; return bytes and source-line/page mapping.
+
+    overlay(canvas) may draw on the last page before saving (render_hidden.py).
+    """
     stream = io.BytesIO()
     pdf = canvas.Canvas(stream, pagesize=PAGE, invariant=1, pageCompression=1)
     pdf.setTitle('ChangeLens constructed brief')
@@ -47,6 +51,8 @@ def make_pdf(text):
             lines.append((offset, line, page))
         y -= 22
         offset += len(raw)
+    if overlay is not None:
+        overlay(pdf)
     pdf.save()
     return stream.getvalue(), lines
 
@@ -254,6 +260,25 @@ def review(out, records):
     (out / 'review.html').write_text('\n'.join(parts), encoding='utf-8')
 
 
+def select(seed=7):
+    """The (record, old, new) text pair each visual pair re-renders, in visual record order."""
+    sources = {op: [] for op in OPS}
+    for rec, old, new in generate.generate(per_op=6, seed=seed):
+        op = rec['source']['operators'][0]
+        if op in sources:
+            sources[op].append((rec, old, new))
+    chosen, used = [], set()
+    for i in range(PAIRS):
+        op = OPS[i % 5] if i < 10 else 'value_change'
+        # Each visual pair re-renders a distinct text pair and records it, so the split keeps them together (07 §5).
+        source = sources[op][i % 6 if i < 10 else i - 9]
+        if source[0]['id'] in used:
+            raise ValueError('two visual pairs would share text source ' + source[0]['id'])
+        used.add(source[0]['id'])
+        chosen.append(source)
+    return chosen
+
+
 def write(out, seed=7, start=600):
     out = Path(out).resolve()
     if generate.inside_git(out):
@@ -261,20 +286,8 @@ def write(out, seed=7, start=600):
     if start < 600:
         raise ValueError('visual record IDs must start at 600 or later')
     out.mkdir(parents=True, exist_ok=True)
-    sources, sources_ids = {op: [] for op in OPS}, []
-    for rec, old, new in generate.generate(per_op=6, seed=seed):
-        sources_ids.append(rec['id'])
-        op = rec['source']['operators'][0]
-        if op in sources:
-            sources[op].append((rec, old, new))
-    records, used = [], set()
-    for i in range(13):
-        op = OPS[i % 5] if i < 10 else 'value_change'
-        # Each visual pair re-renders a distinct text pair and records it, so the split keeps them together (07 §5).
-        source, old, new = sources[op][i % 6 if i < 10 else i - 9]
-        if source['id'] in used:
-            raise ValueError('two visual pairs would share text source ' + source['id'])
-        used.add(source['id'])
+    records, sources_ids = [], [rec['id'] for rec, _, _ in generate.generate(per_op=6, seed=seed)]
+    for i, (source, old, new) in enumerate(select(seed)):
         rec = copy.deepcopy(source)
         rec['id'], rec['expected_status'] = 'P-%03d' % (start + i), 'complete'
         rec['source']['derived_from'] = source['id']

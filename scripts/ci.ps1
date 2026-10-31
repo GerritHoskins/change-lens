@@ -69,7 +69,7 @@ else {
     $global:LASTEXITCODE = -1
     $deps = & $python -c "import reportlab, pypdfium2, PIL" 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { $deps | Write-Host; $errors += 'TEST render: required dependencies not importable' }
-    foreach ($suite in 'generate', 'render') {
+    foreach ($suite in 'generate', 'render', 'render_hidden') {
         $global:LASTEXITCODE = -1
         $out = & $python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') -p "test_$suite.py" 2>&1 | ForEach-Object { "$_" }
         $code = $LASTEXITCODE

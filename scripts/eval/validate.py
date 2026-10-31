@@ -6,8 +6,10 @@ schema uses (type, enum, const, pattern, format: date, required, properties,
 additionalProperties, items, minItems, maxItems, minimum, anyOf, local $ref). Any other
 keyword raises an error, so tightening the schema can never silently pass bad records.
 On top of the schema it checks IDs, stored-file hashes and magic bytes, exact text/PDF
-slices, full PNG decoding, image geometry and unreadable regions (image sides only, no ink,
-overlapping a finding). Whether image pixels show the labelled value needs human review.
+slices, full PNG decoding, image geometry, unreadable regions (image sides only, no ink,
+overlapping a finding) and hidden spans (PDF sides only, non-empty, no finding on them, and
+rendered by PDFium off the page or with almost no ink). Whether image pixels show the
+labelled value needs human review.
 Storage checks need storage_ref; use --schema-only for records without stored files.
 
     python scripts/eval/validate.py --records <dir>/records.jsonl [--texts-root <dir>] [--schema-only]
@@ -33,6 +35,13 @@ ANNOTATIONS = {"$schema", "$id", "$defs", "title", "description"}
 SUFFIX = {"text": ".txt", "pdf": ".pdf", "image": ".png"}
 CHANNELS = {0: 1, 2: 3, 4: 2, 6: 4}  # 8-bit greyscale, RGB, grey+alpha, RGBA; no palettes
 UNREADABLE_INK = 128  # an unreadable region holds no pixel darker than this (07 §4)
+HIDDEN_DPI = 144  # same raster resolution as render.py
+# Hidden text (07 §4): measured on the P-613..P-616 fixtures at 144 DPI with INK_DELTA 32, a span's
+# ink is 0 rows for white-on-white, off-page and covered text, 2-3 rows for a 1 pt run (at eight
+# sub-pixel offsets), 4 for 2 pt, 7 for 3 pt, 24 for 12 pt black and 22 for 12 pt grey #cccccc.
+HIDDEN_PAD = 4  # background sample margin around the character boxes, in pixels
+INK_DELTA = 32  # a channel this far from the background colour counts as ink
+MAX_INK_ROWS = 3  # more ink rows than this means a reader can see the text
 
 
 def _type_ok(value, t):
@@ -179,16 +188,65 @@ def dark_pixels(data, box, threshold=UNREADABLE_INK):
 
 
 def pdf_texts(data):
-    try:
-        import pypdfium2
-    except ImportError as exc:
-        raise ValueError("PDF validation requires pypdfium2; install requirements-render.txt") from exc
+    pypdfium2 = _pdfium()
     with pypdfium2.PdfDocument(data) as doc:
         texts = []
         for page in doc:
             with closing(page), closing(page.get_textpage()) as tp:
                 texts.append(tp.get_text_range())
         return texts
+
+
+def _pdfium():
+    try:
+        import pypdfium2
+    except ImportError as exc:
+        raise ValueError("PDF validation requires pypdfium2; install requirements-render.txt") from exc
+    return pypdfium2
+
+
+def ink_rows(data, span):
+    """Render the span's page with PDFium; count pixel rows of visible ink around its characters.
+
+    Each character box comes from PDFium, not from how the file was built. Boxes wholly off
+    the page count as no ink. Around the on-page boxes (plus HIDDEN_PAD pixels) the commonest
+    colour is the background; a row holds ink if any pixel differs from it by more than
+    INK_DELTA in a colour channel. Returns (ink rows, on-page characters).
+    """
+    pdfium = _pdfium()
+    scale = HIDDEN_DPI / 72
+    with pdfium.PdfDocument(data) as doc, closing(doc[span["page"] - 1]) as page, \
+            closing(page.get_textpage()) as tp:
+        width, height = page.get_size()
+        boxes = []
+        for i in range(span["start"], span["end"]):
+            ci = pdfium.raw.FPDFText_GetCharIndexFromTextIndex(tp, i)
+            if ci < 0:
+                raise ValueError("hidden character has no PDFium character index")
+            left, bottom, right, top = tp.get_charbox(ci)
+            if right <= 0 or left >= width or top <= 0 or bottom >= height:
+                continue  # wholly off the page
+            boxes.append((max(left, 0), max(bottom, 0), min(right, width), min(top, height)))
+        if not boxes:
+            return 0, 0
+        bitmap = page.render(scale=scale, rev_byteorder=True)
+        try:
+            buf, stride, bpp = bytes(bitmap.buffer), bitmap.stride, bitmap.n_channels
+            bw, bh = bitmap.width, bitmap.height
+        finally:
+            bitmap.close()
+    x0 = max(0, math.floor(min(b[0] for b in boxes) * scale) - HIDDEN_PAD)
+    x1 = min(bw, math.ceil(max(b[2] for b in boxes) * scale) + HIDDEN_PAD)
+    y0 = max(0, math.floor((height - max(b[3] for b in boxes)) * scale) - HIDDEN_PAD)
+    y1 = min(bh, math.ceil((height - min(b[1] for b in boxes)) * scale) + HIDDEN_PAD)
+    rows = [[buf[y * stride + x * bpp:y * stride + x * bpp + 3] for x in range(x0, x1)] for y in range(y0, y1)]
+    counts = {}
+    for row in rows:
+        for px in row:
+            counts[px] = counts.get(px, 0) + 1
+    bg = max(counts, key=counts.get)
+    ink = sum(1 for row in rows if any(max(abs(a - b) for a, b in zip(px, bg)) > INK_DELTA for px in row))
+    return ink, len(boxes)
 
 
 def read_version(ver, root):
@@ -298,6 +356,37 @@ def check_texts(rec, root):
             errs.append(rec["id"] + " " + f["id"] + ": unreadable evidence must be uncertain with note unreadable")
         if f.get("note") == "unreadable" and not affected:
             errs.append(rec["id"] + " " + f["id"] + ": unreadable finding has no matching region")
+    return errs + hidden_errors(rec, contents, root)
+
+
+def hidden_errors(rec, contents, root):
+    """Hidden spans: PDF side, non-empty slice, no finding evidence on them, and no visible ink."""
+    errs = []
+    for k, entry in enumerate(rec.get("hidden", [])):
+        side, span = entry["side"], entry["locator"]
+        where = "%s hidden[%d] %s" % (rec["id"], k, side)
+        if rec[side]["format"] != "pdf":
+            errs.append(where + ": hidden text is only allowed on PDF sides")
+            continue
+        if side not in contents:
+            continue
+        bad = locator_errors(span, None, "pdf", contents[side], where, check_value=False)
+        errs += bad
+        if bad:
+            continue
+        if not contents[side][span["page"] - 1][span["start"]:span["end"]].strip():
+            errs.append(where + ": span slices to empty or blank text")
+            continue
+        for f in rec["findings"]:
+            if overlaps(f.get("evidence_" + side, {}), span):
+                errs.append("%s: overlaps evidence of %s; hidden text must produce no finding" % (where, f["id"]))
+        try:
+            ink, _ = ink_rows((Path(root).resolve() / rec[side]["storage_ref"]).read_bytes(), span)
+        except Exception as exc:
+            errs.append("%s: %s" % (where, exc))
+            continue
+        if ink > MAX_INK_ROWS:
+            errs.append("%s: span is visible (%d ink rows, limit %d)" % (where, ink, MAX_INK_ROWS))
     return errs
 
 

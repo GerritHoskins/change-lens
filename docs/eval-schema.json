@@ -49,6 +49,20 @@
         }
       }
     },
+    "hidden": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Text a reader cannot see; the product warns (SA-9) and excludes it from findings (AC-18)",
+      "items": {
+        "type": "object",
+        "required": ["side", "locator"],
+        "additionalProperties": false,
+        "properties": {
+          "side": { "enum": ["old", "new"] },
+          "locator": { "$ref": "#/$defs/locator" }
+        }
+      }
+    },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "labelled_by": { "type": "array", "minItems": 1, "items": { "type": "string" } },
     "reconciliation": {
