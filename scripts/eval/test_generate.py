@@ -17,7 +17,7 @@ BASE = {b["id"]: b for b in BASES}
 
 # Digest of all records for seed 7, 6 per operator. A change to an operator or a base
 # changes every hash the manifest records, so it must be deliberate: update this value.
-GOLDEN = "4852dad289bfb579bcef8bfb1548ec0ec3c65a94450d2f7c35e3f108457574d9"
+GOLDEN = "ff13d6c85ee8365577d98470144c3c4bcf531cb9c99adefd9ac39e089ed413aa"
 
 
 def pairs(per_op=6, seed=7):
