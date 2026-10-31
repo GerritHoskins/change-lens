@@ -81,8 +81,8 @@ def report(findings: list[DraftFinding], llm: Llm) -> tuple[list[DraftFinding], 
     for f in findings:
         f.explanation = None
         if f.change_type in MODEL_WORDED and not at_ceiling:
-            data = [f"{f.change_type} ({f.category})"] + [
-                f"<data>{ev.side.upper()}: {ev.quote}</data>" for ev in f.evidence]
+            # The adapter wraps each block in nonce delimiters and marks it untrusted (AC-18).
+            data = [f"{f.change_type} ({f.category})"] + [f"{ev.side.upper()}: {ev.quote}" for ev in f.evidence]
             try:
                 text = llm.structured("Explanation", SYSTEM, data)["explanation"]
                 f.explanation = text.strip() if _acceptable(text, f) else None

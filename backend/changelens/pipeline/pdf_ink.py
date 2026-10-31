@@ -6,6 +6,9 @@ the origin), so the parser flags exactly the spans the dataset labels as hidden.
 `tests/unit/test_visibility.py` fails if they drift.
 
 Deliberate differences:
+- Covered text (I-6). A span the ink rule calls visible is still `covered` when the page rendered
+  from a second copy of the document with all text objects removed shows no difference there:
+  the "ink" is an image or shape drawn over the text. The eval validator has no such rule.
 - Geometry (I-1c). The eval validator fails closed on rotated pages, a CropBox or an offset
   MediaBox; the backend maps glyph boxes from user space into the rendered page (CropBox origin,
   then /Rotate) and measures them. On plain pages the mapping is the identity the eval code uses.
@@ -94,23 +97,39 @@ class PageGeometry:
 class PageInk:
     """One rendered page plus its text page, measured span by span."""
 
-    def __init__(self, page, textpage, max_render_pixels: int):
+    def __init__(self, page, textpage, max_render_pixels: int, spare_page=None):
         self.geo = PageGeometry(page)
         if self.geo.width * SCALE * self.geo.height * SCALE > max_render_pixels:
             raise Unmeasurable("page_too_large")
         self.geo.cross_check(page)
         self.page, self.tp = page, textpage
+        self.spare = spare_page  # the same page from a second copy of the document, for `textless`
         self.width, self.height = self.geo.width, self.geo.height
         self._pixels: Optional[np.ndarray] = None
+        self._textless: Optional[np.ndarray] = None
+
+    @staticmethod
+    def _render(page) -> np.ndarray:
+        bitmap = page.render(scale=SCALE, rev_byteorder=True)
+        try:
+            return bitmap.to_numpy()[:, :, :3].astype(np.int16)
+        finally:
+            bitmap.close()
 
     def pixels(self) -> np.ndarray:
         if self._pixels is None:
-            bitmap = self.page.render(scale=SCALE, rev_byteorder=True)
-            try:
-                self._pixels = bitmap.to_numpy()[:, :, :3].astype(np.int16)
-            finally:
-                bitmap.close()
+            self._pixels = self._render(self.page)
         return self._pixels
+
+    def textless(self) -> Optional[np.ndarray]:
+        """The page rendered with every text object removed (I-6), or None without a spare page.
+        Where it equals `pixels()`, the text there changes nothing a reader sees: something is
+        drawn over it (an image or a shape), whatever the colours or texture of the cover."""
+        if self._textless is None and self.spare is not None:
+            _strip_text(self.spare.raw, pdfium.raw.FPDFPage_CountObjects, pdfium.raw.FPDFPage_GetObject,
+                        pdfium.raw.FPDFPage_RemoveObject)
+            self._textless = self._render(self.spare)
+        return self._textless
 
     def char_boxes(self, start: int, end: int) -> list:
         """(user-space box, char index) for text-range offsets; generated characters are skipped."""
@@ -133,6 +152,11 @@ class PageInk:
     def measure(self, start: int, end: int) -> tuple[int, int, float]:
         """(ink rows, on-page characters, tallest on-page glyph box in points) for a text-range span,
         rows and height taken across the text's displayed direction."""
+        ink, chars, glyph, _ = self._measure(start, end)
+        return ink, chars, glyph
+
+    def _measure(self, start: int, end: int) -> tuple[int, int, float, Optional[int]]:
+        """`measure` plus the rows where removing the text changes the render (None: not checked)."""
         width, height = self.width, self.height
         boxes, vertical = [], None
         for user_box, ci in self.char_boxes(start, end):
@@ -143,7 +167,7 @@ class PageInk:
             if vertical is None:
                 vertical = self.vertical(ci)
         if not boxes:
-            return 0, 0, 0.0
+            return 0, 0, 0.0, None
         px = self.pixels()
         bh, bw = px.shape[0], px.shape[1]
         x0 = max(0, math.floor(min(b[0] for b in boxes) * SCALE) - HIDDEN_PAD)
@@ -151,28 +175,49 @@ class PageInk:
         y0 = max(0, math.floor(min(b[1] for b in boxes) * SCALE) - HIDDEN_PAD)
         y1 = min(bh, math.ceil(max(b[3] for b in boxes) * SCALE) + HIDDEN_PAD)
         region = px[y0:y1, x0:x1]
+        bare = self.textless()
+        bare = None if bare is None or bare.shape != px.shape else bare[y0:y1, x0:x1]
         if vertical:
             region = region.transpose(1, 0, 2)
+            bare = None if bare is None else bare.transpose(1, 0, 2)
             glyph = max(b[2] - b[0] for b in boxes)
         else:
             glyph = max(b[3] - b[1] for b in boxes)
         if region.size == 0:
-            return 0, len(boxes), glyph
+            return 0, len(boxes), glyph, None
         flat = region.reshape(-1, 3)
         keys = (flat[:, 0].astype(np.int64) << 16) | (flat[:, 1].astype(np.int64) << 8) | flat[:, 2]
         uniq, first, counts = np.unique(keys, return_index=True, return_counts=True)
         top = counts == counts.max()
         bg = flat[first[top].min()]  # most frequent colour; ties go to the first seen, as in the eval code
         ink_px = (np.abs(region - bg).max(axis=2) > INK_DELTA)
-        return int(ink_px.any(axis=1).sum()), len(boxes), glyph
+        shown = None if bare is None else int((np.abs(region - bare).max(axis=2) > INK_DELTA).any(axis=1).sum())
+        return int(ink_px.any(axis=1).sum()), len(boxes), glyph, shown
 
     def hidden_reason(self, start: int, end: int) -> Optional[str]:
-        """None if a reader can see the span, else why not (the eval `visible_reason` inverted)."""
-        ink, chars, glyph = self.measure(start, end)
+        """None if a reader can see the span, else why not (the eval `visible_reason` inverted).
+        `covered` is backend-only (I-6): the span has ink, but removing the text changes no pixel,
+        so what looks like ink is whatever was drawn over it."""
+        ink, chars, glyph, shown = self._measure(start, end)
         if chars == 0:
             return "off_page"
         if ink == 0:
             return "no_ink"
         if ink <= MAX_INK_ROWS and glyph <= MAX_GLYPH_PT:
             return "tiny"
+        if shown == 0:
+            return "covered"
         return None
+
+
+def _strip_text(holder, count, get, remove) -> None:
+    """Remove every text object from a page or form XObject, nested forms included."""
+    for i in reversed(range(count(holder))):
+        obj = get(holder, i)
+        kind = pdfium.raw.FPDFPageObj_GetType(obj)
+        if kind == pdfium.raw.FPDF_PAGEOBJ_TEXT:
+            if remove(holder, obj):
+                pdfium.raw.FPDFPageObj_Destroy(obj)
+        elif kind == pdfium.raw.FPDF_PAGEOBJ_FORM:
+            _strip_text(obj, pdfium.raw.FPDFFormObj_CountObjects, pdfium.raw.FPDFFormObj_GetObject,
+                        pdfium.raw.FPDFFormObj_RemoveObject)

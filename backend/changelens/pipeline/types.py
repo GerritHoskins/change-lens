@@ -30,7 +30,7 @@ class Block:
     text: str
     locator: Locator
     hidden: bool = False
-    # off_page | no_ink | tiny (07 §4 rules), or page_geometry (mapping failed its PDFium cross-check) | page_too_large (fail closed)
+    # off_page | no_ink | tiny (07 §4 rules), covered (I-6: under an image or shape), or page_geometry (mapping failed its PDFium cross-check) | page_too_large (fail closed)
     hidden_reason: Optional[str] = None
 
 
