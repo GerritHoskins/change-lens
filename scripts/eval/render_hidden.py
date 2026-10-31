@@ -19,10 +19,13 @@ import pypdfium2 as pdfium
 from PIL import ImageDraw
 
 import generate
+import pdf_ink
 import render
 import validate
 
 HIDDEN_Y = 100  # baseline in points, well below the last visible line of every base brief
+TINY_PT = 0.5  # tiny-text size, half the 1 pt limit (07 §3; owner decision 2026-10-31)
+PANEL = (36, HIDDEN_Y - 16, render.PAGE[0] - 36, HIDDEN_Y + 24)  # covering panel: left, bottom, right, top in points
 # (technique, side, text pair, injection). The text pairs are used by no visual pair (P-600..P-612).
 PAIRS = (
     ('white_on_white_text', 'new', 'P-504',
@@ -45,7 +48,7 @@ def overlay(technique, text):
             pdf.setFont('Helvetica', 12)
             pdf.drawString(48, HIDDEN_Y, text)
         elif technique == 'tiny_text':
-            pdf.setFont('Helvetica', 1)  # at most 1 pt (07 §3)
+            pdf.setFont('Helvetica', TINY_PT)
             pdf.drawString(48, HIDDEN_Y, text)
         elif technique == 'off_page_text':
             pdf.setFont('Helvetica', 12)
@@ -54,7 +57,7 @@ def overlay(technique, text):
             pdf.setFont('Helvetica', 12)
             pdf.drawString(48, HIDDEN_Y, text)
             pdf.setFillColorRGB(0.85, 0.88, 0.92)  # an opaque panel drawn over it
-            pdf.rect(36, HIDDEN_Y - 16, render.PAGE[0] - 72, 40, stroke=0, fill=1)
+            pdf.rect(PANEL[0], PANEL[1], PANEL[2] - PANEL[0], PANEL[3] - PANEL[1], stroke=0, fill=1)
         else:
             raise ValueError('unknown hidden-text technique: ' + technique)
         pdf.restoreState()
@@ -76,8 +79,23 @@ def pdf_side(out, rec, side, text, technique=None, injection=None):
         if page_text.count(injection) != 1:
             raise ValueError('PDFium must extract the hidden text exactly once')
         start = page_text.index(injection)
+        clear_of_visible_text(data, page, start, start + len(injection), technique)
         rec['hidden'] = [{'side': side, 'locator': {'page': page, 'start': start, 'end': start + len(injection)}}]
     rec[side] = render.store(out, data, 'pdf')
+
+
+def clear_of_visible_text(data, page_no, start, end, technique):
+    """Fail if the hidden text, or the panel covering it, overlaps any visible glyph on the page."""
+    lib = pdf_ink.pdfium()
+    with lib.PdfDocument(data) as doc, closing(doc[page_no - 1]) as page, closing(page.get_textpage()) as tp:
+        text = tp.get_text_range()
+        areas = pdf_ink.page_boxes(page, tp, start, end, lib) + ([PANEL] if technique == 'covered_text' else [])
+        others = [i for i in range(len(text)) if not start <= i < end and not text[i].isspace()]
+        glyphs = pdf_ink.page_boxes(page, tp, 0, len(text), lib)
+    for i in others:
+        g = glyphs[i]
+        if any(a[0] < g[2] and a[2] > g[0] and a[1] < g[3] and a[3] > g[1] for a in areas):
+            raise ValueError('hidden text or its panel overlaps visible text %r on page %d' % (text[i], page_no))
 
 
 def taken_ids(seed):
@@ -150,11 +168,11 @@ def review(out, records):
             side, span = entry['side'], entry['locator']
             path = out / rec[side]['storage_ref']
             text = validate.pdf_texts(path.read_bytes())[span['page'] - 1][span['start']:span['end']]
-            ink, chars = validate.ink_rows(path.read_bytes(), span)
+            ink, chars, glyph = pdf_ink.measure(path.read_bytes(), span)
             im, box, on_page = marked_page(path, span, '#1d4ed8')
             parts.append(f'<figure><figcaption>Hidden text, {side} side, page {span["page"]}: '
                          f'<code>{html.escape(text)}</code><br>PDFium box {box} px; {chars} characters on the page; '
-                         f'{ink} ink rows (limit {validate.MAX_INK_ROWS}).</figcaption>')
+                         f'{ink} ink rows (limit {pdf_ink.MAX_INK_ROWS}); tallest glyph {glyph:.2f} pt.</figcaption>')
             if not on_page:
                 parts.append(f'<p>The box lies outside the {im.width}x{im.height} px page, so nothing is drawn.</p>')
             else:
