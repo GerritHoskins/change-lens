@@ -1,17 +1,21 @@
-# ChangeLens app (I-9)
+# ChangeLens app (I-9, I-10)
 
 The Flutter app for iOS and Android, with the permanent identifier `dev.changelens.app`. It is portrait only on phones in v1. This build covers the app shell:
 - projects and their versions;
 - import by pasting text or picking a PDF;
 - the order and scope confirmation that starts a comparison;
-- a status screen for the comparison.
+- a status screen for the comparison;
+- the report (I-10): material changes first, then *Needs your review*, and a *Selected summary* line that opens every difference, including text no finding explains and moved or reformatted text;
+- a finding screen with its evidence, review actions (confirm, correct, dismiss, note), history and a separate client-approval record;
+- the evidence view: a PDF opens with the quote highlighted (pdfrx); if the PDF text at the stored offsets is not the quote, or the version is plain text, the parsed text is shown with the span marked.
 
-The report screens come with I-10, sign-in with I-18, and camera, photo-library and share-sheet import with I-16.
+Sign-in comes with I-18, and camera, photo-library and share-sheet import with I-16.
 
 ## Rules this build enforces
 
+- **AC-12.** Confirming a finding is a review. Recording a client approval is a separate action, stored separately and labelled "Client approval recorded (not verified by ChangeLens)". The app never says a change was approved or agreed.
 - **AC-14.** Nothing starts until the user picks the earlier and the newer version and the scope of the newer one. Nothing is preselected, and the order never comes from upload time or file names.
-- **AC-15.** Imported versions are immutable. The app has no edit or delete action; a change means importing a new version.
+- **AC-15.** Imported versions are immutable. The app has no edit or delete action; a change means importing a new version. A correction to a finding is saved as a new revision; the original stays in its history.
 - **AC-25.**
   - Document bytes are read into memory, uploaded and dropped.
   - The file picker's cached copies are purged after every import, whether it succeeded, failed or was cancelled, and again on start.
@@ -35,7 +39,7 @@ The report screens come with I-10, sign-in with I-18, and camera, photo-library 
 
 ```powershell
 flutter analyze
-flutter test        # widget tests for AC-14, AC-15, AC-24 and AC-25 against a mocked API
+flutter test        # widget tests for AC-9, AC-10, AC-12..15, AC-18, AC-24 and AC-25 against a mocked API
 flutter build apk --debug
 ```
 

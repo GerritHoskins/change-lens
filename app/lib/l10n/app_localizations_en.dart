@@ -202,13 +202,242 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonFailed => 'Failed';
 
   @override
-  String get reportComing => 'The report screens come in the next build.';
-
-  @override
   String earlierToNewer(String earlier, String newer) {
     return '$earlier → $newer';
   }
 
   @override
   String get privacyCover => 'ChangeLens';
+
+  @override
+  String get openReport => 'Open report';
+
+  @override
+  String get reportTitle => 'Report';
+
+  @override
+  String get allDifferencesTitle => 'All differences';
+
+  @override
+  String selectedSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count other differences',
+      one: '1 other difference',
+      zero: 'no other differences',
+    );
+    return 'Selected summary — $_temp0, including presentation-only edits';
+  }
+
+  @override
+  String get showAllDifferences => 'Show all differences';
+
+  @override
+  String get groupPrioritised => 'Changes';
+
+  @override
+  String get groupNeedsReview => 'Needs your review';
+
+  @override
+  String get groupOther => 'Other findings';
+
+  @override
+  String get noPrioritised => 'No material changes found.';
+
+  @override
+  String withheld(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count findings withheld: their evidence could not be checked.',
+      one: '1 finding withheld: its evidence could not be checked.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get warningPartial =>
+      'Some content could not be processed, so this report may be incomplete.';
+
+  @override
+  String get warningHidden =>
+      'A document contains hidden text. It was left out of the comparison.';
+
+  @override
+  String get warningCeiling =>
+      'The cost limit was reached; some explanations use standard wording.';
+
+  @override
+  String get unexplainedTitle => 'Other text differences';
+
+  @override
+  String get unexplainedHint =>
+      'Text that differs but that no finding explains, such as headings or greetings. Check them if in doubt.';
+
+  @override
+  String get presentationTitle => 'Moved or reformatted';
+
+  @override
+  String get typeAdded => 'Added';
+
+  @override
+  String get typeChanged => 'Changed';
+
+  @override
+  String get typeRemoved => 'Not in the replacement';
+
+  @override
+  String get typeNotAddressed => 'Not addressed';
+
+  @override
+  String get typeUncertain => 'Uncertain';
+
+  @override
+  String get typeEquivalent => 'Reworded';
+
+  @override
+  String get catDeliverable => 'Deliverable';
+
+  @override
+  String get catQuantity => 'Amount or quantity';
+
+  @override
+  String get catDate => 'Date or deadline';
+
+  @override
+  String get catOwner => 'Responsibility';
+
+  @override
+  String get catApproval => 'Approval step';
+
+  @override
+  String get catOther => 'Other';
+
+  @override
+  String get catStructure => 'Structure';
+
+  @override
+  String get sideEarlier => 'Earlier';
+
+  @override
+  String get sideNewer => 'Newer';
+
+  @override
+  String get findingTitle => 'Finding';
+
+  @override
+  String get evidenceTitle => 'Evidence';
+
+  @override
+  String get showInDocument => 'Show in document';
+
+  @override
+  String get reviewConfirmed => 'Confirmed by you';
+
+  @override
+  String get reviewCorrected => 'Corrected by you';
+
+  @override
+  String get reviewDismissed => 'Dismissed by you';
+
+  @override
+  String get notReviewed => 'Not reviewed yet';
+
+  @override
+  String get actionConfirm => 'Confirm';
+
+  @override
+  String get actionCorrect => 'Correct';
+
+  @override
+  String get actionDismiss => 'Dismiss';
+
+  @override
+  String get actionNote => 'Add note';
+
+  @override
+  String get noteLabel => 'Note';
+
+  @override
+  String get correctTitle => 'Correct this finding';
+
+  @override
+  String get correctHint =>
+      'Your correction is saved as a new revision. The original finding is kept.';
+
+  @override
+  String get changeTypeLabel => 'Change type';
+
+  @override
+  String get categoryLabel => 'Category';
+
+  @override
+  String get explanationLabel => 'Explanation';
+
+  @override
+  String get historyTitle => 'History';
+
+  @override
+  String revisionLabel(int n) {
+    return 'Revision $n';
+  }
+
+  @override
+  String notesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes',
+      one: '1 note',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get approvalTitle => 'Client approval';
+
+  @override
+  String get approvalRecorded =>
+      'Client approval recorded (not verified by ChangeLens)';
+
+  @override
+  String get approvalNone => 'No client approval recorded.';
+
+  @override
+  String get approvalHint =>
+      'Record only what someone stated, for example a pasted e-mail. Reviewing a finding never records approval.';
+
+  @override
+  String get recordApproval => 'Record client approval';
+
+  @override
+  String get approvalEvidence => 'Evidence, for example an e-mail excerpt';
+
+  @override
+  String get approvalStatedBy => 'Stated by';
+
+  @override
+  String approvalStatedOn(String date) {
+    return 'Stated on $date';
+  }
+
+  @override
+  String approvalLine(String by, String date) {
+    return '$by, $date';
+  }
+
+  @override
+  String get highlightFallback =>
+      'The highlight could not be placed in the PDF, so the parsed text is shown.';
+
+  @override
+  String loadFailed(String reason) {
+    return 'Could not load: $reason';
+  }
+
+  @override
+  String saveFailed(String reason) {
+    return 'Could not save: $reason';
+  }
 }

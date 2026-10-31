@@ -128,3 +128,134 @@ class Api {
   Future<Comparison> comparison(String id) async =>
       Comparison(await _json(_client.get(_u('/comparisons/$id'), headers: _auth)));
 }
+
+/// A quoted passage at its locator (03 §3). `quote` equals the parsed text there (AC-9).
+class Evidence {
+  Evidence(Map<String, dynamic> j)
+      : side = j['side'] as String,
+        quote = j['quote'] as String,
+        page = (j['locator'] as Map)['page'] as int?,
+        charStart = (j['locator'] as Map)['char_start'] as int,
+        charEnd = (j['locator'] as Map)['char_end'] as int;
+
+  final String side, quote;
+  final int? page;
+  final int charStart, charEnd;
+
+  bool get earlier => side == 'earlier';
+}
+
+class Review {
+  Review(Map<String, dynamic> j)
+      : action = j['action'] as String,
+        note = j['note'] as String?,
+        at = DateTime.parse(j['at'] as String);
+
+  final String action;
+  final String? note;
+  final DateTime at;
+}
+
+class Finding {
+  Finding(Map<String, dynamic> j)
+      : id = j['id'] as String,
+        changeType = j['change_type'] as String,
+        category = j['category'] as String,
+        evidence = [for (final e in j['evidence'] as List) Evidence(e as Map<String, dynamic>)],
+        explanation = j['explanation'] as String?,
+        uncertainty = j['uncertainty'] as String?,
+        note = j['note'] as String?,
+        group = j['group'] as String? ?? 'other',
+        revision = j['revision'] as int? ?? 1,
+        review = j['review'] == null ? null : Review(j['review'] as Map<String, dynamic>),
+        clientApprovalRecorded = j['client_approval_recorded'] as bool? ?? false;
+
+  final String id, changeType, category, group;
+  final List<Evidence> evidence;
+  final String? explanation, uncertainty, note;
+  final int revision;
+  final Review? review;
+  final bool clientApprovalRecorded;
+
+  Iterable<Evidence> side(String s) => evidence.where((e) => e.side == s);
+}
+
+class Report {
+  Report(Map<String, dynamic> j)
+      : status = j['status'] as String,
+        earlierId = j['earlier_id'] as String? ?? '',
+        laterId = j['later_id'] as String? ?? '',
+        findings = [for (final f in j['findings'] as List) Finding(f as Map<String, dynamic>)],
+        otherDifferences = (j['summary'] as Map?)?['other_differences'] as int? ?? 0,
+        withheld = j['withheld_count'] as int? ?? 0,
+        unexplained = [for (final e in j['unexplained_differences'] as List? ?? []) Evidence(e as Map<String, dynamic>)],
+        presentationOnly = [for (final e in j['presentation_only'] as List? ?? []) Evidence(e as Map<String, dynamic>)],
+        warnings = [for (final w in j['warnings'] as List? ?? []) (w as Map)['code'] as String];
+
+  final String status, earlierId, laterId;
+  final List<Finding> findings;
+  final int otherDifferences, withheld;
+  final List<Evidence> unexplained, presentationOnly;
+  final List<String> warnings;
+
+  List<Finding> inGroup(String g) => [for (final f in findings) if (f.group == g) f];
+}
+
+/// "Client approval recorded (not verified by ChangeLens)": a separate record, never a review (AC-12).
+class ApprovalRecord {
+  ApprovalRecord(Map<String, dynamic> j)
+      : evidenceText = j['evidence_text'] as String,
+        statedBy = j['stated_by'] as String,
+        statedAt = DateTime.parse(j['stated_at'] as String);
+
+  final String evidenceText, statedBy;
+  final DateTime statedAt;
+}
+
+class FindingDetail {
+  FindingDetail(Map<String, dynamic> j)
+      : finding = Finding(j),
+        revisions = [for (final r in j['revisions'] as List) Finding(r as Map<String, dynamic>)],
+        reviews = [for (final r in j['reviews'] as List) Review(r as Map<String, dynamic>)],
+        approvals = [for (final a in j['client_approvals'] as List) ApprovalRecord(a as Map<String, dynamic>)];
+
+  final Finding finding;
+  final List<Finding> revisions;
+  final List<Review> reviews;
+  final List<ApprovalRecord> approvals;
+}
+
+extension ReportApi on Api {
+  Future<Report> report(String comparisonId) async =>
+      Report(await _json(_client.get(_u('/comparisons/$comparisonId/findings'), headers: _auth)));
+
+  Future<FindingDetail> finding(String id) async =>
+      FindingDetail(await _json(_client.get(_u('/findings/$id'), headers: _auth)));
+
+  /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15).
+  Future<Finding> review(String findingId, String action, {String? note, Map<String, String>? correction}) async {
+    final j = await _json(_client.post(_u('/findings/$findingId/reviews'),
+        headers: {..._auth, 'Content-Type': 'application/json'},
+        body: jsonEncode({'action': action, 'note': note, 'correction': correction})));
+    return Finding(j['finding'] as Map<String, dynamic>);
+  }
+
+  Future<void> recordApproval(String findingId, String evidenceText, String statedBy, DateTime statedAt) =>
+      _json(_client.post(_u('/findings/$findingId/client-approvals'),
+          headers: {..._auth, 'Content-Type': 'application/json'},
+          body: jsonEncode({'evidence_text': evidenceText, 'stated_by': statedBy,
+                            'stated_at': statedAt.toUtc().toIso8601String()})));
+
+  /// Parsed page texts: the evidence fallback (03 §9.4).
+  Future<List<String>> versionText(String versionId) async {
+    final j = await _json(_client.get(_u('/versions/$versionId/text'), headers: _auth));
+    return [for (final p in j['pages'] as List) p as String];
+  }
+
+  /// The original document, held in memory only (AC-25).
+  Future<Uint8List> original(String versionId) async {
+    final res = await _client.get(_u('/versions/$versionId/original'), headers: _auth);
+    if (res.statusCode != 200) throw ApiException(res.statusCode, 'http_${res.statusCode}');
+    return res.bodyBytes;
+  }
+}

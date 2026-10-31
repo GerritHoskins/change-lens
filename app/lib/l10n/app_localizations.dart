@@ -430,12 +430,6 @@ abstract class AppLocalizations {
   /// **'Failed'**
   String get comparisonFailed;
 
-  /// No description provided for @reportComing.
-  ///
-  /// In en, this message translates to:
-  /// **'The report screens come in the next build.'**
-  String get reportComing;
-
   /// No description provided for @earlierToNewer.
   ///
   /// In en, this message translates to:
@@ -447,6 +441,384 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ChangeLens'**
   String get privacyCover;
+
+  /// No description provided for @openReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Open report'**
+  String get openReport;
+
+  /// No description provided for @reportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get reportTitle;
+
+  /// No description provided for @allDifferencesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All differences'**
+  String get allDifferencesTitle;
+
+  /// No description provided for @selectedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected summary — {count, plural, =0{no other differences} =1{1 other difference} other{{count} other differences}}, including presentation-only edits'**
+  String selectedSummary(int count);
+
+  /// No description provided for @showAllDifferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all differences'**
+  String get showAllDifferences;
+
+  /// No description provided for @groupPrioritised.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes'**
+  String get groupPrioritised;
+
+  /// No description provided for @groupNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your review'**
+  String get groupNeedsReview;
+
+  /// No description provided for @groupOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other findings'**
+  String get groupOther;
+
+  /// No description provided for @noPrioritised.
+  ///
+  /// In en, this message translates to:
+  /// **'No material changes found.'**
+  String get noPrioritised;
+
+  /// No description provided for @withheld.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 finding withheld: its evidence could not be checked.} other{{count} findings withheld: their evidence could not be checked.}}'**
+  String withheld(int count);
+
+  /// No description provided for @warningPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Some content could not be processed, so this report may be incomplete.'**
+  String get warningPartial;
+
+  /// No description provided for @warningHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'A document contains hidden text. It was left out of the comparison.'**
+  String get warningHidden;
+
+  /// No description provided for @warningCeiling.
+  ///
+  /// In en, this message translates to:
+  /// **'The cost limit was reached; some explanations use standard wording.'**
+  String get warningCeiling;
+
+  /// No description provided for @unexplainedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Other text differences'**
+  String get unexplainedTitle;
+
+  /// No description provided for @unexplainedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Text that differs but that no finding explains, such as headings or greetings. Check them if in doubt.'**
+  String get unexplainedHint;
+
+  /// No description provided for @presentationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved or reformatted'**
+  String get presentationTitle;
+
+  /// No description provided for @typeAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get typeAdded;
+
+  /// No description provided for @typeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed'**
+  String get typeChanged;
+
+  /// No description provided for @typeRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in the replacement'**
+  String get typeRemoved;
+
+  /// No description provided for @typeNotAddressed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not addressed'**
+  String get typeNotAddressed;
+
+  /// No description provided for @typeUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncertain'**
+  String get typeUncertain;
+
+  /// No description provided for @typeEquivalent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reworded'**
+  String get typeEquivalent;
+
+  /// No description provided for @catDeliverable.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliverable'**
+  String get catDeliverable;
+
+  /// No description provided for @catQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount or quantity'**
+  String get catQuantity;
+
+  /// No description provided for @catDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date or deadline'**
+  String get catDate;
+
+  /// No description provided for @catOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Responsibility'**
+  String get catOwner;
+
+  /// No description provided for @catApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval step'**
+  String get catApproval;
+
+  /// No description provided for @catOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get catOther;
+
+  /// No description provided for @catStructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Structure'**
+  String get catStructure;
+
+  /// No description provided for @sideEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier'**
+  String get sideEarlier;
+
+  /// No description provided for @sideNewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Newer'**
+  String get sideNewer;
+
+  /// No description provided for @findingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding'**
+  String get findingTitle;
+
+  /// No description provided for @evidenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence'**
+  String get evidenceTitle;
+
+  /// No description provided for @showInDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in document'**
+  String get showInDocument;
+
+  /// No description provided for @reviewConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed by you'**
+  String get reviewConfirmed;
+
+  /// No description provided for @reviewCorrected.
+  ///
+  /// In en, this message translates to:
+  /// **'Corrected by you'**
+  String get reviewCorrected;
+
+  /// No description provided for @reviewDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed by you'**
+  String get reviewDismissed;
+
+  /// No description provided for @notReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reviewed yet'**
+  String get notReviewed;
+
+  /// No description provided for @actionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get actionConfirm;
+
+  /// No description provided for @actionCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct'**
+  String get actionCorrect;
+
+  /// No description provided for @actionDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get actionDismiss;
+
+  /// No description provided for @actionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get actionNote;
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get noteLabel;
+
+  /// No description provided for @correctTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct this finding'**
+  String get correctTitle;
+
+  /// No description provided for @correctHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your correction is saved as a new revision. The original finding is kept.'**
+  String get correctHint;
+
+  /// No description provided for @changeTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change type'**
+  String get changeTypeLabel;
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get categoryLabel;
+
+  /// No description provided for @explanationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get explanationLabel;
+
+  /// No description provided for @historyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get historyTitle;
+
+  /// No description provided for @revisionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision {n}'**
+  String revisionLabel(int n);
+
+  /// No description provided for @notesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 note} other{{count} notes}}'**
+  String notesCount(int count);
+
+  /// No description provided for @approvalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client approval'**
+  String get approvalTitle;
+
+  /// No description provided for @approvalRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Client approval recorded (not verified by ChangeLens)'**
+  String get approvalRecorded;
+
+  /// No description provided for @approvalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No client approval recorded.'**
+  String get approvalNone;
+
+  /// No description provided for @approvalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Record only what someone stated, for example a pasted e-mail. Reviewing a finding never records approval.'**
+  String get approvalHint;
+
+  /// No description provided for @recordApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Record client approval'**
+  String get recordApproval;
+
+  /// No description provided for @approvalEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence, for example an e-mail excerpt'**
+  String get approvalEvidence;
+
+  /// No description provided for @approvalStatedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Stated by'**
+  String get approvalStatedBy;
+
+  /// No description provided for @approvalStatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Stated on {date}'**
+  String approvalStatedOn(String date);
+
+  /// No description provided for @approvalLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{by}, {date}'**
+  String approvalLine(String by, String date);
+
+  /// No description provided for @highlightFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'The highlight could not be placed in the PDF, so the parsed text is shown.'**
+  String get highlightFallback;
+
+  /// No description provided for @loadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load: {reason}'**
+  String loadFailed(String reason);
+
+  /// No description provided for @saveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save: {reason}'**
+  String saveFailed(String reason);
 }
 
 class _AppLocalizationsDelegate

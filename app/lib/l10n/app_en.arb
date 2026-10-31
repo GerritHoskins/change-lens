@@ -27,14 +27,32 @@
   "upload": "Import",
   "uploading": "Importing…",
   "importFailed": "Import failed: {reason}",
-  "@importFailed": {"placeholders": {"reason": {"type": "String"}}},
+  "@importFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "originalsNote": "Imported versions are kept exactly as imported and cannot be edited. Import a new version instead.",
   "statusUploaded": "Waiting to be read",
   "statusParsed": "Ready",
   "statusRejected": "Rejected: {reason}",
-  "@statusRejected": {"placeholders": {"reason": {"type": "String"}}},
+  "@statusRejected": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "warningsCount": "{count, plural, =1{1 warning} other{{count} warnings}}",
-  "@warningsCount": {"placeholders": {"count": {"type": "int"}}},
+  "@warningsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "compare": "Compare two versions",
   "compareNeedsTwo": "Import at least two versions that are ready to compare.",
   "confirmTitle": "Confirm the comparison",
@@ -54,14 +72,150 @@
   "confirmMissing": "Choose both versions and the scope to continue.",
   "comparisonTitle": "Comparison",
   "comparisonStatus": "Status: {status}",
-  "@comparisonStatus": {"placeholders": {"status": {"type": "String"}}},
+  "@comparisonStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "comparisonQueued": "Queued",
   "comparisonRunning": "Processing",
   "comparisonComplete": "Complete",
   "comparisonPartial": "Partial: some content could not be processed",
   "comparisonFailed": "Failed",
-  "reportComing": "The report screens come in the next build.",
   "earlierToNewer": "{earlier} → {newer}",
-  "@earlierToNewer": {"placeholders": {"earlier": {"type": "String"}, "newer": {"type": "String"}}},
-  "privacyCover": "ChangeLens"
+  "@earlierToNewer": {
+    "placeholders": {
+      "earlier": {
+        "type": "String"
+      },
+      "newer": {
+        "type": "String"
+      }
+    }
+  },
+  "privacyCover": "ChangeLens",
+  "openReport": "Open report",
+  "reportTitle": "Report",
+  "allDifferencesTitle": "All differences",
+  "selectedSummary": "Selected summary — {count, plural, =0{no other differences} =1{1 other difference} other{{count} other differences}}, including presentation-only edits",
+  "@selectedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "showAllDifferences": "Show all differences",
+  "groupPrioritised": "Changes",
+  "groupNeedsReview": "Needs your review",
+  "groupOther": "Other findings",
+  "noPrioritised": "No material changes found.",
+  "withheld": "{count, plural, =1{1 finding withheld: its evidence could not be checked.} other{{count} findings withheld: their evidence could not be checked.}}",
+  "@withheld": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "warningPartial": "Some content could not be processed, so this report may be incomplete.",
+  "warningHidden": "A document contains hidden text. It was left out of the comparison.",
+  "warningCeiling": "The cost limit was reached; some explanations use standard wording.",
+  "unexplainedTitle": "Other text differences",
+  "unexplainedHint": "Text that differs but that no finding explains, such as headings or greetings. Check them if in doubt.",
+  "presentationTitle": "Moved or reformatted",
+  "typeAdded": "Added",
+  "typeChanged": "Changed",
+  "typeRemoved": "Not in the replacement",
+  "typeNotAddressed": "Not addressed",
+  "typeUncertain": "Uncertain",
+  "typeEquivalent": "Reworded",
+  "catDeliverable": "Deliverable",
+  "catQuantity": "Amount or quantity",
+  "catDate": "Date or deadline",
+  "catOwner": "Responsibility",
+  "catApproval": "Approval step",
+  "catOther": "Other",
+  "catStructure": "Structure",
+  "sideEarlier": "Earlier",
+  "sideNewer": "Newer",
+  "findingTitle": "Finding",
+  "evidenceTitle": "Evidence",
+  "showInDocument": "Show in document",
+  "reviewConfirmed": "Confirmed by you",
+  "reviewCorrected": "Corrected by you",
+  "reviewDismissed": "Dismissed by you",
+  "notReviewed": "Not reviewed yet",
+  "actionConfirm": "Confirm",
+  "actionCorrect": "Correct",
+  "actionDismiss": "Dismiss",
+  "actionNote": "Add note",
+  "noteLabel": "Note",
+  "correctTitle": "Correct this finding",
+  "correctHint": "Your correction is saved as a new revision. The original finding is kept.",
+  "changeTypeLabel": "Change type",
+  "categoryLabel": "Category",
+  "explanationLabel": "Explanation",
+  "historyTitle": "History",
+  "revisionLabel": "Revision {n}",
+  "@revisionLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "{count, plural, =1{1 note} other{{count} notes}}",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalTitle": "Client approval",
+  "approvalRecorded": "Client approval recorded (not verified by ChangeLens)",
+  "approvalNone": "No client approval recorded.",
+  "approvalHint": "Record only what someone stated, for example a pasted e-mail. Reviewing a finding never records approval.",
+  "recordApproval": "Record client approval",
+  "approvalEvidence": "Evidence, for example an e-mail excerpt",
+  "approvalStatedBy": "Stated by",
+  "approvalStatedOn": "Stated on {date}",
+  "@approvalStatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalLine": "{by}, {date}",
+  "@approvalLine": {
+    "placeholders": {
+      "by": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "highlightFallback": "The highlight could not be placed in the PDF, so the parsed text is shown.",
+  "loadFailed": "Could not load: {reason}",
+  "@loadFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "Could not save: {reason}",
+  "@saveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }

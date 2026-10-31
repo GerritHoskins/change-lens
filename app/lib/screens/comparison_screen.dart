@@ -1,4 +1,4 @@
-// Comparison status, polled until it finishes. The report screens are I-10.
+// Comparison status, polled until it finishes, then a link to the report (I-10).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
+import 'report_screen.dart';
 
 class ComparisonScreen extends StatefulWidget {
   const ComparisonScreen({super.key, required this.comparisonId, this.versions = const []});
@@ -80,8 +81,16 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             Expanded(child: Text(l.comparisonStatus(status))),
           ]),
           if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!)),
-          if (c != null && c.finished)
-            Padding(padding: const EdgeInsets.only(top: 24), child: Text(l.reportComing)),
+          if (c != null && c.finished && c.status != 'failed')
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: FilledButton.icon(
+                icon: const Icon(Icons.article_outlined),
+                label: Text(l.openReport),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ReportScreen(comparisonId: c.id, versions: widget.versions))),
+              ),
+            ),
         ]),
       ),
     );
