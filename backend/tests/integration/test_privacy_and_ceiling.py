@@ -67,7 +67,7 @@ def test_no_document_content_in_logs_or_jobs(env):
 def _three_change_pair(env):
     pid = env.project()
     a = env.upload(pid, text="a\nb\nc\nd\ne").json()["id"]
-    b = env.upload(pid, text="A\nb\nC\nd\nE").json()["id"]
+    b = env.upload(pid, text="x\nb\ny\nd\nz").json()["id"]  # 3 removed (templated) + 3 added (worded)
     env.worker.run_until_idle()
     return pid, a, b
 
@@ -79,21 +79,23 @@ def test_ceiling_stops_with_partial_results(env_factory):
     assert env.worker.run_until_idle() == 1
     c = env.get("/comparisons/" + cid).json()
     assert c["status"] == "partial"
-    assert {"code": "cost_ceiling", "skipped_findings": 1} in c["warnings"]
+    assert {"code": "cost_ceiling", "stage": "report", "templated_findings": 1} in c["warnings"]
     assert Decimal(c["cost_actual"]) == Decimal("1.20") <= Decimal(c["cost_ceiling"])
     f = env.get("/comparisons/%s/findings" % cid).json()
-    assert len(f["findings"]) == 2 and all(x["explanation"] for x in f["findings"])
+    # Verified findings are never dropped at the ceiling; the last one gets template wording.
+    assert len(f["findings"]) == 6 and all(x["explanation"] for x in f["findings"])
+    assert sum(x["explanation"].startswith("New in this version") for x in f["findings"]) == 1
     assert env.sql("SELECT status, attempts FROM jobs WHERE kind = 'compare'") == [("done", 1)]
 
 
-def test_ceiling_before_first_call_fails_cleanly(env_factory):
+def test_ceiling_before_first_wording_call_keeps_templated_findings(env_factory):
     env = env_factory(cost_ceiling_eur=Decimal("0.10"), fake_llm_cost_eur=Decimal("0.60"))
     pid, a, b = _three_change_pair(env)
     cid = env.compare(pid, a, b).json()["id"]
     env.worker.run_until_idle()
     c = env.get("/comparisons/" + cid).json()
-    assert c["status"] == "failed" and Decimal(c["cost_actual"]) == 0
-    assert {"code": "cost_ceiling", "skipped_findings": 3} in c["warnings"]
-    assert env.get("/comparisons/%s/findings" % cid).json()["findings"] == []
+    assert c["status"] == "partial" and Decimal(c["cost_actual"]) == 0
+    assert {"code": "cost_ceiling", "stage": "report", "templated_findings": 3} in c["warnings"]
+    assert len(env.get("/comparisons/%s/findings" % cid).json()["findings"]) == 6
     # A clean stop is not a crash: the job is done, not retried.
     assert env.sql("SELECT status, attempts FROM jobs WHERE kind = 'compare'") == [("done", 1)]
