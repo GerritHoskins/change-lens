@@ -106,3 +106,9 @@ def test_api_never_opens_pdfs():
     import changelens.api.routes
     for mod in (uploads, changelens.api.routes, changelens.api.app):
         assert "pypdfium2" not in open(mod.__file__, encoding="utf-8").read()
+
+
+def test_dev_api_binds_to_localhost_unless_lan_is_asked_for():
+    from changelens.api.__main__ import bind_host
+    assert bind_host(False) == "127.0.0.1"
+    assert bind_host(True) == "0.0.0.0"
