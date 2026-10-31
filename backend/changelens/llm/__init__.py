@@ -1,8 +1,8 @@
 """The `llm` port (AD-9) and a fake adapter for I-22.
 
 The port is one structured-output call: a schema name, a system prompt and delimited data blocks.
-No tools, no URL fetching, and prompts or responses are never logged (AC-18, AC-23). The real
-provider adapter arrives with D-17/I-2.
+No tools, no URL fetching, and prompts or responses are never logged (AC-18, AC-23). The IONOS
+AI Model Hub adapter is `changelens.llm.ionos` (D-17); the worker still uses the fake until I-2.
 """
 from __future__ import annotations
 
