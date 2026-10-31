@@ -9,6 +9,7 @@ from starlette.formparsers import MultiPartParser
 
 from changelens.api import errors
 from changelens.api.errors import ApiError, problem
+from changelens.api.reviews import router as review_router
 from changelens.api.routes import router
 from changelens.config import Settings
 from changelens.domain import Database
@@ -82,6 +83,7 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     app.state.store = store
     errors.install(app)
     app.include_router(router)
+    app.include_router(review_router)
     app.add_middleware(BodyLimitMiddleware, max_bytes=max_body)
     app.add_middleware(AccessLogMiddleware)
     return app

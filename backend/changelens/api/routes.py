@@ -177,23 +177,3 @@ def get_comparison(comparison_id: uuid.UUID, request: Request, tenant: uuid.UUID
             raise not_found()
         repo.s.refresh(c)
         return _comparison_out(c)
-
-
-@router.get("/comparisons/{comparison_id}/findings")
-def get_findings(comparison_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
-    with request.app.state.db.tenant_scope(tenant) as repo:
-        c = repo.comparison(comparison_id)
-        if c is None:
-            raise not_found()
-        findings = [{"id": str(f.id), "change_type": f.change_type, "category": f.category,
-                     "evidence": f.evidence, "explanation": f.explanation, "uncertainty": f.uncertainty,
-                     "note": f.note, "group": f.review_group, "priority": f.priority, "revision": f.revision}
-                    for f in sorted(repo.findings(c.id), key=lambda f: f.priority)]
-        prioritised = sum(f["group"] == "prioritised" for f in findings)
-        # AC-13: the prioritised list is a selected summary; everything else stays reachable.
-        other = len(findings) - prioritised + len(c.unexplained) + len(c.presentation_only)
-        return {"comparison_id": str(c.id), "status": c.status, "pipeline_version": c.pipeline_version,
-                "placeholder": c.pipeline_version.startswith("placeholder"), "findings": findings,
-                "summary": {"selected": True, "prioritised": prioritised, "other_differences": other},
-                "withheld_count": c.withheld_count, "unexplained_differences": c.unexplained,
-                "presentation_only": c.presentation_only, "warnings": c.warnings}

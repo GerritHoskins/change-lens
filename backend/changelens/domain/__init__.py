@@ -14,7 +14,9 @@ from sqlalchemy import create_engine, delete, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from changelens.domain.models import Base, Comparison, FactCacheEntry, Finding, Project, SourceVersion
+from changelens.domain.models import (
+    Base, ClientApprovalRecord, Comparison, FactCacheEntry, Finding, Project, ReviewEvent, SourceVersion,
+)
 
 
 DEV_COLUMNS = [  # I-5
@@ -118,6 +120,21 @@ class TenantRepo:
         q = (select(Finding)
              .where(Finding.comparison_id == comparison_id, Finding.tenant_id == self.tenant_id)
              .order_by(Finding.priority))
+        return list(self.s.scalars(q))
+
+    def finding(self, id_: uuid.UUID, lock: bool = False) -> Optional[Finding]:
+        return self._get(Finding, id_, lock)
+
+    def reviews(self, finding_ids) -> list[ReviewEvent]:
+        q = (select(ReviewEvent).where(ReviewEvent.tenant_id == self.tenant_id,
+                                       ReviewEvent.finding_id.in_(list(finding_ids)))
+             .order_by(ReviewEvent.created_at, ReviewEvent.id))
+        return list(self.s.scalars(q))
+
+    def approvals(self, finding_ids) -> list[ClientApprovalRecord]:
+        q = (select(ClientApprovalRecord).where(ClientApprovalRecord.tenant_id == self.tenant_id,
+                                                ClientApprovalRecord.finding_id.in_(list(finding_ids)))
+             .order_by(ClientApprovalRecord.created_at, ClientApprovalRecord.id))
         return list(self.s.scalars(q))
 
     def cached_facts(self, key: str) -> Optional[dict]:
