@@ -109,6 +109,8 @@ class ExtractedFact:
     locator: Locator
     status: Literal["ok", "ambiguous", "unextracted"]
     confidence: float
+    subject: str = ""  # normalised subject: the I-3 alignment key is (type, subject)
+    ambiguity: Optional[str] = None  # ambiguous_date | ambiguous_entity | ambiguous_value
 
 
 @dataclass(frozen=True)

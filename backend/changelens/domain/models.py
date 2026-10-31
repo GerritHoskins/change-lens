@@ -96,6 +96,19 @@ class Finding(Base):
     supersedes_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
 
 
+class FactCacheEntry(Base):
+    """Extracted facts per version (03 §2, AD-4). The key covers the version hash, the extract
+    prompt and schema, and the model config (pipeline.extract.cache_key); tenant-scoped (03 §5)."""
+    __tablename__ = "fact_cache"
+    __table_args__ = (UniqueConstraint("tenant_id", "cache_key", name="uq_fact_cache_tenant_key"),)
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    source_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("source_versions.id"), nullable=False)
+    cache_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    result: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = _now()
+
+
 class Job(Base):
     """Postgres queue row. `payload` holds IDs only (AC-23); `last_error` is an error class name."""
     __tablename__ = "jobs"

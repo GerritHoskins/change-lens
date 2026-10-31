@@ -11,9 +11,10 @@ from contextlib import contextmanager
 from typing import Iterator, Optional
 
 from sqlalchemy import create_engine, delete, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from changelens.domain.models import Base, Comparison, Finding, Project, SourceVersion
+from changelens.domain.models import Base, Comparison, FactCacheEntry, Finding, Project, SourceVersion
 
 
 class Database:
@@ -38,6 +39,21 @@ class Database:
     def system_session(self) -> Iterator[Session]:
         with self._sessions() as s, s.begin():
             yield s
+
+
+class DbFactCache:
+    """`pipeline.extract.FactCache` over the fact_cache table, for one tenant and version."""
+
+    def __init__(self, db: Database, tenant_id: uuid.UUID, version_id: uuid.UUID):
+        self.db, self.tenant_id, self.version_id = db, tenant_id, version_id
+
+    def get(self, key: str) -> Optional[dict]:
+        with self.db.tenant_scope(self.tenant_id) as repo:
+            return repo.cached_facts(key)
+
+    def put(self, key: str, value: dict) -> None:
+        with self.db.tenant_scope(self.tenant_id) as repo:
+            repo.cache_facts(self.version_id, key, value)
 
 
 class TenantRepo:
@@ -74,6 +90,20 @@ class TenantRepo:
              .where(Finding.comparison_id == comparison_id, Finding.tenant_id == self.tenant_id)
              .order_by(Finding.priority))
         return list(self.s.scalars(q))
+
+    def cached_facts(self, key: str) -> Optional[dict]:
+        q = select(FactCacheEntry.result).where(FactCacheEntry.tenant_id == self.tenant_id,
+                                                FactCacheEntry.cache_key == key)
+        return self.s.scalars(q).one_or_none()
+
+    def cache_facts(self, version_id: uuid.UUID, key: str, result: dict) -> None:
+        """First writer wins; a concurrent duplicate for the same key is dropped."""
+        if self.cached_facts(key) is None:
+            try:
+                with self.s.begin_nested():  # savepoint: a lost race rolls back only this insert
+                    self.add(FactCacheEntry(source_version_id=version_id, cache_key=key, result=result))
+            except IntegrityError:
+                pass
 
     def replace_findings(self, comparison_id: uuid.UUID, findings: list[Finding]) -> None:
         """Retries never duplicate findings (03 §7): the old set is replaced in the same transaction."""

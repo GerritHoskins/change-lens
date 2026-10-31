@@ -26,7 +26,7 @@ S3 = os.environ.get("CHANGELENS_TEST_S3", "http://127.0.0.1:59000")
 TEST_DB = "changelens_test"
 TENANT_A = uuid.UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
-TABLES = "findings, comparisons, jobs, source_versions, projects"
+TABLES = "findings, fact_cache, comparisons, jobs, source_versions, projects"
 
 
 def pytest_collection_modifyitems(items):
