@@ -236,6 +236,19 @@ $env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
 
 `tools/i3_run.py --report` runs verify and report on the development split as well (see §9).
 
+## 11. Reviews, client approvals and evidence (I-10)
+
+Routes in `changelens/api/reviews.py`:
+
+- `GET /comparisons/{id}/findings` now returns current revisions only, each with its latest `review`, a `notes` count and `client_approval_recorded`, plus the comparison's `earlier_id`, `later_id` and `scope`.
+- `GET /findings/{id}`: the finding with its `revisions`, `reviews` and `client_approvals`.
+- `POST /findings/{id}/reviews` with `action` `confirmed`, `corrected`, `dismissed` or `note` (a note needs text). A correction (`correction`: any of `change_type`, `category`, `explanation`) creates a new revision with `supersedes_id` and `revision + 1`; the original row is never changed (AC-15). Reviewing a superseded revision gives 409 `finding_superseded`.
+- `POST /findings/{id}/client-approvals` with `evidence_text`, `stated_by` and `stated_at`. It is stored in its own table and shown as "Client approval recorded (not verified by ChangeLens)". A review never creates one and a client approval never counts as a review (AC-12). Evidence is text only for now; file attachments are not built.
+- `GET /versions/{id}/text`: the parsed page texts, for the evidence view (409 until parsed).
+- `GET /versions/{id}/original`: the uploaded bytes with `Cache-Control: no-store`, so the app can highlight a quote in the PDF. This is a dev shortcut; 03 §9.4 specifies a short-lived signed URL (I-8).
+
+The actor is the fixed `dev-token-user` until real auth (I-8).
+
 ## What is placeholder or out of scope
 
 - Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.

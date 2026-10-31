@@ -133,3 +133,30 @@ class Job(Base):
     locked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[Optional[str]] = mapped_column(String(80))
     created_at: Mapped[datetime] = _now()
+
+
+class ReviewEvent(Base):
+    """User review of a finding (02 §5, 03a P6). Append-only; never creates or implies client
+    approval (AC-12). `actor` is the dev-token user until I-8 brings real users."""
+    __tablename__ = "review_events"
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    finding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("findings.id"), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(80), nullable=False)
+    action: Mapped[str] = mapped_column(String(12), nullable=False)  # confirmed | corrected | dismissed | note
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = _now()
+
+
+class ClientApprovalRecord(Base):
+    """Someone stated that the client approved (02 §5). Separate from review and never set by it
+    (AC-12); ChangeLens does not verify it. Append-only."""
+    __tablename__ = "client_approvals"
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    finding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("findings.id"), nullable=False, index=True)
+    evidence_text: Mapped[str] = mapped_column(Text, nullable=False)  # e.g. a pasted e-mail excerpt
+    stated_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    stated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recorded_by: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = _now()

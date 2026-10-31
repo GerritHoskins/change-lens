@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'l10n/app_localizations.dart';
 import 'screens/projects_screen.dart';
@@ -11,6 +12,7 @@ import 'services.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await pdfrxFlutterInitialize(); // evidence view (I-10)
   final services = Services(SecureSettingsStore(), PlatformDocumentPicker());
   await services.picker.purge(); // leftovers from an interrupted import (03a P10, AC-25)
   await services.load();
