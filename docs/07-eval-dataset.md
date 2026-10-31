@@ -10,9 +10,9 @@ The original plan seeded the set with ≥ 10 real revision pairs donated by inte
 
 | Tier | Source | Target | Labels |
 |---|---|---|---|
-| **A — public real** | Published tenders and RFPs with their amendments, addenda and clarification notes: UK Find a Tender and Contracts Finder, EU TED corrigenda, and public-sector, university and non-profit "website redesign RFP" postings with addenda | 25–35 pairs | Dual, independent (§5) |
-| **B — owner's own** | Briefs from the owner's past projects, only where the owner holds the rights or has written client consent | 0–10 pairs | Dual, independent |
-| **C — donated** | Pairs shared by interviewees with written permission, anonymised | 0–10 pairs | Dual, independent |
+| **A — public real** | Published tenders and RFPs with their amendments, addenda and clarification notes: UK Find a Tender and Contracts Finder, EU TED corrigenda, and public-sector, university and non-profit "website redesign RFP" postings with addenda | 25–35 pairs | Owner R1; blind R2 third (§5) |
+| **B — owner's own** | Briefs from the owner's past projects, only where the owner holds the rights or has written client consent | 0–10 pairs | Owner R1; blind R2 third |
+| **C — donated** | Pairs shared by interviewees with written permission, anonymised | 0–10 pairs | Owner R1; blind R2 third |
 | **D — constructed** | A base brief plus scripted edits (§3); the script writes the gold labels | the rest, ≥ 50 | By construction, then human review (§5) |
 
 Candidate tier A pairs found on 2026-10-30 (44, of which 31 confirmed) are listed in [eval-candidates.md](eval-candidates.md).
@@ -22,7 +22,7 @@ Why Tier A fits: an RFP addendum is a real revision written by a real client. Ad
 **Rules for Tier A**
 - Record the URL, retrieval date and stated licence for each document. UK government documents are usually under the Open Government Licence and TED content is reusable under the Commission's reuse policy [U: confirm per source in D-3]. Where the licence is unclear, use the document for internal evaluation only.
 - Remove names, emails and phone numbers of contact officers before labelling. Anonymise each person consistently (`Contact A`, `Contact B`), so that changes of owner stay labellable.
-- **Never commit source documents to git**, even though the repository is private. They live in private storage; git holds only the schema, the generator script and a manifest of IDs, source URLs and SHA-256 hashes.
+- **Never commit source documents or real labels to git**, even though the repository is private. They live in private storage; Git holds the schema, tooling, generic guidance and synthetic tests; the collection manifest stays in private storage too.
 
 ## 3. Constructed pairs (Tier D)
 
@@ -71,7 +71,7 @@ PDFs use invariant ReportLab output, built-in Helvetica and fixed layout; PDFium
 
 `validate.py` checks all formats: required stored files, SHA-256, PDF/PNG magic bytes, PDF page/span bounds and exact PDFium text slices, PNG IHDR dimensions against every image box, and hidden spans (§4). Missing PDFium fails PDF validation explicitly. Text-only validation still needs only the standard library. Image pixels need human review; bounds and hashes cannot establish their meaning.
 
-A language model may draft paraphrases and emails for the operators, but it never writes the gold labels and it is never one of the two labellers. Every drafted text is read by a person, who confirms that it says what the operator claims. A paraphrase that changes meaning is relabelled or discarded.
+A language model may draft paraphrases and emails for the operators, but it never writes the gold labels and it is never a labeller. Every drafted text is read by a person, who confirms that it says what the operator claims. A paraphrase that changes meaning is relabelled or discarded.
 
 ## 4. Label definitions
 
@@ -83,12 +83,12 @@ A language model may draft paraphrases and emails for the operators, but it neve
 |---|---|
 | `added` | New in the newer version |
 | `changed` | Present in both versions with a different value or meaning |
-| `removed` | The newer version is a full replacement and the item is gone |
+| `removed` | The newer version explicitly deletes the item, or is a full replacement and the item is gone |
 | `not_addressed` | The newer version is a partial update and does not mention the item; it still stands |
 | `uncertain` | The evidence cannot settle it: unknown scope, contradiction or ambiguity |
 | `equivalent` | Reworded or moved with the same meaning; nothing should be reported as material |
 
-`removed` requires evidence that the newer version replaces the whole document. When in doubt between `removed` and `not_addressed` or `uncertain`, choose the latter: a false removal is the critical failure (04 §5).
+`removed` requires an explicit deletion or evidence that the newer version replaces the whole document. An explicit deletion in an addendum is `removed`, with old-clause evidence and, where present, the deletion statement as new evidence. When in doubt between `removed` and `not_addressed` or `uncertain`, choose the latter: a false removal is the critical failure (04 §5).
 
 **Material:** a change is material if it affects deliverables, quantities, dates, responsibilities or approval wording (04 §5). Edge cases:
 
@@ -107,19 +107,22 @@ A language model may draft paraphrases and emails for the operators, but it neve
 
 ## 5. Labelling process
 
-1. **Real pairs (tiers A–C):** two people label each pair independently, without seeing each other's labels. They then compare, resolve each disagreement and record the reason in `reconciliation`.
-2. **Constructed pairs (tier D):** one person reviews every pair against its gold labels and corrects drafting errors. The second person independently labels a stratified 30% sample. If item-level agreement with the gold labels is below 90%, the second person reviews all tier D pairs.
-3. **Second labeller:** someone who knows client briefs, such as a freelancer or colleague, paid at an hourly rate. Because all the sources are public or constructed, no data processing agreement is needed for the labelling work. Allow 3–4 days.
-4. **Split:** a random split stratified by case type and tier: 40% development, 60% held-out. The unit of the split is a group: a pair together with every pair whose `source.derived_from` names it (a text pair and its visual re-renders), so the same content never lands in both sets. After the split, the held-out set is frozen. It is not used for prompt tuning, D-17 or debugging; it is used only to score the gates.
-5. **Labelling workflow for real pairs.** `scripts/eval/label_kit.py --data ../change-lens-data` writes one offline page per pair and labeller to `labelling/A/` and `labelling/B/` in private storage (it refuses a path inside Git). A page shows the stored old and new texts side by side with line numbers, no labels, hints or manifest notes, and no network access (CSP `default-src 'none'`). It renders long texts lazily. Selections become zero-based, end-exclusive code-point offsets into the stored text, and values always come from the selection. Each labeller exports `labels-<pair>-<labeller>.json` to `labelling/returned/`; labeller A exports before opening B's files. `scripts/eval/reconcile.py compare --pairs …` rejects any invalid export (schema, §4 rules, spans that do not slice to their value, wrong text hash, draft without the review tick). It matches findings on the same category with overlapping evidence, and reports item-level agreement (same change type and material over all items) and Cohen's kappa over matched items. It writes a worksheet and a resolution file. The two labellers fill in a decision and a reason for every disagreement and the case types; `reconcile.py finalize --pair …` checks the resolution against the labels, builds the record (tier `public`, `labelled_by` [A, B], `split` `unsplit`, source from `manifest-draft.json`) and adds it to `labelling/records.jsonl` only after `validate.py` passes. The labeller guide, the recruiting brief and an invented calibration pair (`CAL-1`, with its answer key) are in `labelling/` in private storage.
+1. **Option A, real pairs (tiers A–C):** the owner labels every included pair once in R1, assigning its primary `case_type`. P-015 is dropped; 25 real pairs remain. Real-pair labelling is postponed while the app is built; the current delivery is tooling only.
+2. **Freeze and sample:** `reconcile.py freeze --data <dir> --pairs ...` fixes the R1 export hashes, source metadata and UTC freeze times in a non-overwritable manifest. `sample --data <dir> --seed <int>` writes one immutable R2 sample: ceiling(N/3), stratified jointly by case type and tier, with one per stratum when the quota permits. Remaining places favour proportional coverage; if strata outnumber places, seeded selection chooses the strata represented. For 25 pairs the sample is 9.
+3. **Blind R2:** the same owner labels sampled pairs again at least 14 full days after their R1 freeze, without consulting R1. Pages use separate storage and imports for R1/R2, embed no earlier labels or chosen case type, and export `labels-<pair>-R1.json` or `labels-<pair>-R2.json`. `compare` rejects early R2 timestamps, future dates, altered frozen R1 files, drafts and invalid evidence. This measures intra-owner consistency, not inter-annotator agreement.
+4. **Constructed pairs (tier D):** gold labels come from construction and the owner reviews every pair. No second human labeller is required. Gates are judged on constructed pairs; real-pair metrics are reported separately and never gate anything. The eventual split is 40% development and 60% held-out, stratified by case type and tier, keeping each pair with every `source.derived_from` descendant. Held-out data is frozen and never used for prompt tuning, D-17 or debugging. This tooling creates no split: all built records remain `unsplit`.
+5. **Reconcile and build:** `compare` matches category plus overlapping evidence, measures item agreement and matched-item Cohen's kappa, and writes a worksheet and resolution. The owner records a decision and reason for every difference (`R1`, `R2`, `drop` or `edit`). `build` uses R1, preferring complete, valid resolved labels where R2 and a resolution exist; incomplete or stale resolutions fail. Records use `labelled_by: ["owner"]`, schema-defined round/hash `provenance`, and `split: "unsplit"`. The full proposed output must pass `validate.py` before replacing `labelling/records.jsonl`.
+6. **Kit and rules:** [GUIDE](../scripts/eval/GUIDE.md) contains the exact R1 → freeze → sample → R2 → compare → build → calibrate commands and the accepted rules. Unchanged clauses are inventoried only in its §6 sections. Explicit deletions are `removed`; a Q&A answer changing a requirement is an amendment with an explanatory note. Source fields retain the accepted manifest mapping: kind `rfp_addendum` for public RFP revisions, newer URL/retrieval date, manifest licence and `anonymised: true`. Pages show only source texts and labelling controls, use offline CSP, and preserve exact code-point evidence offsets. All generated pages, labels and manifests stay outside Git.
 
 ## 6. Reporting
 
-Every metric is reported for the whole held-out set and for real pairs (tiers A–C) on their own. If a model does clearly better on constructed pairs than on real ones, the constructed set is too easy. That result is recorded in the decision log before any gate decision.
+Model metrics are reported separately for constructed and real pairs. **Only constructed-pair results decide gates.** Real results (tiers A–C) are descriptive, including any constructed-versus-real gap; they do not block or pass a gate. No real-pair result is claimed while labelling is postponed.
+
+`reconcile.py calibrate --data <dir>` prints R1/R2 consistency separately for real and constructed sampled pairs, overall and per finding category. Report the pair/item counts, item-level agreement (same change type and material; unmatched items count as disagreement), and Cohen's kappa for change type and material over matched items only. Report undefined values as such. This is repeatability of one owner's labels, not inter-annotator agreement or model accuracy. Resolution does not retroactively change these measurements; they use the original frozen R1 and blind R2 exports.
 
 ## 7. Done when (D-6)
 
 - At least 80 pairs plus 10 cross-format pairs meet the 04 §4 case mix, and at least 25 of them are real.
 - Every record validates against the schema.
-- The manifest, the reconciliation notes and the split are committed. The documents themselves are in private storage.
+- The real manifest, labels, reconciliation notes, documents and eventual split remain in private storage outside Git. Only tooling, schema, generic guidance and synthetic test fixtures are committed.
 - The held-out set has not been opened since the split.

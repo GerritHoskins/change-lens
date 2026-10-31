@@ -64,6 +64,22 @@
       }
     },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "provenance": {
+      "type": "object",
+      "required": ["rounds", "labels_sha256", "r1_frozen_at"],
+      "properties": {
+        "rounds": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"enum": ["R1", "R2"]}},
+        "labels_sha256": {
+          "type": "object", "required": ["R1"],
+          "properties": {
+            "R1": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "R2": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }, "additionalProperties": false
+        },
+        "r1_frozen_at": {"type": "string"},
+        "resolution_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }, "additionalProperties": false
+    },
     "labelled_by": { "type": "array", "minItems": 1, "items": { "type": "string" } },
     "reconciliation": {
       "type": "array",

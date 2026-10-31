@@ -95,8 +95,8 @@ def export(root, pair, who, findings, reviewed=True):
     for side in ("old", "new"):
         ref = label_kit.text_ref(pair, side)
         texts[side] = {"storage_ref": ref, "sha256": hashlib.sha256((Path(root) / ref).read_bytes()).hexdigest()}
-    doc = {"format": label_kit.FORMAT, "pair": pair, "labeller": who, "texts": texts,
-           "reviewed_fully": reviewed, "exported": "2026-10-31T12:00:00Z", "findings": findings}
+    doc = {"format": label_kit.FORMAT, "pair": pair, "round": who, "texts": texts,
+           "reviewed_fully": reviewed, "exported": "2026-10-31T12:00:00Z" if who == "R1" else "2026-11-14T13:00:00Z", "case_type": "value_change", "findings": findings}
     path = Path(root) / "labelling" / "returned" / ("labels-%s-%s.json" % (pair, who))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc), encoding="utf-8")
@@ -150,19 +150,17 @@ class Offsets(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             make_data(tmp, {"P-001": (OLD, TRICKY)})
             written = label_kit.write_kit(tmp)
-            self.assertEqual(sorted(p.relative_to(Path(tmp).resolve()).as_posix() for p in written),
-                             ["labelling/A/P-001.html", "labelling/B/P-001.html"])
-            a, b = (p.read_text(encoding="utf-8") for p in written)
-        for html, who in ((a, "A"), (b, "B")):
-            data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
-            self.assertEqual((data["texts"]["old"]["text"], data["texts"]["new"]["text"], data["labeller"]), (OLD, TRICKY, who))
-            self.assertEqual(data["texts"]["new"]["sha256"], hashlib.sha256(TRICKY.encode("utf-8")).hexdigest())
-            self.assertNotIn("SHOULD-NOT-LEAK", html)
-            self.assertEqual(set(data), {"pair", "labeller", "categories", "change_types", "texts"})
-        self.assertEqual(a.replace("labeller A", "labeller B").replace('"labeller": "A"', '"labeller": "B"'), b)
+            self.assertEqual([p.relative_to(Path(tmp).resolve()).as_posix() for p in written],
+                             ["labelling/R1/P-001.html"])
+            html = written[0].read_text(encoding="utf-8")
+        data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
+        self.assertEqual((data["texts"]["old"]["text"], data["texts"]["new"]["text"], data["round"]), (OLD, TRICKY, "R1"))
+        self.assertEqual(data["texts"]["new"]["sha256"], hashlib.sha256(TRICKY.encode("utf-8")).hexdigest())
+        self.assertNotIn("SHOULD-NOT-LEAK", html)
+        self.assertEqual(set(data), {"pair", "round", "categories", "change_types", "case_types", "texts"})
 
     def test_page_is_offline_and_script_safe(self):
-        html = label_kit.page("P-001", "A", {"old": ("anon/P-001/old.txt", "x</script><img src=x>&", "0" * 64),
+        html = label_kit.page("P-001", "R1", {"old": ("anon/P-001/old.txt", "x</script><img src=x>&", "0" * 64),
                                               "new": ("anon/P-001/new.txt", "y", "1" * 64)})
         self.assertIn("default-src 'none'", html)
         self.assertNotRegex(html, r"https?:|(src|href)\s*=\s*[\"']")
@@ -176,7 +174,7 @@ class Offsets(unittest.TestCase):
             (Path(tmp) / "anon/P-001/new.txt").write_bytes(b"caf\xe9")
             with self.assertRaisesRegex(ValueError, "not valid UTF-8"):
                 label_kit.write_kit(tmp)
-        for pair, who in (("P-1", "A"), ("P-001", "a"), ("../P-001", "A")):
+        for pair, who in (("P-1", "R1"), ("P-001", "a"), ("../P-001", "R1")):
             with self.assertRaises(ValueError):
                 label_kit.page(pair, who, {})
 
@@ -191,9 +189,9 @@ class LargeFile(unittest.TestCase):
                        for i in range(4800))
         self.assertGreater(len(body), 374000)
         with tempfile.TemporaryDirectory() as tmp:
-            make_data(tmp, {"P-015": ("short", body)})
+            make_data(tmp, {"P-014": ("short", body)})
             t0 = time.perf_counter()
-            [page, _] = label_kit.write_kit(tmp)
+            [page] = label_kit.write_kit(tmp)
             html = page.read_text(encoding="utf-8")
             self.assertLess(time.perf_counter() - t0, 10)
         self.assertLess(len(html), 3 * len(body))
@@ -209,16 +207,16 @@ class LargeFile(unittest.TestCase):
 
 class Agreement(unittest.TestCase):
     def test_matching_needs_category_and_overlap_and_prefers_larger_overlap(self):
-        a = [finding("A-1", "other_material", "changed", True, "€10,000", "€12,000"),
-             finding("A-2", "deliverable", "changed", True, "PNG", "SVG"),
-             finding("A-3", "approval", "changed", True, "signs off", "reviews")]
-        b = [finding("B-1", "other_material", "changed", True, "10,000", None),
-             finding("B-2", "other_material", "changed", True, "€10,000 excluding VAT", "€12,000"),
-             finding("B-3", "quantity", "changed", True, "PNG", "SVG"),
-             finding("B-4", "approval", "uncertain", False, None, "reviews the design")]
+        a = [finding("R1-1", "other_material", "changed", True, "€10,000", "€12,000"),
+             finding("R1-2", "deliverable", "changed", True, "PNG", "SVG"),
+             finding("R1-3", "approval", "changed", True, "signs off", "reviews")]
+        b = [finding("R2-1", "other_material", "changed", True, "10,000", None),
+             finding("R2-2", "other_material", "changed", True, "€10,000 excluding VAT", "€12,000"),
+             finding("R2-3", "quantity", "changed", True, "PNG", "SVG"),
+             finding("R2-4", "approval", "uncertain", False, None, "reviews the design")]
         pairs, only_a, only_b = reconcile.match(a, b)
-        self.assertEqual([(x["id"], y["id"]) for x, y in pairs], [("A-1", "B-2"), ("A-3", "B-4")])
-        self.assertEqual(([x["id"] for x in only_a], [y["id"] for y in only_b]), (["A-2"], ["B-1", "B-3"]))
+        self.assertEqual([(x["id"], y["id"]) for x, y in pairs], [("R1-1", "R2-2"), ("R1-3", "R2-4")])
+        self.assertEqual(([x["id"] for x in only_a], [y["id"] for y in only_b]), (["R1-2"], ["R2-1", "R2-3"]))
         self.assertEqual(reconcile.overlap(a[0], b[1]), 7 + 7)
 
     def test_agreement_and_kappa_hand_computed(self):
@@ -229,19 +227,19 @@ class Agreement(unittest.TestCase):
         s = reconcile.agreement(pairs, [{"change_type": "added", "material": True}], [])
         # change_type: po 3/4; pe .5*.25 + .25*.25 + .25*.25 = .25; kappa (.75-.25)/.75 = 2/3
         # material: po 2/4; pe .75*.25 + .25*.75 = .375; kappa .125/.625 = .2; items 5, of which 2 agree on both
-        self.assertEqual((s["items"], s["matched"], s["only_a"], s["only_b"], s["agreed"]), (5, 4, 1, 0, 2))
+        self.assertEqual((s["items"], s["matched"], s["only_r1"], s["only_r2"], s["agreed"]), (5, 4, 1, 0, 2))
         self.assertAlmostEqual(s["item_agreement"], 0.4)
         self.assertAlmostEqual(s["kappa_change_type"], 2 / 3)
         self.assertAlmostEqual(s["kappa_material"], 0.2)
 
     def test_same_verdict_on_different_evidence_still_needs_resolving(self):
-        a = [finding("A-1", "other_material", "changed", True, "€10,000", "€12,000")]
-        b = [finding("B-1", "other_material", "changed", True, "€10,000 excluding VAT", "€12,000"),
-             finding("B-2", "other_material", "changed", True, "€10,000", "€12,000")]
-        agreed, items = reconcile.disagreements([(a[0], b[0])], [], [], "A", "B")
+        a = [finding("R1-1", "other_material", "changed", True, "€10,000", "€12,000")]
+        b = [finding("R2-1", "other_material", "changed", True, "€10,000 excluding VAT", "€12,000"),
+             finding("R2-2", "other_material", "changed", True, "€10,000", "€12,000")]
+        agreed, items = reconcile.disagreements([(a[0], b[0])], [], [], "R1", "R2")
         self.assertEqual((agreed, [i["disagreement"] for i in items]), ([], ["evidence or values differ"]))
-        agreed, items = reconcile.disagreements([(a[0], b[1])], [], [], "A", "B")
-        self.assertEqual((agreed, items), ([{"a": "A-1", "b": "B-2"}], []))
+        agreed, items = reconcile.disagreements([(a[0], b[1])], [], [], "R1", "R2")
+        self.assertEqual((agreed, items), ([{"r1": "R1-1", "r2": "R2-2"}], []))
 
     def test_kappa_edge_cases(self):
         self.assertIsNone(reconcile.kappa([], []))
@@ -263,10 +261,10 @@ class LabelValidation(unittest.TestCase):
         make_data(self.tmp, {"P-001": (OLD, NEW), "P-002": (NEW, OLD)})
 
     def load(self, mutate):
-        path, doc = export(self.tmp, "P-001", "A", good_findings("A"))
+        path, doc = export(self.tmp, "P-001", "R1", good_findings("R1"))
         mutate(doc)
         path.write_text(json.dumps(doc), encoding="utf-8")
-        return reconcile.load_labels(path, "P-001", "A", self.tmp)
+        return reconcile.load_labels(path, "P-001", "R1", self.tmp)
 
     def test_valid_labels_load(self):
         doc, errs = self.load(lambda d: None)
@@ -282,15 +280,15 @@ class LabelValidation(unittest.TestCase):
         cases = {
             "keys must be exactly": lambda d: d.pop("exported"),
             "format is not": lambda d: d.__setitem__("format", "other/1"),
-            "expected P-001/A": lambda d: d.__setitem__("labeller", "B"),
+            "expected P-001/R1": lambda d: d.__setitem__("round", "R2"),
             "not marked as fully reviewed": lambda d: d.__setitem__("reviewed_fully", "yes"),
             "findings must be a list": lambda d: d.__setitem__("findings", {}),
             "needs storage_ref and sha256": lambda d: d["texts"]["old"].pop("sha256"),
             "not this pair's stored text": lambda d: d["texts"]["new"].__setitem__("storage_ref", "anon/P-002/new.txt"),
             "sha256 mismatch": lambda d: d["texts"]["new"].__setitem__("sha256", "0" * 64),
             "not in ['deliverable'": f0("category", "budget"),
-            "id must start with A-": f0("id", "B-1"),
-            "duplicate finding ids": lambda d: d["findings"][1].__setitem__("id", "A-1"),
+            "id must start with R1-": f0("id", "R2-1"),
+            "duplicate finding ids": lambda d: d["findings"][1].__setitem__("id", "R1-1"),
             "slices to": f0("old_value", "€10,001"),
             "outside the text": f0("evidence_new", {"start": 5, "end": 10 ** 6}),
             "evidence_old is empty": f0("evidence_old", {"start": 5, "end": 5}),
@@ -310,113 +308,14 @@ class LabelValidation(unittest.TestCase):
                 doc, errs = self.load(mutate)
                 self.assertIsNone(doc)
                 self.assertTrue(any(expected in e for e in errs), errs)
-        path = Path(self.tmp) / "labelling/returned/labels-P-001-A.json"
+        path = Path(self.tmp) / "labelling/returned/labels-P-001-R1.json"
         for content, expected in ((b"{", "cannot read labels"), (b"[]", "must be a JSON object"), (b"\xff", "cannot read labels")):
             path.write_bytes(content)
-            self.assertIn(expected, reconcile.load_labels(path, "P-001", "A", self.tmp)[1][0])
-        self.assertIn("cannot read labels", reconcile.load_labels(path.with_name("missing.json"), "P-001", "A", self.tmp)[1][0])
+            self.assertIn(expected, reconcile.load_labels(path, "P-001", "R1", self.tmp)[1][0])
+        self.assertIn("cannot read labels", reconcile.load_labels(path.with_name("missing.json"), "P-001", "R1", self.tmp)[1][0])
 
 
 EVIDENCE_KEYS = ("evidence_old", "evidence_new", "old_value", "new_value")
-
-
-class Finalize(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp)
-        make_data(self.tmp, {"P-001": (OLD, NEW), "P-003": (OLD, OLD)})
-        a = good_findings("A") + [finding("A-3", "approval", "changed", True, "signs off", "reviews")]
-        b = good_findings("B")[:1] + [finding("B-2", "deliverable", "uncertain", False, "PNG", "SVG")]
-        export(self.tmp, "P-001", "A", a)
-        export(self.tmp, "P-001", "B", b)
-        self.res = Path(self.tmp) / "labelling/reconcile/P-001-resolution.json"
-
-    def fill(self, change):
-        res = json.loads(self.res.read_text(encoding="utf-8"))
-        change(res)
-        self.res.write_text(json.dumps(res), encoding="utf-8")
-        return reconcile.finalize(self.tmp, "P-001")
-
-    def decide(self, res, d1="A", d2="drop", reason="agreed in call", case_types=("value_change", "partial_update")):
-        res["case_types"] = list(case_types)
-        for it, d in zip(res["items"], (d1, d2)):
-            it["decision"], it["reason"], it["finding"] = d, reason, None
-
-    def test_compare_writes_worksheet_and_skeleton(self):
-        stats, _ = reconcile.compare(self.tmp, "P-001")
-        self.assertEqual((stats["items"], stats["matched"], stats["agreed"]), (3, 2, 1))
-        res = json.loads(self.res.read_text(encoding="utf-8"))
-        self.assertEqual(res["agreed"], [{"a": "A-1", "b": "B-1"}])
-        self.assertEqual([(i["a"], i["b"], i["decision"]) for i in res["items"]], [("A-2", "B-2", ""), ("A-3", None, "")])
-        self.assertIn('change_type: A "changed" / B "uncertain"', res["items"][0]["disagreement"])
-        sheet = (Path(self.tmp) / "labelling/reconcile/P-001-worksheet.md").read_text(encoding="utf-8")
-        self.assertIn("## D2: only A found this", sheet)
-        with self.assertRaisesRegex(SystemExit, "may hold decisions"):
-            reconcile.compare(self.tmp, "P-001")
-
-    def test_compare_refuses_invalid_labels(self):
-        export(self.tmp, "P-001", "B", good_findings("B"), reviewed=False)
-        with self.assertRaisesRegex(SystemExit, "draft export"):
-            reconcile.compare(self.tmp, "P-001")
-
-    def test_finalize_builds_a_valid_record(self):
-        reconcile.compare(self.tmp, "P-001")
-        self.assertEqual(self.fill(lambda r: self.decide(r, "B", "edit") or r["items"][1].__setitem__(
-            "finding", finding("x", "approval", "changed", True, "signs off the design", "reviews the design"))), [])
-        records = Path(self.tmp) / "labelling/records.jsonl"
-        [rec] = [json.loads(x) for x in records.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual((rec["tier"], rec["split"], rec["labelled_by"]), ("public", "unsplit", ["A", "B"]))
-        self.assertEqual(rec["source"], {"kind": "rfp_addendum", "url": "https://example.invalid/P-001/new",
-                                         "licence": "test-only", "retrieved": "2026-10-30", "anonymised": True})
-        self.assertEqual([(f["id"], f["change_type"]) for f in rec["findings"]], [("F1", "changed"), ("F2", "uncertain"), ("F3", "changed")])
-        self.assertEqual(rec["reconciliation"][0]["finding"], "F2")
-        self.assertEqual(rec["reconciliation"][1]["resolution"], "edit: agreed in call")
-        self.assertEqual(validate.validate_file(str(records), texts_root=self.tmp), (1, []))
-        self.assertEqual(self.fill(lambda r: self.decide(r, "A", "drop")), [])  # rerun replaces, never duplicates
-        [rec] = [json.loads(x) for x in records.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(rec["reconciliation"][1]["finding"], "none (dropped A-3)")
-
-    def test_no_change_pair_finalizes_with_no_findings(self):
-        export(self.tmp, "P-003", "A", [])
-        export(self.tmp, "P-003", "B", [])
-        self.assertEqual(reconcile.compare(self.tmp, "P-003")[0]["items"], 0)
-        res = Path(self.tmp) / "labelling/reconcile/P-003-resolution.json"
-        r = json.loads(res.read_text(encoding="utf-8"))
-        r["case_types"] = ["no_change"]
-        res.write_text(json.dumps(r), encoding="utf-8")
-        self.assertEqual(reconcile.finalize(self.tmp, "P-003"), [])
-
-    def test_every_resolution_failure_path(self):
-        def stale(r):
-            export(self.tmp, "P-001", "B", good_findings("B"))
-
-        def manifest(r):
-            m = Path(self.tmp) / "manifest-draft.json"
-            m.write_text(m.read_text(encoding="utf-8").replace('"public"', '"owner"'), encoding="utf-8")
-        cases = {
-            "decision must be one of": lambda r: self.decide(r, "A", "B"),
-            "give the reason": lambda r: self.decide(r, reason=" "),
-            "required for edit and only for edit": lambda r: self.decide(r, "A", "edit"),
-            "case_types must name": lambda r: self.decide(r, case_types=()),
-            "not in ['value_change'": lambda r: self.decide(r, case_types=("deadline_change",)),
-            "labels changed since compare": lambda r: self.decide(r) or stale(r),
-            "do not match the labels": lambda r: self.decide(r) or r["items"].pop(),
-            "format or labellers": lambda r: self.decide(r) or r.__setitem__("labellers", ["B", "A"]),
-            "expected public": lambda r: self.decide(r) or manifest(r),
-            "slices to": lambda r: self.decide(r, "A", "edit") or r["items"][1].__setitem__(
-                "finding", dict(finding("x", "approval", "changed", True, "signs off"), old_value="signs of")),
-            "never material": lambda r: self.decide(r, "A", "edit") or r["items"][1].__setitem__(
-                "finding", finding("x", "structure", "equivalent", True, "signs off", "reviews")),
-            "is not the resolution for": lambda r: r.__setitem__("pair", "P-002"),
-        }
-        for expected, change in cases.items():
-            with self.subTest(expected):
-                make_data(self.tmp, {"P-001": (OLD, NEW), "P-003": (OLD, OLD)})
-                export(self.tmp, "P-001", "B", good_findings("B")[:1] + [finding("B-2", "deliverable", "uncertain", False, "PNG", "SVG")])
-                reconcile.compare(self.tmp, "P-001", force=True)
-                errs = self.fill(change)
-                self.assertTrue(any(expected in e for e in errs), errs)
-                self.assertFalse((Path(self.tmp) / "labelling/records.jsonl").exists())
 
 
 if __name__ == "__main__":
