@@ -1,0 +1,100 @@
+# Codemagic CI for the ChangeLens Flutter app (currently the D-15 proof of concept in poc/d15/app).
+# Owner decision 2026-10-31 (06): Android first, iOS on the owner's Mac plus a cloud macOS build.
+# Flutter is pinned to the version used locally; bump it here and locally together.
+definitions:
+  app: &app
+    working_directory: poc/d15/app
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+  flutter: &flutter
+    flutter: 3.47.9
+    xcode: latest
+    cocoapods: default
+  cache: &cache
+    cache_paths:
+      - $HOME/.pub-cache
+      - $HOME/.gradle/caches
+  on_app_change: &on_app_change
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+          include: true
+    when:
+      changeset:
+        includes:
+          - 'poc/d15/app/'
+          - 'codemagic.yaml'
+  scripts:
+    - &pub_get
+      name: Get packages
+      script: flutter pub get
+    - &analyze
+      name: Analyze
+      script: flutter analyze
+    - &unit_tests
+      name: Unit tests
+      script: flutter test
+
+workflows:
+  # Every push that touches the app: analyze, test and build a debug APK.
+  android-check:
+    name: Android check
+    <<: [*app, *on_app_change]
+    environment:
+      <<: *flutter
+    cache: *cache
+    scripts:
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Build debug APK
+        script: flutter build apk --debug
+    artifacts:
+      - $CM_BUILD_DIR/poc/d15/app/build/app/outputs/flutter-apk/*.apk
+
+  # Every push that touches the app: prove the iOS build compiles. Unsigned, so it needs no
+  # Apple Developer account and produces nothing installable.
+  ios-compile-check:
+    name: iOS compile check (unsigned)
+    <<: [*app, *on_app_change]
+    environment:
+      <<: *flutter
+    cache: *cache
+    scripts:
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Build iOS without code signing
+        script: flutter build ios --release --no-codesign
+
+  # Manual only. Needs an Apple Developer account, the bundle ID registered in the Apple
+  # Developer portal, and a Codemagic App Store Connect integration named below
+  # (Team settings > Integrations > Developer Portal). Not usable until those exist.
+  ios-testflight:
+    name: iOS TestFlight
+    <<: *app
+    integrations:
+      app_store_connect: ChangeLens App Store Connect
+    environment:
+      <<: *flutter
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: dev.changelens.changelensPoc
+    cache: *cache
+    scripts:
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Apply signing profiles
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - $CM_BUILD_DIR/poc/d15/app/build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
