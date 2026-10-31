@@ -130,3 +130,15 @@ def test_rerun_after_crash_does_not_duplicate_findings(env):
     env.worker.handle_compare(TENANT_A, uuid.UUID(cid))
     assert len(env.get("/comparisons/%s/findings" % cid).json()["findings"]) == before
     assert env.sql("SELECT count(*) FROM findings")[0][0] == before
+
+
+def test_list_routes_are_tenant_scoped(env):
+    pa = env.project(TOKEN_A, name="A")
+    pb = env.project(TOKEN_B, name="B")
+    va = env.upload(pa, TOKEN_A, label="a1", text="hello").json()["id"]
+    env.upload(pb, TOKEN_B, label="b1", text="other")
+    assert [p["name"] for p in env.get("/projects", TOKEN_A).json()["projects"]] == ["A"]
+    assert [v["id"] for v in env.get("/projects/%s/versions" % pa, TOKEN_A).json()["versions"]] == [va]
+    assert env.get("/projects/%s/comparisons" % pa, TOKEN_A).json() == {"comparisons": []}
+    for path in ("/projects/%s/versions" % pb, "/projects/%s/comparisons" % pb):
+        assert env.get(path, TOKEN_A).status_code == 404

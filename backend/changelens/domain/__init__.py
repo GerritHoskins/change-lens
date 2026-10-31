@@ -79,6 +79,23 @@ class TenantRepo:
         p = self._get(Project, id_)
         return p if p is not None and p.deleted_at is None else None
 
+    def projects(self) -> list[Project]:
+        q = (select(Project).where(Project.tenant_id == self.tenant_id, Project.deleted_at.is_(None))
+             .order_by(Project.created_at.desc()))
+        return list(self.s.scalars(q))
+
+    def versions_of(self, project_id: uuid.UUID) -> list[SourceVersion]:
+        q = (select(SourceVersion)
+             .where(SourceVersion.tenant_id == self.tenant_id, SourceVersion.project_id == project_id)
+             .order_by(SourceVersion.created_at))
+        return list(self.s.scalars(q))
+
+    def comparisons_of(self, project_id: uuid.UUID) -> list[Comparison]:
+        q = (select(Comparison)
+             .where(Comparison.tenant_id == self.tenant_id, Comparison.project_id == project_id)
+             .order_by(Comparison.created_at.desc()))
+        return list(self.s.scalars(q))
+
     def version(self, id_: uuid.UUID, lock: bool = False) -> Optional[SourceVersion]:
         return self._get(SourceVersion, id_, lock)
 

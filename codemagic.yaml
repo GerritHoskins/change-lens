@@ -1,4 +1,5 @@
-# Codemagic CI for the ChangeLens Flutter app (currently the D-15 proof of concept in poc/d15/app).
+# Codemagic CI for the ChangeLens Flutter apps: the real app in app/ (I-9, dev.changelens.app) and
+# the D-15 proof of concept in poc/d15/app.
 # Owner decision 2026-10-31 (06): Android first, iOS on the owner's Mac plus a cloud macOS build.
 # Flutter is pinned to the version used locally; bump it here and locally together.
 definitions:
@@ -27,6 +28,23 @@ definitions:
         includes:
           - 'poc/d15/app/'
           - 'codemagic.yaml'
+  real_app: &real_app
+    working_directory: app
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+  on_real_app_change: &on_real_app_change
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+          include: true
+    when:
+      changeset:
+        includes:
+          - 'app/'
+          - 'codemagic.yaml'
   scripts:
     - &pub_get
       name: Get packages
@@ -39,6 +57,35 @@ definitions:
       script: flutter test
 
 workflows:
+  # The real app (I-9): analyze, test and build on every push that touches app/.
+  app-android-check:
+    name: App Android check
+    <<: [*real_app, *on_real_app_change]
+    environment:
+      <<: *flutter
+    cache: *cache
+    scripts:
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Build debug APK
+        script: flutter build apk --debug
+    artifacts:
+      - $CM_BUILD_DIR/app/build/app/outputs/flutter-apk/*.apk
+
+  app-ios-compile-check:
+    name: App iOS compile check (unsigned)
+    <<: [*real_app, *on_real_app_change]
+    environment:
+      <<: *flutter
+    cache: *cache
+    scripts:
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Build iOS without code signing
+        script: flutter build ios --release --no-codesign
+
   # Every push that touches the app: analyze, test and build a debug APK.
   android-check:
     name: Android check
