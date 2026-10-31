@@ -74,7 +74,12 @@ PAGE = ("Project brief\nBudget: EUR 12,000\nFinal files are due on 30 April 2027
                                             ("about", "- Pages: home, about")])
 def test_sentence_of(quote, sentence):
     i = PAGE.index(quote)
-    assert sentence_of(PAGE, Locator(i, i + len(quote))) == sentence
+    assert sentence_of(PAGE, Locator(i, i + len(quote)), wrapped=True) == sentence
+
+
+def test_text_lines_never_wrap():
+    i = PAGE.index("SVG files")
+    assert sentence_of(PAGE, Locator(i, i + 9)) == "as SVG files."
 
 
 # align --------------------------------------------------------------------------------------------
@@ -126,11 +131,10 @@ def matched(a, b, **kw):
     return FactPair("matched", fact(a, **kw), fact(b, **kw))
 
 
-def test_identical_context_is_equivalent_whatever_the_quote():
+def test_identical_context_is_unchanged_whatever_the_quote():
     p = FactPair("matched", fact("30 April", context="Files are due on 30 April."),
                  fact("Files are due on 30 April.", context="Files are due on 30 April."))
-    [d] = compare([p], "complete", Never())
-    assert d.change_type == "equivalent"
+    assert compare([p], "complete", Never()) == []
 
 
 @pytest.mark.parametrize("a,b,reason", [("Budget EUR 12,000", "Budget EUR 12,500", None),
@@ -181,4 +185,4 @@ def test_ambiguous_date_or_contradiction_is_never_a_silent_guess():
     hedged = matched("Around EUR 5,000", "Around EUR 5,000", ambiguity="ambiguous_value")
     drafts = compare([date, same, hedged], "complete", Never())
     assert [(d.change_type, d.uncertainty) for d in drafts] == [
-        ("uncertain", "ambiguous_date"), ("uncertain", "contradiction"), ("equivalent", "ambiguous_value")]
+        ("uncertain", "ambiguous_date"), ("uncertain", "contradiction")]  # an unchanged hedged value is no finding

@@ -20,15 +20,18 @@ def _run_pair(env, upload_a, upload_b):
     assert env.get("/comparisons/" + cid).json()["status"] == "queued"
     assert env.worker.run_until_idle() == 1
     c = env.get("/comparisons/" + cid).json()
-    assert c["status"] == "complete" and c["placeholder"] is True and c["pipeline_version"] == "placeholder-0"
-    assert {"code": "placeholder_pipeline"} in c["warnings"]
+    assert c["status"] == "complete" and c["placeholder"] is False and c["pipeline_version"] == "facts-1"
     assert 0 < float(c["cost_actual"]) <= float(c["cost_ceiling"])
     f = env.get("/comparisons/%s/findings" % cid).json()
-    assert f["status"] == "complete" and f["placeholder"] is True and f["findings"]
+    assert f["status"] == "complete" and f["placeholder"] is False and f["findings"]
+    assert [x["priority"] for x in f["findings"]] == list(range(len(f["findings"])))
+    assert f["summary"]["selected"] is True and f["withheld_count"] == 0
     pages = {"earlier": _pages(env, va["id"]), "later": _pages(env, vb["id"])}
     for finding in f["findings"]:
-        assert finding["explanation"]
-        for ev in finding["evidence"]:
+        assert finding["explanation"] and finding["group"] in ("prioritised", "needs_review", "other")
+    # AC-9: every quote, in findings and in unexplained differences, is exact at its locator.
+    for evidence in [x["evidence"] for x in f["findings"]] + [f["unexplained_differences"]]:
+        for ev in evidence:
             loc = ev["locator"]
             assert pages[ev["side"]][(loc["page"] or 1) - 1][loc["char_start"]:loc["char_end"]] == ev["quote"]
     return f["findings"]
@@ -37,10 +40,12 @@ def _run_pair(env, upload_a, upload_b):
 def test_text_versions_end_to_end(env):
     findings = _run_pair(env, lambda p: env.upload(p, label="v1", text="\n".join(EARLIER_LINES)),
                          lambda p: env.upload(p, label="v2", file=("v2.txt", "\n".join(LATER_LINES).encode(), "text/plain")))
-    budget = findings[0]
-    assert budget["change_type"] == "changed"
-    assert [(e["side"], e["quote"]) for e in budget["evidence"]] == [
-        ("earlier", "Budget: EUR 12,000"), ("later", "Budget: EUR 15,000")]
+    assert [(f["change_type"], [(e["side"], e["quote"]) for e in f["evidence"]]) for f in findings] == [
+        ("changed", [("earlier", "Budget: EUR 12,000"), ("later", "Budget: EUR 15,000")]),
+        ("changed", [("earlier", "Pages: home, about, contact"), ("later", "Pages: home, about, contact, blog")]),
+        ("removed", [("earlier", "Hosting is provided by the client")]),
+        ("added", [("later", "Copywriting is included")])]
+    assert "does not mean it was cancelled" in findings[2]["explanation"]  # AC-2
 
 
 def test_pdf_versions_end_to_end(env):
@@ -131,17 +136,16 @@ def test_rotated_cropped_offset_pdfs_end_to_end(env):
     env.worker.run_until_idle()
     c = env.get("/comparisons/" + cid).json()
     assert c["status"] == "complete" and {"code": "hidden_text"} in c["warnings"]
-    f = env.get("/comparisons/%s/findings" % cid).json()["findings"]
+    got = env.get("/comparisons/%s/findings" % cid).json()
     pages = {"earlier": _pages(env, a), "later": _pages(env, b)}
     quotes = []
-    for finding in f:
-        for ev in finding["evidence"]:
+    for evidence in [x["evidence"] for x in got["findings"]] + [got["unexplained_differences"], got["presentation_only"]]:
+        for ev in evidence:
             loc = ev["locator"]
             assert pages[ev["side"]][loc["page"] - 1][loc["char_start"]:loc["char_end"]] == ev["quote"]
             quotes.append((ev["side"], ev["quote"]))
-    # PDFium orders a rotated page's text by its displayed layout, so the order-sensitive placeholder
-    # diff pairs lines loosely (I-3/I-4 align by content). What I-1c owns: the edits and the line
-    # cropped away are reported, and no hidden line is ever quoted.
+    # What I-1c owns: the edits and the line cropped away are reported (a case-only edit is listed as
+    # presentation-only), and no hidden line is ever quoted.
     assert {("earlier", "Visible line one"), ("later", "Visible line ONE"), ("earlier", "Cropped away text")} <= set(quotes)
     hidden = {k for k, v in expected.items() if v}
     assert not [q for side, q in quotes if side == "later" and q in hidden]

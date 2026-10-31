@@ -121,8 +121,16 @@ SAME_MEANING = {
     },
 }
 
+# I-5 report wording, one call per changed, added or equivalent finding (03a P5.5).
+EXPLANATION = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["explanation"],
+    "properties": {"explanation": {"type": "string"}},
+}
+
 SCHEMAS = {"ChangeFindings": CHANGE_FINDINGS, "FactList": FACT_LIST, "FactMatches": FACT_MATCHES,
-           "SameMeaning": SAME_MEANING}
+           "SameMeaning": SAME_MEANING, "Explanation": EXPLANATION}
 
 _TYPES = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None),
           "integer": int, "number": (int, float)}
