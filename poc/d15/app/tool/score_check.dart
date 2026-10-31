@@ -1,5 +1,6 @@
 // Desktop check for D-15: score mock-API passages against pdfrx_engine's PDFium (no device needed).
 //   dart run tool/score_check.dart <dir with x.pdf + x.json pairs>
+// ignore_for_file: avoid_print  (a command-line tool: printing is its output)
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,7 +21,11 @@ Future<void> main(List<String> args) async {
       final u1 = back.reduce((a, b) => a.merge(b)), u2 = local.reduce((a, b) => a.merge(b));
       final d = [u1.left - u2.left, u1.top - u2.top, u1.right - u2.right, u1.bottom - u2.bottom].map((x) => x.abs()).reduce((a, b) => a > b ? a : b);
       total++;
-      if (same && d < 0.5) ok++; else print('MISMATCH ${f.uri.pathSegments.last} #${j['id']} same=$same maxdiff=$d');
+      if (same && d < 0.5) {
+        ok++;
+      } else {
+        print('MISMATCH ${f.uri.pathSegments.last} #${j['id']} same=$same maxdiff=$d');
+      }
     }
     await doc.dispose();
   }
