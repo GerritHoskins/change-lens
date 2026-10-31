@@ -37,7 +37,7 @@ BASES = [
                  "alts": ["21 March 2027", "7 March 2027"], "vague": "early next month"},
                 {"id": "final", "cat": "date_deadline", "v": "30 April 2027",
                  "tpl": "Final files are due on {v}.",
-                 "para": "The final files must reach us by {v}.",
+                 "para": "The final files must be delivered on {v}.",
                  "alts": ["29 April 2027", "15 May 2027"], "vague": "shortly after launch"},
             ]},
             {"name": "Budget", "items": [
@@ -69,7 +69,7 @@ BASES = [
                  "alts": ["20", "32"]},
                 {"id": "print", "cat": "deliverable", "v": "print-ready PDF/X-4",
                  "tpl": "Artwork must be supplied as {v}.",
-                 "para": "The artwork must come as {v}.",
+                 "para": "The artwork must be supplied as {v}.",
                  "alts": ["editable InDesign files", "PDF for screen"],
                  "flip": ["must", "may"]},
                 {"id": "photos", "cat": "quantity", "v": "15",
@@ -120,7 +120,7 @@ BASES = [
                  "alts": ["4K", "720p"], "flip": ["must", "should"]},
                 {"id": "length", "cat": "deliverable", "v": "30 seconds",
                  "tpl": "No video may be longer than {v}.",
-                 "para": "The maximum length of any video is {v}.",
+                 "para": "No video may run longer than {v}.",
                  "alts": ["45 seconds", "20 seconds"], "flip": ["may", "should"]},
             ]},
             {"name": "Timeline", "items": [
@@ -136,7 +136,7 @@ BASES = [
             {"name": "Budget", "items": [
                 {"id": "budget", "cat": "other_material", "v": "EUR 9,500",
                  "tpl": "The production budget is capped at {v}.",
-                 "para": "Production costs are capped at {v}.",
+                 "para": "The budget for production is capped at {v}.",
                  "alts": ["EUR 8,000", "EUR 11,000"], "flip": ["capped", "estimated"]},
             ]},
             {"name": "Responsibilities", "items": [
@@ -146,7 +146,7 @@ BASES = [
                  "alts": ["Contact F"], "vague": "whoever is available"},
                 {"id": "approval", "cat": "approval", "v": "the trustees sign off the final cut",
                  "tpl": "Videos are published after {v}.",
-                 "para": "Publication follows once {v}.",
+                 "para": "Videos are released after {v}.",
                  "alts": ["the trustees have seen the final cut"]},
             ]},
         ],
