@@ -8,9 +8,18 @@ Kind = Literal["text", "pdf"]
 Scope = Literal["complete", "partial", "unknown"]
 
 
+class ParseRejected(Exception):
+    """The version cannot be used; `code` is a stable, content-free reason."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class Locator:
-    """Character offsets into the version's immutable parsed text; `page` is 1-based for PDFs."""
+    """07 §4 locator. Text: offsets into the exact decoded text (page None). PDF: 1-based `page`,
+    offsets into that page's exact PDFium `get_text_range()` output, line endings included."""
     char_start: int
     char_end: int
     page: Optional[int] = None
@@ -21,37 +30,62 @@ class Block:
     text: str
     locator: Locator
     hidden: bool = False
+    # off_page | no_ink | tiny (07 §4 rules), or page_geometry | page_too_large (fail closed)
+    hidden_reason: Optional[str] = None
 
 
 @dataclass(frozen=True)
 class ParseWarning:
+    """Content-free: a code plus, where useful, a page and span. Never the text itself."""
     code: str
     page: Optional[int] = None
+    char_start: Optional[int] = None
+    char_end: Optional[int] = None
+
+
+# Warnings that make a comparison partial: some content could not be read or checked (AC-11).
+PARTIAL_WARNINGS = frozenset({"no_text_layer", "unextracted_region", "visibility_unchecked"})
 
 
 @dataclass
 class ParsedDocument:
     kind: Kind
-    text: str
+    pages: list[str]  # text: one entry; pdf: one entry per page
     blocks: list[Block]
     page_count: Optional[int] = None
     warnings: list[ParseWarning] = field(default_factory=list)
 
+    def slice(self, loc: Locator) -> str:
+        page = self.pages[(loc.page or 1) - 1]
+        return page[loc.char_start:loc.char_end]
+
+    def word_count(self) -> int:
+        return sum(len(p.split()) for p in self.pages)
+
+    def to_json(self) -> dict:
+        return {"kind": self.kind, "pages": self.pages, "page_count": self.page_count,
+                "blocks": self.blocks_json(), "warnings": [asdict(w) for w in self.warnings]}
+
     def blocks_json(self) -> list[dict]:
-        return [{"locator": asdict(b.locator), "hidden": b.hidden} for b in self.blocks]
+        return [{"locator": asdict(b.locator), "hidden": b.hidden, "hidden_reason": b.hidden_reason}
+                for b in self.blocks]
 
     @classmethod
-    def from_stored(cls, kind: str, text: str, blocks: list[dict], page_count, warnings: list[dict]) -> "ParsedDocument":
-        rebuilt = []
+    def from_json(cls, d: dict) -> "ParsedDocument":
+        return cls.from_stored(d["kind"], d["pages"], d["blocks"], d["page_count"], d["warnings"])
+
+    @classmethod
+    def from_stored(cls, kind: str, pages: list[str], blocks: list[dict], page_count, warnings: list[dict]) -> "ParsedDocument":
+        doc = cls(kind, list(pages), [], page_count, [ParseWarning(**w) for w in warnings])
         for b in blocks:
             loc = Locator(**b["locator"])
-            rebuilt.append(Block(text[loc.char_start:loc.char_end], loc, b.get("hidden", False)))
-        return cls(kind, text, rebuilt, page_count, [ParseWarning(**w) for w in warnings])
+            doc.blocks.append(Block(doc.slice(loc), loc, b.get("hidden", False), b.get("hidden_reason")))
+        return doc
 
 
 @dataclass(frozen=True)
 class Evidence:
-    """`quote` must equal parsed_text[char_start:char_end] of `side` (AC-9)."""
+    """`quote` must equal the parsed page text [char_start:char_end] of `side` (AC-9)."""
     side: Literal["earlier", "later"]
     locator: Locator
     quote: str

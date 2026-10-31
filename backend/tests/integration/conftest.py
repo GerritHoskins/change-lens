@@ -49,6 +49,9 @@ def services():
     except Exception as exc:
         pytest.skip("MinIO not reachable at %s (%s): run `docker compose up -d --wait` in backend/" % (S3, type(exc).__name__))
     db = Database(PG.replace("postgresql://", "postgresql+psycopg://").rsplit("/", 1)[0] + "/" + TEST_DB)
+    # No migrations yet (I-8): rebuild the disposable test schema so model changes always apply.
+    from changelens.domain.models import Base
+    Base.metadata.drop_all(db.engine)
     db.create_schema()
     return db, store
 

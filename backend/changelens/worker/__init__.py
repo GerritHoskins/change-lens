@@ -16,9 +16,9 @@ from changelens.domain import Database
 from changelens.domain.models import Finding
 from changelens.llm import FakeLlm, LlmPort, MeteredLlm
 from changelens.metering import CostMeter
-from changelens.pipeline.parse import ParseRejected, parse
+from changelens.pipeline.sandbox import parse_sandboxed
 from changelens.pipeline.stages import ReportInterrupted, placeholder_compare, report
-from changelens.pipeline.types import ParsedDocument
+from changelens.pipeline.types import PARTIAL_WARNINGS, ParsedDocument, ParseRejected
 from changelens.storage import ObjectStore
 
 log = logging.getLogger("changelens.worker")
@@ -95,9 +95,9 @@ class Worker:
                 return  # another tenant's ID or already done: nothing to do (idempotent)
             key, kind = v.original_object_key, v.kind
         data = self.store.get(key)
-        # Placeholder: in-process parse. I-1 moves this into the sandbox with CPU/memory caps (03 §6).
+        # PDFs are parsed in the capped sandbox child (03 §6); a breach rejects the version.
         try:
-            doc, reason = parse(data, kind, self.settings.limits), None
+            doc, reason = parse_sandboxed(data, kind, self.settings.limits), None
         except ParseRejected as r:
             doc, reason = None, r.code
         with self.db.tenant_scope(tenant_id) as repo:
@@ -107,8 +107,8 @@ class Worker:
             if doc is None:
                 v.status, v.reject_reason = "rejected", reason
                 return
-            v.parsed_text, v.blocks, v.page_count = doc.text, doc.blocks_json(), doc.page_count
-            v.parse_warnings = [{"code": w.code, "page": w.page} for w in doc.warnings]
+            v.parsed_pages, v.blocks, v.page_count = doc.pages, doc.blocks_json(), doc.page_count
+            v.parse_warnings = doc.to_json()["warnings"]
             v.status = "parsed"
 
     def handle_compare(self, tenant_id: uuid.UUID, comparison_id: uuid.UUID) -> None:
@@ -118,18 +118,23 @@ class Worker:
                 return
             c.status = "running"
             e, l = repo.version(c.earlier_id), repo.version(c.later_id)
-            earlier = ParsedDocument.from_stored(e.kind, e.parsed_text, e.blocks, e.page_count, e.parse_warnings)
-            later = ParsedDocument.from_stored(l.kind, l.parsed_text, l.blocks, l.page_count, l.parse_warnings)
+            earlier = ParsedDocument.from_stored(e.kind, e.parsed_pages, e.blocks, e.page_count, e.parse_warnings)
+            later = ParsedDocument.from_stored(l.kind, l.parsed_pages, l.blocks, l.page_count, l.parse_warnings)
             ceiling = c.cost_ceiling
         meter = CostMeter(ceiling)
         llm = MeteredLlm(self.llm, meter)
         warnings = [{"code": "placeholder_pipeline"}]
-        if earlier.warnings or later.warnings:
+        # Hidden text is excluded from the comparison (placeholder_compare skips hidden blocks) and
+        # reported; unread or unchecked content makes the result partial (AC-11, AC-18).
+        codes = {w.code for w in earlier.warnings + later.warnings}
+        if "hidden_text" in codes:
+            warnings.append({"code": "hidden_text"})
+        if codes & PARTIAL_WARNINGS:
             warnings.append({"code": "parse_warnings"})
         drafts = placeholder_compare(earlier, later)
         try:
             done = report(drafts, llm)
-            status = "partial" if len(warnings) > 1 else "complete"
+            status = "partial" if {"code": "parse_warnings"} in warnings else "complete"
         except ReportInterrupted as stop:
             done = stop.done
             warnings.append({"code": "cost_ceiling", "skipped_findings": stop.skipped})

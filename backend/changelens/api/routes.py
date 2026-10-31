@@ -97,7 +97,7 @@ async def upload_version(project_id: uuid.UUID, request: Request, tenant: uuid.U
     data, label = await _read_upload(request)
     label = uploads.check_label(label, state.settings.limits)
     kind = uploads.sniff(data)
-    pages = uploads.check_limits(data, kind, state.settings.limits)
+    uploads.check_limits(data, kind, state.settings.limits)
     with state.db.tenant_scope(tenant) as repo:
         if repo.project(project_id) is None:
             raise not_found()
@@ -106,7 +106,7 @@ async def upload_version(project_id: uuid.UUID, request: Request, tenant: uuid.U
     with state.db.tenant_scope(tenant) as repo:
         v = repo.add(SourceVersion(project_id=project_id, label=label, kind=kind, original_object_key=key,
                                    sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data),
-                                   page_count=pages, status="uploaded", parse_warnings=[]))
+                                   status="uploaded", parse_warnings=[]))
         jobs.enqueue(repo.s, tenant, "parse", {"version_id": v.id}, state.settings.job_max_attempts)
         repo.s.refresh(v)
         return _version_out(v)

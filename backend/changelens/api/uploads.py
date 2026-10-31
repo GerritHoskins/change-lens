@@ -1,10 +1,6 @@
 """Upload checks done before anything is stored (AC-20 basics, AD-3). The client's type is ignored."""
 from __future__ import annotations
 
-from contextlib import closing
-
-import pypdfium2 as pdfium
-
 from changelens.api.errors import ApiError
 from changelens.config import Limits
 
@@ -25,24 +21,17 @@ def sniff(data: bytes) -> str:
     return "text"
 
 
-def check_limits(data: bytes, kind: str, limits: Limits) -> int | None:
-    """Raise limit_exceeded naming the limit; returns the PDF page count (from metadata only)."""
+def check_limits(data: bytes, kind: str, limits: Limits) -> None:
+    """Size and word limits only. The API never opens a PDF: page count, extracted-text size and
+    malformed files are checked by the parse sandbox in the worker (I-1)."""
     if kind == "text":
         if len(data) > limits.max_text_bytes:
             raise ApiError(413, "limit_exceeded", "bytes")
         if len(data.decode("utf-8", "replace").split()) > limits.max_text_words:
             raise ApiError(413, "limit_exceeded", "words")
-        return None
+        return
     if len(data) > limits.max_pdf_bytes:
         raise ApiError(413, "limit_exceeded", "bytes")
-    try:
-        with closing(pdfium.PdfDocument(data)) as pdf:
-            pages = len(pdf)
-    except pdfium.PdfiumError:
-        raise ApiError(415, "unsupported_type", "malformed pdf") from None
-    if pages > limits.max_pdf_pages:
-        raise ApiError(413, "limit_exceeded", "pages")
-    return pages
 
 
 def check_label(label: str | None, limits: Limits) -> str:

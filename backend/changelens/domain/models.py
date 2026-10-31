@@ -52,7 +52,8 @@ class SourceVersion(Base):
     page_count: Mapped[Optional[int]] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")  # uploaded | parsed | rejected
     reject_reason: Mapped[Optional[str]] = mapped_column(String(50))
-    parsed_text: Mapped[Optional[str]] = mapped_column(Text)
+    # Exact parsed text per page (one entry for text); 07 §4 locators index into it. Immutable (AC-15).
+    parsed_pages: Mapped[Optional[list]] = mapped_column(JSONB)
     blocks: Mapped[Optional[list]] = mapped_column(JSONB)
     parse_warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = _now()
