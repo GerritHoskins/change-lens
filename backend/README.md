@@ -14,7 +14,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `jobs` | `changelens/jobs/` | Postgres queue: ID-only payloads, idempotency keys, `SKIP LOCKED`, retries, leases |
 | `worker` | `changelens/worker/` | Runs `parse` and `compare` jobs under the cost ceiling |
 | `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1), the parse sandbox, placeholder compare; `extract`, `align`, `compare` and `verify` signatures |
-| `llm` | `changelens/llm/` | The `llm` port, the fake adapter and the metered wrapper |
+| `llm` | `changelens/llm/` | The `llm` port, the fake adapter, the metered wrapper, the IONOS adapter (`ionos.py`) and output schemas (`schemas.py`) |
 | `metering` | `changelens/metering/` | Per-comparison cost meter and ceiling |
 | logging | `changelens/logs.py` | Log scrubbing (AC-23) |
 
@@ -39,7 +39,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install --require-hashes -r requirements.txt -r requirements-test.txt
 ```
 
-Every dependency is pinned with hashes. `requirements-test.txt` holds the test-only packages (pytest, httpx, reportlab).
+Every dependency is pinned with hashes. `httpx` is a runtime dependency (the IONOS adapter); `requirements-test.txt` holds the test-only packages (pytest, reportlab).
 
 ## 3. Run the API and the worker
 
@@ -165,6 +165,35 @@ The unit tests include the hostile-file fixtures, all generated in the tests:
 - a 14,400 pt page.
 
 They also check the sandbox caps against misbehaving child probes (`tests/unit/sandbox_probes.py`).
+
+## 7. Development split and the D-17 model check
+
+**Split (07 §5.4).** `scripts/eval/split.py` assigns the constructed pairs to 40% development and 60% held-out, stratified by tier and case type. A pair and every pair whose `source.derived_from` names it stay on the same side. It is seeded and deterministic and writes IDs only to `scripts/eval/split.json`, which is kept in git. Held-out pairs are frozen: never used for prompt tuning, D-17 or debugging. From the repository root:
+
+```powershell
+python scripts/eval/split.py --data ../change-lens-data --seed 17
+python -m unittest discover -s scripts/eval -p test_split.py
+```
+
+**IONOS adapter.** `changelens/llm/ionos.py` implements the `llm` port against the OpenAI-compatible IONOS AI Model Hub:
+- `response_format` json_schema strict, or `--mode json_object` (the schema goes in the prompt);
+- no tools;
+- data blocks delimited with a per-call random nonce, and a system prompt that marks them untrusted;
+- local schema validation, with one retry on invalid JSON or schema;
+- per-call tokens, latency and cost;
+- no prompt or response bodies in logs or exceptions; a 401 or 403 is never retried.
+
+Output schemas avoid booleans, because strict decoding of a boolean made Qwen emit whitespace until `max_tokens`. Prices are EUR per million tokens in `PRICES_EUR`, from the IONOS price list on 2026-10-30. Override them per run with `--price-in` and `--price-out`.
+
+**D-17 runner.** `tools/d17_run.py` runs change detection on the **development** pairs only. It refuses any held-out or unassigned pair before a call, and a unit test covers that. Text sides are sent exactly; PDF sides go through the I-1 parser, visible blocks only. Pairs with an image side are skipped (I-1b). The token is read in place from `IONOS_API_TOKEN` or from the env file named by `CHANGELENS_IONOS_ENV_FILE` (or `--env-file`), and never printed. Model outputs and per-pair scores go to `../../change-lens-data/d17/<prompt>/<model>/` (refused inside a Git worktree). Only aggregates go to stdout and `summary.json`. Metric definitions are in the `tools/d17_score.py` docstring. From `backend/`:
+
+```powershell
+$env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
+.venv\Scripts\python -m tools.d17_run --model Qwen/Qwen3.5-397B-A17B --runs 2
+.venv\Scripts\python -m tools.d17_run --model Qwen/Qwen3.8-27B --runs 2
+```
+
+Results and the model choice are in `docs/06-decision-log.md` (D-17, 2026-10-31).
 
 ## What is placeholder or out of scope
 
