@@ -68,6 +68,7 @@ button { font: inherit; }
     <table><thead><tr><th>ID</th><th>Category</th><th>Type</th><th>Mat.</th><th>Old</th><th>New</th><th>Note</th><th></th></tr></thead>
       <tbody id="list"></tbody></table>
     <p><label><input type="checkbox" id="reviewed"> I have read both documents in full and recorded every change (or that there is none).</label></p>
+    <label>Pair case type <select id="case_type" required></select></label><br>
     <button id="export">Export labels</button>
     <label>Import a previous export <input type="file" id="import" accept=".json,application/json"></label>
     <div class="muted" id="status"></div>
@@ -130,13 +131,29 @@ function checkFinding(f, categories, types) {
     e.push('structure and equivalent findings are never material');
   return e;
 }
+function storageKey(d) {
+  return 'changelens:rounds-v2:' + d.pair + ':' + d.round + ':' + d.texts.old.sha256 + ':' + d.texts.new.sha256;
+}
+function makeExport(d, caseType, reviewed, findings, exported) {
+  if (d.case_types.indexOf(caseType) < 0) throw new Error('Choose a pair case type before exporting.');
+  return {format: 'change-lens-labels/2', pair: d.pair, round: d.round, case_type: caseType,
+    texts: {old: {storage_ref: d.texts.old.storage_ref, sha256: d.texts.old.sha256},
+      new: {storage_ref: d.texts.new.storage_ref, sha256: d.texts.new.sha256}},
+    reviewed_fully: reviewed, exported: exported, findings: findings};
+}
+function canImport(d, incoming) {
+  return incoming.format === 'change-lens-labels/2' && incoming.pair === d.pair && incoming.round === d.round &&
+    d.case_types.indexOf(incoming.case_type) >= 0 && Array.isArray(incoming.findings) &&
+    ['old', 'new'].every(function (s) { return incoming.texts[s].sha256 === d.texts[s].sha256 &&
+      incoming.texts[s].storage_ref === d.texts[s].storage_ref; });
+}
 // CORE-END
 var D = JSON.parse(document.getElementById('data').textContent);
-var KEY = 'changelens:' + D.pair + ':' + D.labeller + ':' + D.texts.old.sha256 + ':' + D.texts.new.sha256;
+var KEY = storageKey(D);
 var P = {}, findings = [], draft = null, editing = null, current = null, finds = {old: -1, new: -1};
 var $ = function (id) { return document.getElementById(id); };
-document.title = D.pair + ' · labeller ' + D.labeller;
-$('hdr').textContent = D.pair + ' · labeller ' + D.labeller;
+document.title = D.pair + ' · round ' + D.round;
+$('hdr').textContent = D.pair + ' · round ' + D.round;
 
 function setupPane(side) {
   var text = D.texts[side].text, b = buildLines(text), el = $('doc-' + side), chunks = [];
@@ -226,7 +243,7 @@ function readForm() {
 function nextId() {
   var n = 0;
   findings.forEach(function (f) { n = Math.max(n, +f.id.split('-')[1]); });
-  return D.labeller + '-' + (n + 1);
+  return D.round + '-' + (n + 1);
 }
 function evOf(f, side) { return f['evidence_' + side] ? {start: f['evidence_' + side].start, end: f['evidence_' + side].end, value: f[side + '_value']} : null; }
 function cell(tr, t) { var td = document.createElement('td'); td.textContent = t; tr.appendChild(td); return td; }
@@ -247,7 +264,7 @@ function show() {
   $('status').textContent = findings.length + ' finding(s). Saved in this browser; export to hand in.';
 }
 function persist() {
-  try { localStorage.setItem(KEY, JSON.stringify({findings: findings, reviewed: $('reviewed').checked})); } catch (e) { /* storage unavailable */ }
+  try { localStorage.setItem(KEY, JSON.stringify({findings: findings, reviewed: $('reviewed').checked, case_type: $('case_type').value})); } catch (e) { /* storage unavailable */ }
 }
 function go(side, i) { rowEl(side, i).scrollIntoView({block: 'center'}); }
 function find(side) {
@@ -264,12 +281,12 @@ function find(side) {
   row.scrollIntoView({block: 'center'}); onSelect();
 }
 function exportLabels() {
-  var out = {format: 'change-lens-labels/1', pair: D.pair, labeller: D.labeller,
-    texts: {old: {storage_ref: D.texts.old.storage_ref, sha256: D.texts.old.sha256}, new: {storage_ref: D.texts.new.storage_ref, sha256: D.texts.new.sha256}},
-    reviewed_fully: $('reviewed').checked, exported: new Date().toISOString(), findings: findings};
+  var out;
+  try { out = makeExport(D, $('case_type').value, $('reviewed').checked, findings, new Date().toISOString()); }
+  catch (e) { return msg(e.message); }
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type: 'application/json'}));
-  a.download = 'labels-' + D.pair + '-' + D.labeller + '.json';
+  a.download = 'labels-' + D.pair + '-' + D.round + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   if (!out.reviewed_fully) msg('Exported as a draft: tick the review box before the final export.');
 }
@@ -278,21 +295,20 @@ function importLabels(file) {
   rd.onload = function () {
     try {
       var d = JSON.parse(rd.result);
-      if (d.pair !== D.pair || d.labeller !== D.labeller || d.texts.old.sha256 !== D.texts.old.sha256 || d.texts.new.sha256 !== D.texts.new.sha256)
-        return msg('That file belongs to another pair, labeller or text version.');
+      if (!canImport(D, d)) return msg('That file belongs to another pair, round or text version, or lacks a case type.');
       if (!confirm('Replace the ' + findings.length + ' finding(s) on this page with ' + d.findings.length + ' from the file?')) return;
-      findings = d.findings; $('reviewed').checked = d.reviewed_fully === true; persist(); show();
+      findings = d.findings; $('case_type').value = d.case_type; $('reviewed').checked = d.reviewed_fully === true; persist(); show();
     } catch (e) { msg('Not a labels file.'); }
   };
   rd.readAsText(file);
 }
 function init() {
-  ['category', 'change_type'].forEach(function (k) {
-    var sel = $(k), opts = [''].concat(k === 'category' ? D.categories : D.change_types);
+  ['category', 'change_type', 'case_type'].forEach(function (k) {
+    var sel = $(k), opts = [''].concat(k === 'category' ? D.categories : k === 'case_type' ? D.case_types : D.change_types);
     opts.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v || '(choose)'; sel.appendChild(o); });
   });
   setupPane('old'); setupPane('new');
-  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) { findings = saved.findings; $('reviewed').checked = saved.reviewed; } } catch (e) { /* none */ }
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) { findings = saved.findings; $('case_type').value = saved.case_type || ''; $('reviewed').checked = saved.reviewed; } } catch (e) { /* none */ }
   draft = blank(); fillForm(); show();
   ['old', 'new'].forEach(function (s) { P[s].el.addEventListener('mouseup', onSelect); P[s].el.addEventListener('keyup', onSelect); });
   document.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () {
@@ -312,6 +328,7 @@ function init() {
     editing = null; draft = blank(); fillForm(); persist(); show(); msg('');
   };
   $('reviewed').onchange = persist;
+  $('case_type').onchange = persist;
   $('export').onclick = exportLabels;
   $('import').onchange = function () { if (this.files[0]) importLabels(this.files[0]); this.value = ''; };
 }

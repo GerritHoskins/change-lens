@@ -12,11 +12,13 @@ powershell -NoProfile -File scripts/ci.ps1
 
 It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and separate text, visual, hidden-text and labelling-kit evaluation test stages (see 07 §3 and §5), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
 
-CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py` and `test_label_kit.py` as separate stages; an install/import failure, a failing test or zero tests in any stage fails CI. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
+CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py`, `test_label_kit.py` and `test_label_rounds.py` as separate stages; an install/import failure, a failing test or zero tests in any stage fails CI. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
 
 ```bash
 .venv/Scripts/python -m unittest discover -s scripts/eval
 ```
+
+Run `.venv/Scripts/python scripts/eval/probe_label_rounds.py` to repeat the option A mutation probes. It first requires the full synthetic suite to pass, then tests 21 deliberate regressions in disposable copies; every probe must fail the same complete suite. It changes no worktree source or private data.
 
 If Windows blocks the local script under its execution policy, use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1` for that process only; do not change machine policy. D-6 failure probes on 2026-10-31 confirmed `CI FAIL` with nonzero exit for a deliberately wrong visual golden and for a blocked `pypdfium2` import; sources were restored after the probes. Visual and hidden-text fixtures and their `review.html` sheets belong in private storage outside Git. Owner per-pair review and the independently arranged code review remain distinct from automated CI.
 
@@ -75,6 +77,10 @@ After substantial changes, run independent read-only reviews against handoff §1
 ## 6. Encoding
 
 Files are UTF-8. Windows PowerShell 5.1 reads files as ANSI unless told otherwise, so scripts that rewrite docs must use `-Encoding utf8` on read and write.
+
+## 7. Owner labelling rounds (option A)
+
+Real labelling is postponed until the owner is ready after building the app. Follow the exact PowerShell commands in [GUIDE §7](../scripts/eval/GUIDE.md): create R1 pages, label all 25 real pairs (excluding P-015), `freeze`, `sample --seed 7`, wait at least 14 days from freeze, create and label blind R2 pages, `compare`, complete the resolution files, `build`, then `calibrate`. All commands take `--data` pointing outside Git. Freeze and sample refuse replacement; do not reroll the sample or edit frozen R1 exports. R1/R2 are rounds of one owner, not two labellers. Build retains `unsplit`, sets `labelled_by` to owner and records round provenance. Real metrics remain separate and non-gating; constructed model-evaluation results decide gates. No real documents or labels enter tests or Git.
 
 ## ADR index
 
