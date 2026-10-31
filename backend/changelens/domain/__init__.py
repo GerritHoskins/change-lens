@@ -17,6 +17,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from changelens.domain.models import Base, Comparison, FactCacheEntry, Finding, Project, SourceVersion
 
 
+DEV_COLUMNS = [  # I-5
+    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS unexplained JSONB NOT NULL DEFAULT '[]'",
+    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS presentation_only JSONB NOT NULL DEFAULT '[]'",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS note VARCHAR(40)",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS review_group VARCHAR(20) NOT NULL DEFAULT 'other'",
+]
+
+
 class Database:
     def __init__(self, url: str):
         # echo stays off: SQL parameters can carry document text (AC-23).
@@ -24,8 +32,12 @@ class Database:
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
 
     def create_schema(self) -> None:
-        """Dev schema bootstrap (no Alembic until I-8; see 06, I-22 row)."""
+        """Dev schema bootstrap (no Alembic until I-8; see 06, I-22 row). Columns added after a
+        table first existed are added in place, so an existing dev database keeps working."""
         Base.metadata.create_all(self.engine)
+        with self.engine.begin() as conn:
+            for stmt in DEV_COLUMNS:
+                conn.execute(text(stmt))
 
     @contextmanager
     def tenant_scope(self, tenant_id: uuid.UUID) -> Iterator["TenantRepo"]:

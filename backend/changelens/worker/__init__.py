@@ -16,10 +16,13 @@ from changelens.domain import Database, DbFactCache
 from changelens.domain.models import Finding
 from changelens.llm import FakeLlm, LlmPort, MeteredLlm
 from changelens.metering import CeilingReached, CostMeter
+from changelens.pipeline.align import align
+from changelens.pipeline.compare import compare
 from changelens.pipeline.extract import extract_cached
+from changelens.pipeline.report import report
 from changelens.pipeline.sandbox import parse_sandboxed
-from changelens.pipeline.stages import ReportInterrupted, placeholder_compare, report
-from changelens.pipeline.types import PARTIAL_WARNINGS, ParsedDocument, ParseRejected
+from changelens.pipeline.types import PARTIAL_WARNINGS, Evidence, ParsedDocument, ParseRejected, VerifyResult
+from changelens.pipeline.verify import verify
 from changelens.storage import ObjectStore
 
 log = logging.getLogger("changelens.worker")
@@ -122,53 +125,60 @@ class Worker:
             earlier = ParsedDocument.from_stored(e.kind, e.parsed_pages, e.blocks, e.page_count, e.parse_warnings)
             later = ParsedDocument.from_stored(l.kind, l.parsed_pages, l.blocks, l.page_count, l.parse_warnings)
             sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
-            ceiling = c.cost_ceiling
+            ceiling, scope = c.cost_ceiling, c.scope_snapshot
         meter = CostMeter(ceiling)
         llm = MeteredLlm(self.llm, meter)
-        warnings = [{"code": "placeholder_pipeline"}]
-        # Hidden text is excluded from the comparison (placeholder_compare skips hidden blocks) and
-        # reported; unread or unchecked content makes the result partial (AC-11, AC-18).
+        warnings = []
+        # Hidden blocks are never sent to the model nor diffed, and are reported; unread or
+        # unchecked content makes the result partial (AC-11, AC-18).
         codes = {w.code for w in earlier.warnings + later.warnings}
         if "hidden_text" in codes:
             warnings.append({"code": "hidden_text"})
         if codes & PARTIAL_WARNINGS:
             warnings.append({"code": "parse_warnings"})
-        # Facts per version, cached (I-2). Not compared yet: I-3 aligns them; findings stay placeholder.
         config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
-        unextracted = 0
+        facts, unextracted, stage = [], 0, "extract"
         try:
-            for version_id, sha, doc in sides:
+            for version_id, sha, doc in sides:  # facts per version, cached (I-2)
                 res = extract_cached(doc, sha, config_id, DbFactCache(self.db, tenant_id, version_id), llm)
+                facts.append(res.facts)
                 unextracted += len(res.unextracted)
+            stage = "compare"
+            drafts = compare(align(facts[0], facts[1], llm), scope, llm)  # I-3, I-4
         except CeilingReached:
-            log.warning("comparison %s stopped at the cost ceiling during extraction", comparison_id)
-            self._finish(tenant_id, comparison_id, [], "failed",
-                         warnings + [{"code": "cost_ceiling", "stage": "extract"}], meter.total)
+            log.warning("comparison %s stopped at the cost ceiling during %s", comparison_id, stage)
+            self._finish(tenant_id, comparison_id, VerifyResult([], 0, []), "failed",
+                         warnings + [{"code": "cost_ceiling", "stage": stage}], meter.total)
             return
         if unextracted:
             warnings.append({"code": "unextracted", "chunks": unextracted})  # AC-11
-        drafts = placeholder_compare(earlier, later)
-        partial = {"code": "parse_warnings"} in warnings or unextracted > 0
-        try:
-            done = report(drafts, llm)
-            status = "partial" if partial else "complete"
-        except ReportInterrupted as stop:
-            done = stop.done
-            warnings.append({"code": "cost_ceiling", "skipped_findings": stop.skipped})
-            status = "partial" if done else "failed"
-            log.warning("comparison %s stopped at the cost ceiling after %d llm calls", comparison_id, meter.calls)
-        self._finish(tenant_id, comparison_id, done, status, warnings, meter.total)
-        log.info("comparison %s %s: %d findings, cost %s of %s", comparison_id, status, len(done), meter.total, ceiling)
+        checked = verify(drafts, earlier, later)  # I-5: exact quotes, needs review, block cross-check
+        checked.findings, templated = report(checked.findings, llm)
+        if templated:  # verified findings are kept with template wording, never dropped (AC-21)
+            warnings.append({"code": "cost_ceiling", "stage": "report", "templated_findings": templated})
+            log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, meter.calls)
+        partial = {"code": "parse_warnings"} in warnings or unextracted > 0 or templated > 0
+        status = "partial" if partial else "complete"
+        self._finish(tenant_id, comparison_id, checked, status, warnings, meter.total)
+        log.info("comparison %s %s: %d findings, %d withheld, %d unexplained, cost %s of %s", comparison_id,
+                 status, len(checked.findings), checked.withheld_count, len(checked.unexplained), meter.total, ceiling)
 
-    def _finish(self, tenant_id, comparison_id, done, status, warnings, cost) -> None:
+    def _finish(self, tenant_id, comparison_id, checked: VerifyResult, status, warnings, cost) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
             c = repo.comparison(comparison_id, lock=True)
             if c is None or c.status in TERMINAL:
                 return
             rows = [Finding(comparison_id=c.id, category=f.category, change_type=f.change_type,
-                            evidence=[{"side": ev.side, "quote": ev.quote,
-                                       "locator": {"page": ev.locator.page, "char_start": ev.locator.char_start,
-                                                   "char_end": ev.locator.char_end}} for ev in f.evidence],
-                            explanation=f.explanation, priority=f.priority) for f in done]
+                            evidence=[_evidence_json(ev) for ev in f.evidence], explanation=f.explanation,
+                            uncertainty=f.uncertainty, note=f.note, review_group=f.group, priority=f.priority)
+                    for f in checked.findings]
             repo.replace_findings(c.id, rows)
+            c.withheld_count = checked.withheld_count
+            c.unexplained = [_evidence_json(ev) for ev in checked.unexplained]
+            c.presentation_only = [_evidence_json(ev) for ev in checked.presentation_only]
             c.status, c.warnings, c.cost_actual = status, warnings, cost
+
+
+def _evidence_json(ev: Evidence) -> dict:
+    return {"side": ev.side, "quote": ev.quote,
+            "locator": {"page": ev.locator.page, "char_start": ev.locator.char_start, "char_end": ev.locator.char_end}}

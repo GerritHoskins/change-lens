@@ -102,6 +102,8 @@ class DraftFinding:
     old_value: Optional[str] = None  # normalised fact values (I-3); content, never logged
     new_value: Optional[str] = None
     note: Optional[str] = None  # wording key for omissions, e.g. absent_from_replacement (02 §3)
+    confidence: float = 1.0  # lowest fact confidence; routing only, never shown as evidence (AC-10)
+    group: str = "other"  # prioritised | needs_review | other (03a P5.5)
 
 
 @dataclass(frozen=True)
@@ -129,3 +131,4 @@ class VerifyResult:
     findings: list[DraftFinding]
     withheld_count: int
     unexplained: list[Evidence]
+    presentation_only: list[Evidence] = field(default_factory=list)  # moved blocks, same text

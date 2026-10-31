@@ -2,7 +2,7 @@
 
 A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Authentication is a single dev token. **Never deploy this publicly.** I-8 replaces the dev token with Logto JWTs, tenants and row-level security.
 
-The comparison itself is a **placeholder** (`pipeline_version = "placeholder-0"`): a line-level diff of added, removed and changed lines, with a fake LLM that costs a configurable amount per call. Parsing is real (I-1): exact text with 07 §4 locators, visibility flags for hidden text, and a resource-capped parse sandbox for PDFs. Extraction and comparison arrive with I-2 to I-5. Use synthetic documents only.
+The comparison runs the fact pipeline (`pipeline_version = "facts-1"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
 
 Module layout follows `docs/03-technical-design.md` §9.1:
 
@@ -13,7 +13,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `storage` | `changelens/storage/` | S3 adapter; tenant-prefixed keys; in-memory store for unit tests |
 | `jobs` | `changelens/jobs/` | Postgres queue: ID-only payloads, idempotency keys, `SKIP LOCKED`, retries, leases |
 | `worker` | `changelens/worker/` | Runs `parse` and `compare` jobs under the cost ceiling |
-| `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1), the parse sandbox, placeholder compare; `extract`, `align`, `compare` and `verify` signatures |
+| `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1) and its sandbox, `extract` (I-2), `align`, `compare` and `values` (I-3), `verify` and `report` (I-5) |
 | `llm` | `changelens/llm/` | The `llm` port, the fake adapter, the metered wrapper, the IONOS adapter (`ionos.py`) and output schemas (`schemas.py`) |
 | `metering` | `changelens/metering/` | Per-comparison cost meter and ceiling |
 | logging | `changelens/logs.py` | Log scrubbing (AC-23) |
@@ -66,7 +66,7 @@ Optional environment variables:
 | `CHANGELENS_S3_SECRET_KEY` | the compose dev value |
 | `CHANGELENS_S3_BUCKET` | `changelens-dev` |
 | `CHANGELENS_COST_CEILING_EUR` | `1.50` per comparison |
-| `CHANGELENS_FAKE_LLM_COST_EUR` | `0.01` per fake llm call |
+| `CHANGELENS_FAKE_LLM_COST_EUR` | `0.01` per fake llm explanation (its other answers are free) |
 
 ## 4. Example curl sequence (Git Bash)
 
@@ -200,9 +200,9 @@ Results and the model choice are in `docs/06-decision-log.md` (D-17, 2026-10-31)
 
 `changelens/pipeline/extract.py` sends a version's visible blocks, numbered and in chunks of about 6,000 characters, to the `FactList` schema. Hidden blocks are never sent. The model names a block number and a quote; the quote is located in that block's page text, so every locator is computed here and `raw_text` is always the exact parsed slice. Facts whose quote cannot be found are dropped and counted. A chunk whose output is still invalid after the adapter's one retry is marked *unextracted*, and the comparison gets an `unextracted` warning and becomes partial (AC-11). Unavailability and the cost ceiling propagate: there is no fallback model, so the job is retried later.
 
-Results are cached per version in the `fact_cache` table (tenant-scoped). The key covers the version hash, the extract prompt and schema, and the model config, so changing any of them re-extracts. Results with unextracted chunks are never cached. The worker extracts both versions before the placeholder comparison; the facts are not compared until I-3.
+Results are cached per version in the `fact_cache` table (tenant-scoped). The key covers the version hash, the extract prompt and schema, and the model config, so changing any of them re-extracts. Results with unextracted chunks are never cached.
 
-The worker uses the fake llm unless `CHANGELENS_LLM=ionos` (model `CHANGELENS_LLM_MODEL`, default `Qwen/Qwen3.5-397B-A17B`; token from `CHANGELENS_IONOS_ENV_FILE`). The fake answers `FactList` with no facts, at no cost.
+The worker uses the fake llm unless `CHANGELENS_LLM=ionos` (model `CHANGELENS_LLM_MODEL`, default `Qwen/Qwen3.5-397B-A17B`; token from `CHANGELENS_IONOS_ENV_FILE`). The fake answers `FactList` with one fact per line ("Budget: EUR 12,000" has subject "Budget"), `FactMatches` with no proposals and `SameMeaning` with no verdicts, all at no cost.
 
 **I-2 runner.** `tools/i2_run.py` extracts every distinct version of the usable development pairs once, then runs a second pass that must be answered entirely from the cache. It refuses held-out pairs, like the D-17 runner. It writes per-version results to `../../change-lens-data/i2/<model>/` and aggregates to stdout and `summary.json`. From `backend/`:
 
@@ -215,17 +215,28 @@ $env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
 
 `changelens/pipeline/align.py` pairs the facts of two versions. A fact's key is its type plus its canonical subject; a key that occurs once on each side is a match, whatever the position, so reordering changes nothing (AC-6). Two different values for one key inside a version are a contradiction: every member is marked ambiguous and paired with every counterpart, never resolved by picking one (AC-7). The remaining facts go to one `FactMatches` call; a proposal becomes a match only with high confidence and when it is one-to-one, otherwise the pair is ambiguous.
 
-`changelens/pipeline/compare.py` turns pairs into draft findings. Each fact carries `context`, the whole sentence or list item around its quote, worked out from the page rather than by the model (extract-v3), and the guards compare those sentences (`changelens/pipeline/values.py`): the same sentence after canonicalisation is equivalent; different numbers, dates or currencies, or a different owner or approver, are changed; different negation, modality or limit words are changed (AC-8). Only what passes all three goes to one `SameMeaning` call, and a missing verdict counts as a change. Ambiguous pairs, ambiguous dates and entities, and contradictions are uncertain. Unmatched earlier facts follow the scope (I-4): complete → removed (absent from the replacement), partial → not addressed, unknown → uncertain. Unmatched newer facts are added. The worker does not run these stages yet; that comes with I-5.
+`changelens/pipeline/compare.py` turns pairs into draft findings. Each fact carries `context`, the whole sentence or list item around its quote, worked out from the page rather than by the model (extract-v4; only PDF lines can wrap into the next), and the guards compare those sentences (`changelens/pipeline/values.py`): the same sentence after canonicalisation is unchanged and gets no finding; different numbers, dates or currencies, or a different owner or approver, are changed; different negation, modality or limit words are changed (AC-8). Only what passes all three goes to one `SameMeaning` call, and a missing verdict counts as a change. Ambiguous pairs, ambiguous dates and entities, and contradictions are uncertain. Unmatched earlier facts follow the scope (I-4): complete → removed (absent from the replacement), partial → not addressed, unknown → uncertain. Unmatched newer facts are added.
 
 **I-3 runner.** `tools/i3_run.py` reads the I-2 runner's saved facts, aligns and compares every usable development pair, and scores the drafts with `tools/d17_score.py`. The scope is taken from the pair's case type. It also reports reportable findings on reordered pairs (AC-6, must be 0) and uncertain findings on ambiguous pairs (AC-7). Output goes to `../../change-lens-data/i3/<tag>/<model>/`. From `backend/`, after the I-2 runner:
 
 ```powershell
-.venv\Scripts\python -m tools.i3_run --runs 2 --tag v3
+.venv\Scripts\python -m tools.i3_run --runs 2 --tag v4-report --report --max-calls 400
 ```
+
+`--report` also runs verify and report (I-5), so the scores are on what a user would see, and adds the withheld, unexplained and presentation-only counts, the groups, and how often the model's wording was kept.
+
+## 10. Verification and the report (I-5)
+
+`changelens/pipeline/verify.py` makes no model calls. A draft is kept only if every quote equals the parsed text at its locator and its evidence fits its type: a change cites both sides (AC-1), an omission only the earlier side, an addition only the newer side. Anything else is withheld and counted (AC-9, AC-10). Uncertain findings and findings resting on a low-confidence fact go to *needs review*. A block diff of the visible text is then cross-checked: a changed block that no finding covers is an *unexplained difference*, and an equivalent verdict does not count as covering it, so injected text cannot hide a change (AC-18). Blocks that only moved or were reformatted (list marker, capitals) are *presentation-only*.
+
+`changelens/pipeline/report.py` words and ranks. Changes, additions and equivalences get one `Explanation` call each; the wording is replaced by a template if the call fails, if it names a number the quotes do not contain, or if it says removed or cancelled where the quotes do not. Omissions and uncertain findings always get a template, so an omission is never called cancelled (AC-2..4). Groups: *prioritised* (material categories), *needs review*, *other*; `priority` is the display rank in that order. At the cost ceiling the remaining findings keep template wording rather than being dropped, and the comparison is partial with a `cost_ceiling` warning (`stage: report`). A ceiling during extraction or comparison fails the comparison (`stage: extract` or `compare`).
+
+`GET /comparisons/{id}/findings` returns the findings in rank order with `group` and `note`, `withheld_count`, `unexplained_differences`, `presentation_only`, and a `summary` (`selected: true`, the prioritised count and the count of other differences) for the "Selected summary" line (AC-13). The worker adds the new columns to an existing dev database on start.
+
+`tools/i3_run.py --report` runs verify and report on the development split as well (see §9).
 
 ## What is placeholder or out of scope
 
-- Verification and the report (I-5). Facts are extracted, aligned and compared, but the worker still writes the placeholder result.
 - Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.

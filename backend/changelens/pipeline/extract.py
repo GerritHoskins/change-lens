@@ -25,7 +25,7 @@ from changelens.llm.errors import LlmOutputInvalid
 from changelens.llm.schemas import FACT_LIST
 from changelens.pipeline.types import Block, ExtractedFact, Locator, ParsedDocument
 
-EXTRACT_VERSION = "extract-v3"  # v2: D-17 category boundaries; v3: whole-sentence quotes plus `context`
+EXTRACT_VERSION = "extract-v4"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs
 CHUNK_CHARS = 6000
 CONFIDENCE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 
@@ -148,18 +148,19 @@ def _breaks_at(page: str, nl: int) -> bool:
     return not before or before[-1] in ".!?;:" or not after or bool(_BULLET.match(after)) or after.startswith("\n")
 
 
-def sentence_of(page: str, loc: Locator, limit: int = 400) -> str:
-    """The sentence or list item around a located quote, deterministic (I-3 compares these)."""
+def sentence_of(page: str, loc: Locator, wrapped: bool = False, limit: int = 400) -> str:
+    """The sentence or list item around a located quote, deterministic (I-3 compares these).
+    Only PDF text is `wrapped`: there a line may continue on the next; in text every line ends."""
     start = loc.char_start
     while start > 0 and loc.char_start - start < limit:
-        if page[start - 1] == "\n" and _breaks_at(page, start - 1):
+        if page[start - 1] == "\n" and (not wrapped or _breaks_at(page, start - 1)):
             break
         if _END.match(page, start - 1) and start - 1 < loc.char_start - 1:
             break
         start -= 1
     end = loc.char_end
     while end < len(page) and end - loc.char_end < limit:
-        if page[end] == "\n" and _breaks_at(page, end):
+        if page[end] == "\n" and (not wrapped or _breaks_at(page, end)):
             break
         if _END.match(page, end) and end >= loc.char_end - 1:
             end += 1
@@ -194,7 +195,7 @@ def extract(doc: ParsedDocument, llm: Llm) -> ExtractionResult:
                 type=f["type"], raw_text=doc.slice(loc), normalised_value=normalise(f["value"]),
                 locator=loc, status="ambiguous" if f["ambiguity"] else "ok",
                 confidence=CONFIDENCE[f["confidence"]], subject=normalise(f["subject"]),
-                ambiguity=f["ambiguity"], context=sentence_of(doc.pages[(loc.page or 1) - 1], loc)))
+                ambiguity=f["ambiguity"], context=sentence_of(doc.pages[(loc.page or 1) - 1], loc, doc.kind == "pdf")))
     return result
 
 

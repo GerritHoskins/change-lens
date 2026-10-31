@@ -1,8 +1,9 @@
 """The `compare` stage (03 §4, 03a P5.3; I-3): FactPairs + confirmed scope -> DraftFindings.
 
 Matched pairs, deterministic guards first (03 §4.1):
-0. The same passage on both sides (after canonicalisation) is equivalent: no value noise from the
-   extraction can turn unchanged text into a change (AC-6).
+0. The same sentence on both sides (after canonicalisation) is unchanged and gets no finding: no
+   value noise from the extraction can turn unchanged text into a change (AC-6). A contradiction
+   stays uncertain even so (AC-7). Any exact-text edit left is caught by verify's block diff.
 1. The numbers, dates and currencies in the passages differ, or (owners and approvals) the named
    values differ -> changed, whatever the model thinks (AC-1).
 2. Negation, modality or limit words differ -> changed, never equivalent (AC-8).
@@ -59,7 +60,8 @@ def _draft(change_type: str, pair: FactPair, uncertainty: Optional[str] = None) 
     return DraftFinding(change_type, fact.type, _ev("earlier", pair.earlier) + _ev("later", pair.later),
                         uncertainty=uncertainty,
                         old_value=pair.earlier.normalised_value if pair.earlier else None,
-                        new_value=pair.later.normalised_value if pair.later else None)
+                        new_value=pair.later.normalised_value if pair.later else None,
+                        confidence=min(f.confidence for f in (pair.earlier, pair.later) if f is not None))
 
 
 def compare(pairs: list[FactPair], later_scope: Scope, llm: Llm) -> list[DraftFinding]:
@@ -70,7 +72,9 @@ def compare(pairs: list[FactPair], later_scope: Scope, llm: Llm) -> list[DraftFi
         if p.status == "matched":
             ec, lc = e.context or e.raw_text, l.context or l.raw_text
             if canonical(ec) == canonical(lc):
-                drafts.append(_draft("equivalent", p))
+                if "contradiction" in (e.ambiguity, l.ambiguity):
+                    drafts.append(_draft("equivalent", p))  # becomes uncertain (AC-7)
+                # otherwise unchanged: no finding (a case or spacing edit is left to verify's block diff)
             elif figures(ec) != figures(lc) or (
                     e.type in NAMED_VALUE_TYPES and canonical(e.normalised_value) != canonical(l.normalised_value)):
                 drafts.append(_draft("changed", p))
