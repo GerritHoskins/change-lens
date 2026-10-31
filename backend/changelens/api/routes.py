@@ -60,6 +60,29 @@ def create_project(body: ProjectIn, request: Request, tenant: uuid.UUID = Depend
         return _project_out(p)
 
 
+@router.get("/projects")
+def list_projects(request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+    with request.app.state.db.tenant_scope(tenant) as repo:
+        return {"projects": [_project_out(p) for p in repo.projects()]}
+
+
+@router.get("/projects/{project_id}/versions")
+def list_versions(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+    """Upload order only; the app never uses it as the comparison order (AC-14)."""
+    with request.app.state.db.tenant_scope(tenant) as repo:
+        if repo.project(project_id) is None:
+            raise not_found()
+        return {"versions": [_version_out(v) for v in repo.versions_of(project_id)]}
+
+
+@router.get("/projects/{project_id}/comparisons")
+def list_comparisons(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+    with request.app.state.db.tenant_scope(tenant) as repo:
+        if repo.project(project_id) is None:
+            raise not_found()
+        return {"comparisons": [_comparison_out(c) for c in repo.comparisons_of(project_id)]}
+
+
 @router.get("/projects/{project_id}")
 def get_project(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
     with request.app.state.db.tenant_scope(tenant) as repo:
