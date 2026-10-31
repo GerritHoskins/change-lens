@@ -63,7 +63,9 @@ class HiddenFixtures(unittest.TestCase):
             source = texts[rec['source']['derived_from']][0]
             self.assertEqual(rec['source']['base_pair'], source['source']['base_pair'])
             self.assertEqual(rec['source']['operators'][:-1], source['source']['operators'])
-            self.assertTrue(rec['findings'])
+            self.assertIn(source['source']['operators'][0], ('value_change', 'qualifier_flip'))
+            self.assertTrue(any(f['change_type'] == 'changed' and f['material'] and
+                                {'evidence_old', 'evidence_new'} <= set(f) for f in rec['findings']))
             for before, after in zip(source['findings'], rec['findings']):
                 strip = lambda f: {k: v for k, v in f.items() if not k.startswith('evidence_')}
                 self.assertEqual(strip(after), strip(before))
