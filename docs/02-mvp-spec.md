@@ -69,6 +69,8 @@ There are three separate states, stored separately and never derived from each o
 
 ## 6. Sharing behaviour
 
+> **Deferred until after v1 (owner decision 2026-10-31).** v1 has no share links (I-12 deferred). The rules below stay as the design for later.
+
 - A share is an **immutable snapshot** of selected findings and their evidence excerpts. It never links to the live project.
 - The owner chooses which findings to include. The snapshot holds only those findings and their quoted passages. It never includes other project files or versions (AC-16).
 - The link is unguessable, with at least 128 bits of entropy. It has a default expiry of 30 days [A][O], and the owner can revoke it at any time.
