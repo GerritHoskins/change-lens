@@ -10,6 +10,11 @@
    the model, so it does not count as an explanation: a false equivalence forced by injected text
    still surfaces (AC-18). Blocks that only moved or were reformatted (list marker, capitals) are
    presentation-only (AC-5, AC-6).
+4. A one-sided finding (an addition, or an omission of any scope) whose quoted sentence, ignoring
+   list marker, spacing and case, is in a visible block of the other version is dropped: the text
+   is on both sides, so nothing was added or left out. This happens when extraction types or
+   names the same sentence differently in the two versions, and must not fabricate a change on a
+   reordered or unchanged pair (AC-6). Any edit around it is still caught by the block diff (3).
 """
 from __future__ import annotations
 
@@ -50,6 +55,19 @@ def _loose(text: str) -> str:
     return _MARKER.sub("", _norm(text)).casefold()
 
 
+def _on_other_side(f: DraftFinding, docs: dict[str, ParsedDocument]) -> bool:
+    sides = {ev.side for ev in f.evidence}
+    if len(sides) != 1:
+        return False
+    other = docs["later" if sides == {"earlier"} else "earlier"]
+    blocks = [_loose(b.text) for b in other.blocks if not b.hidden]
+    for ev in f.evidence:
+        q = re.compile(rf"(?<!\w){re.escape(_loose(ev.quote))}(?!\w)")
+        if not any(q.search(b) for b in blocks):
+            return False
+    return True
+
+
 def _overlaps(a: Locator, b: Locator) -> bool:
     return a.page == b.page and a.char_start < b.char_end and b.char_start < a.char_end
 
@@ -81,6 +99,8 @@ def verify(drafts: list[DraftFinding], earlier: ParsedDocument, later: ParsedDoc
     for f in drafts:
         if not (_quotes_match(f, docs) and _sides_fit(f)):
             withheld += 1
+            continue
+        if _on_other_side(f, docs):
             continue
         if f.change_type == "uncertain" or f.confidence < REVIEW_BELOW:
             f.group = "needs_review"

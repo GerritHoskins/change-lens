@@ -157,3 +157,22 @@ def test_fake_pipeline_end_to_end():
         ("removed", ["Hosting is provided by the client"]),
         ("added", ["Copywriting is included"])]
     assert checked.withheld_count == 0 and checked.unexplained == [] and skipped == 0
+
+
+def test_a_one_sided_finding_whose_sentence_is_on_the_other_side_is_dropped():
+    """Extraction typed the same sentence differently in each version: no addition or omission (AC-6)."""
+    e = doc(["- Produce 3 short videos for social media.", "Budget: EUR 12,000"])
+    l = doc(["Budget: EUR 12,000", "* produce 3 short videos for social media.", "Write 2 blog posts."])
+    moved = DraftFinding("added", "quantity", [ev(l, "later", "produce 3 short videos for social media.")])
+    gone = DraftFinding("removed", "deliverable", [ev(e, "earlier", "Produce 3 short videos for social media.")])
+    new = DraftFinding("added", "deliverable", [ev(l, "later", "Write 2 blog posts.")])
+    out = verify([moved, gone, new], e, l)
+    assert out.findings == [new] and out.withheld_count == 0
+    assert [x.quote for x in out.unexplained] == []  # the blog line is explained by the kept addition
+
+
+def test_part_of_a_longer_sentence_is_not_on_the_other_side():
+    e = doc(["Deliver the logo."])
+    l = doc(["Deliver the logo files."])
+    gone = DraftFinding("removed", "deliverable", [ev(e, "earlier", "Deliver the logo.")])
+    assert verify([gone], e, l).findings == [gone]

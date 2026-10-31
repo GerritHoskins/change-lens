@@ -25,7 +25,7 @@ from changelens.llm.errors import LlmOutputInvalid
 from changelens.llm.schemas import FACT_LIST
 from changelens.pipeline.types import Block, ExtractedFact, Locator, ParsedDocument
 
-EXTRACT_VERSION = "extract-v4"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs
+EXTRACT_VERSION = "extract-v5"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs; v5: counted deliverables are quantities
 CHUNK_CHARS = 6000
 CONFIDENCE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 
@@ -124,6 +124,16 @@ def normalise(s: Optional[str]) -> str:
     return _SEP.sub("", _WS.sub(" ", s).strip(_TRIM).casefold())
 
 
+_COUNT = re.compile(r"\d+(?:\s|$)")
+
+
+def fact_type(model_type: str, value: str) -> str:
+    """The prompt's own boundary, enforced: a deliverable whose value is a count of units ("3",
+    "24 pages", "3 short videos") is a quantity. The model does not always follow it (I-7), and the
+    two versions must type the same item alike to align."""
+    return "quantity" if model_type == "deliverable" and _COUNT.match(value) else model_type
+
+
 def locate(doc: ParsedDocument, block: Block, quote: str) -> Optional[Locator]:
     """The quote's exact span on `block`'s page, starting inside the block; None if absent."""
     words = quote.split()
@@ -191,8 +201,9 @@ def extract(doc: ParsedDocument, llm: Llm) -> ExtractionResult:
             if loc is None:
                 result.unlocated += 1
                 continue
+            value = normalise(f["value"])
             result.facts.append(ExtractedFact(
-                type=f["type"], raw_text=doc.slice(loc), normalised_value=normalise(f["value"]),
+                type=fact_type(f["type"], value), raw_text=doc.slice(loc), normalised_value=value,
                 locator=loc, status="ambiguous" if f["ambiguity"] else "ok",
                 confidence=CONFIDENCE[f["confidence"]], subject=normalise(f["subject"]),
                 ambiguity=f["ambiguity"], context=sentence_of(doc.pages[(loc.page or 1) - 1], loc, doc.kind == "pdf")))
