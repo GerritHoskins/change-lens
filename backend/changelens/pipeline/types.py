@@ -99,6 +99,9 @@ class DraftFinding:
     explanation: Optional[str] = None
     uncertainty: Optional[str] = None
     priority: int = 0
+    old_value: Optional[str] = None  # normalised fact values (I-3); content, never logged
+    new_value: Optional[str] = None
+    note: Optional[str] = None  # wording key for omissions, e.g. absent_from_replacement (02 §3)
 
 
 @dataclass(frozen=True)
@@ -110,7 +113,8 @@ class ExtractedFact:
     status: Literal["ok", "ambiguous", "unextracted"]
     confidence: float
     subject: str = ""  # normalised subject: the I-3 alignment key is (type, subject)
-    ambiguity: Optional[str] = None  # ambiguous_date | ambiguous_entity | ambiguous_value
+    ambiguity: Optional[str] = None  # ambiguous_date | ambiguous_entity | ambiguous_value | contradiction
+    context: str = ""  # the whole sentence or list item around the quote, whitespace-collapsed
 
 
 @dataclass(frozen=True)

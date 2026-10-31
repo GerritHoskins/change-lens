@@ -207,13 +207,25 @@ The worker uses the fake llm unless `CHANGELENS_LLM=ionos` (model `CHANGELENS_LL
 **I-2 runner.** `tools/i2_run.py` extracts every distinct version of the usable development pairs once, then runs a second pass that must be answered entirely from the cache. It refuses held-out pairs, like the D-17 runner. It writes per-version results to `../../change-lens-data/i2/<model>/` and aggregates to stdout and `summary.json`. From `backend/`:
 
 ```powershell
-$env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lensackend\.env'
+$env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
 .venv\Scripts\python -m tools.i2_run
+```
+
+## 9. Alignment and comparison (I-3)
+
+`changelens/pipeline/align.py` pairs the facts of two versions. A fact's key is its type plus its canonical subject; a key that occurs once on each side is a match, whatever the position, so reordering changes nothing (AC-6). Two different values for one key inside a version are a contradiction: every member is marked ambiguous and paired with every counterpart, never resolved by picking one (AC-7). The remaining facts go to one `FactMatches` call; a proposal becomes a match only with high confidence and when it is one-to-one, otherwise the pair is ambiguous.
+
+`changelens/pipeline/compare.py` turns pairs into draft findings. Each fact carries `context`, the whole sentence or list item around its quote, worked out from the page rather than by the model (extract-v3), and the guards compare those sentences (`changelens/pipeline/values.py`): the same sentence after canonicalisation is equivalent; different numbers, dates or currencies, or a different owner or approver, are changed; different negation, modality or limit words are changed (AC-8). Only what passes all three goes to one `SameMeaning` call, and a missing verdict counts as a change. Ambiguous pairs, ambiguous dates and entities, and contradictions are uncertain. Unmatched earlier facts follow the scope (I-4): complete → removed (absent from the replacement), partial → not addressed, unknown → uncertain. Unmatched newer facts are added. The worker does not run these stages yet; that comes with I-5.
+
+**I-3 runner.** `tools/i3_run.py` reads the I-2 runner's saved facts, aligns and compares every usable development pair, and scores the drafts with `tools/d17_score.py`. The scope is taken from the pair's case type. It also reports reportable findings on reordered pairs (AC-6, must be 0) and uncertain findings on ambiguous pairs (AC-7). Output goes to `../../change-lens-data/i3/<tag>/<model>/`. From `backend/`, after the I-2 runner:
+
+```powershell
+.venv\Scripts\python -m tools.i3_run --runs 2 --tag v3
 ```
 
 ## What is placeholder or out of scope
 
-- Comparison logic, alignment and verification (I-3 to I-5). Facts are extracted (I-2) but not yet compared.
+- Verification and the report (I-5). Facts are extracted, aligned and compared, but the worker still writes the placeholder result.
 - Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.
