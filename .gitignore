@@ -3,3 +3,7 @@ __pycache__/
 # Evaluation texts belong in private storage, never in git (docs/07-eval-dataset.md §2)
 records.jsonl
 texts/
+
+# Isolated render dependencies and private visual fixtures
+.venv/
+files/

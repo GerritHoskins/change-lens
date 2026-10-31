@@ -1,19 +1,25 @@
-"""Validate evaluation records against docs/eval-schema.json and their stored texts.
+"""Validate evaluation records against docs/eval-schema.json and their stored files.
 
-Standard library only, so it implements the subset of JSON Schema 2020-12 that the
+Text/image validation uses the standard library; PDF validation requires pypdfium2.
+It implements the subset of JSON Schema 2020-12 that the
 schema uses (type, enum, const, pattern, format: date, required, properties,
 additionalProperties, items, minItems, maxItems, minimum, anyOf, local $ref). Any other
 keyword raises an error, so tightening the schema can never silently pass bad records.
-On top of the schema it checks unique record and finding IDs, that each stored text
-matches its SHA-256, and that every evidence span slices the text to the labelled value.
+On top of the schema it checks IDs, stored-file hashes and magic bytes, exact text/PDF
+slices, image geometry and unreadable-region semantics. Image pixels require human review.
 
     python scripts/eval/validate.py --records <dir>/records.jsonl [--texts-root <dir>]
 """
 import argparse
+from contextlib import closing
 import datetime
 import hashlib
 import json
 import os
+import math
+import struct
+import zlib
+from pathlib import Path
 import re
 import sys
 
@@ -92,40 +98,125 @@ def check(value, schema, root, path="$"):
     return errs
 
 
+def png_size(data):
+    if (len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or
+            data[8:16] != b"\x00\x00\x00\x0dIHDR"):
+        raise ValueError("wrong PNG magic bytes or missing IHDR")
+    if zlib.crc32(data[12:29]) != struct.unpack(">I", data[29:33])[0]:
+        raise ValueError("invalid PNG IHDR checksum")
+    size = struct.unpack(">II", data[16:24])
+    if min(size) == 0:
+        raise ValueError("invalid PNG dimensions")
+    return size
+
+
+def pdf_texts(data):
+    try:
+        import pypdfium2
+    except ImportError as exc:
+        raise ValueError("PDF validation requires pypdfium2; install requirements-render.txt") from exc
+    with pypdfium2.PdfDocument(data) as doc:
+        texts = []
+        for page in doc:
+            with closing(page), closing(page.get_textpage()) as tp:
+                texts.append(tp.get_text_range())
+        return texts
+
+
+def read_version(ver, root):
+    if "storage_ref" not in ver:
+        raise ValueError("missing storage_ref")
+    root = Path(root).resolve()
+    path = (root / ver["storage_ref"]).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError("storage_ref escapes the private storage root")
+    if not path.is_file():
+        raise ValueError("missing " + str(path))
+    data = path.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ver["sha256"]:
+        raise ValueError("sha256 mismatch")
+    if ver["format"] == "text":
+        if data.startswith((b"%PDF-", b"\x89PNG\r\n\x1a\n")):
+            raise ValueError("text format has PDF/PNG magic bytes")
+        return data.decode("utf-8")
+    if ver["format"] == "image":
+        return png_size(data)
+    if ver["format"] == "pdf":
+        if not data.startswith(b"%PDF-"):
+            raise ValueError("wrong PDF magic bytes")
+        return pdf_texts(data)
+    raise ValueError("unsupported format")
+
+
+def locator_errors(span, value, fmt, content, where, check_value=True):
+    if fmt == "image":
+        if set(span) != {"box"}:
+            return [where + ": an image locator needs only box"]
+        b = span["box"]
+        if not all(math.isfinite(x) for x in b) or not (0 <= b[0] < b[2] <= content[0] and 0 <= b[1] < b[3] <= content[1]):
+            return [where + ": box outside the image or degenerate"]
+        return []
+    required = {"page", "start", "end"} if fmt == "pdf" else {"start", "end"}
+    if set(span) != required:
+        return [where + ": a " + fmt + " locator needs " + ("page, " if fmt == "pdf" else "") + "start and end"]
+    if fmt == "pdf":
+        if not 1 <= span["page"] <= len(content):
+            return [where + ": page outside the PDF"]
+        content = content[span["page"] - 1]
+    if not 0 <= span["start"] <= span["end"] <= len(content):
+        return [where + ": span %d-%d outside the text" % (span["start"], span["end"])]
+    actual = content[span["start"]:span["end"]]
+    if check_value and (value is None or actual != value):
+        return ["%s slices to %r, labelled %r" % (where, actual, value)]
+    return []
+
+
+def overlaps(a, b):
+    if "box" in a and "box" in b:
+        a, b = a["box"], b["box"]
+        return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
+    if all("start" in x and "end" in x for x in (a, b)):
+        return a.get("page") == b.get("page") and a["start"] < b["end"] and a["end"] > b["start"]
+    return False
+
+
 def check_texts(rec, root):
-    """Hashes and evidence spans against the stored texts (text format only)."""
-    errs, texts = [], {}
+    """Validate stored bytes, format-specific evidence, and unreadable regions."""
+    errs, contents = [], {}
     for side in ("old", "new"):
-        ver = rec[side]
-        if ver.get("format") != "text" or "storage_ref" not in ver:
-            continue
-        p = os.path.join(root, ver["storage_ref"])
-        if not os.path.isfile(p):
-            errs.append("%s %s: missing %s" % (rec["id"], side, p))
-            continue
-        with open(p, "rb") as fh:
-            data = fh.read()
-        if hashlib.sha256(data).hexdigest() != ver["sha256"]:
-            errs.append("%s %s: sha256 mismatch" % (rec["id"], side))
         try:
-            texts[side] = data.decode("utf-8")
-        except UnicodeDecodeError as e:
-            errs.append("%s %s: text is not UTF-8 (%s)" % (rec["id"], side, e.reason))
+            contents[side] = read_version(rec[side], root)
+        except Exception as exc:
+            errs.append("%s %s: %s" % (rec["id"], side, exc))
     ids = [f["id"] for f in rec["findings"]]
     if len(ids) != len(set(ids)):
         errs.append("%s: duplicate finding ids" % rec["id"])
+    regions = rec.get("unreadable", [])
+    if regions and rec.get("expected_status") != "partial":
+        errs.append(rec["id"] + ": unreadable regions require expected_status partial")
+    if rec.get("expected_status") == "partial" and not regions:
+        errs.append(rec["id"] + ": partial requires unreadable regions")
+    for region in regions:
+        side, span = region["side"], region["locator"]
+        if side in contents:
+            errs += locator_errors(span, None, rec[side]["format"], contents[side],
+                                   rec["id"] + " unreadable " + side, check_value=False)
     for f in rec["findings"]:
+        affected = False
         for side in ("old", "new"):
             span, value = f.get("evidence_" + side), f.get(side + "_value")
-            if not span or side not in texts:
+            if not span:
                 continue
-            where = "%s %s evidence_%s" % (rec["id"], f["id"], side)
-            if "start" not in span or "end" not in span:
-                errs.append(where + ": a text locator needs start and end")
-            elif not span["start"] <= span["end"] <= len(texts[side]):
-                errs.append(where + ": span %d-%d outside the text" % (span["start"], span["end"]))
-            elif value is None or texts[side][span["start"]:span["end"]] != value:
-                errs.append("%s slices to %r, labelled %r" % (where, texts[side][span["start"]:span["end"]], value))
+            if value is None:
+                errs.append(rec["id"] + " " + f["id"] + ": evidence needs a labelled value")
+            if side in contents:
+                errs += locator_errors(span, value, rec[side]["format"], contents[side],
+                                       "%s %s evidence_%s" % (rec["id"], f["id"], side))
+            affected |= any(r["side"] == side and overlaps(span, r["locator"]) for r in regions)
+        if affected and (f["change_type"] != "uncertain" or f.get("note") != "unreadable"):
+            errs.append(rec["id"] + " " + f["id"] + ": unreadable evidence must be uncertain with note unreadable")
+        if f.get("note") == "unreadable" and not affected:
+            errs.append(rec["id"] + " " + f["id"] + ": unreadable finding has no matching region")
     return errs
 
 
@@ -133,6 +224,7 @@ def validate_file(records, texts_root=None, schema_path=SCHEMA):
     with open(schema_path, encoding="utf-8") as fh:
         schema = json.load(fh)
     errs, n, seen = [], 0, set()
+    texts_root = texts_root or os.path.dirname(os.path.abspath(records))
     with open(records, encoding="utf-8") as fh:
         for lineno, line in enumerate(fh, 1):
             if not line.strip():
@@ -144,9 +236,10 @@ def validate_file(records, texts_root=None, schema_path=SCHEMA):
                 errs.append("line %d: not valid JSON (%s)" % (lineno, e))
                 continue
             rid = rec.get("id") if isinstance(rec, dict) else None
-            if rid in seen:
+            if isinstance(rid, str) and rid in seen:
                 errs.append("line %d: duplicate record id %s" % (lineno, rid))
-            seen.add(rid)
+            if isinstance(rid, str):
+                seen.add(rid)
             e = check(rec, schema, schema)
             errs += ["line %d %s %s" % (lineno, rid, x) for x in e]
             if not e and texts_root:

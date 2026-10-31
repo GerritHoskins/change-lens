@@ -48,18 +48,33 @@ foreach ($s in 'check-trace', 'check-verification', 'cost-model') {
     if ($LASTEXITCODE -ne 0) { $errors += "TEST $s exit $LASTEXITCODE" }
 }
 
-# Evaluation generator tests (docs/07-eval-dataset.md, D-6); standard library only
+# Evaluation tests run in a project venv; never install into the global Python.
 $env:PYTHONDONTWRITEBYTECODE = '1'
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) { $errors += 'TEST eval: python not found' }
+$python = Join-Path $root '.venv/Scripts/python.exe'
+if (-not (Test-Path $python)) {
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) { $errors += 'TEST eval: python not found' }
+    else {
+        & python -m venv (Join-Path $root '.venv')
+        if ($LASTEXITCODE -ne 0) { $errors += 'TEST eval: venv creation failed' }
+    }
+}
+if (-not (Test-Path $python)) { $errors += 'TEST eval: project venv missing' }
 else {
-    $ErrorActionPreference = 'Continue'   # unittest reports on stderr; PowerShell 5.1 would treat that as an error
-    $global:LASTEXITCODE = -1             # so a failed launch can never reuse the previous script's 0
-    $out = & python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') 2>&1 | ForEach-Object { "$_" }
-    $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Continue'
+    $install = & $python -m pip install --disable-pip-version-check --require-hashes -r (Join-Path $PSScriptRoot 'eval/requirements-render.txt') 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) { $install | Write-Host; $errors += 'TEST render: dependency installation failed' }
+    else { Write-Host 'PASS render dependency install: pinned requirements with --require-hashes' }
+    $deps = & $python -c "import reportlab, pypdfium2, PIL" 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) { $deps | Write-Host; $errors += 'TEST render: required dependencies not importable' }
+    foreach ($suite in 'generate', 'render') {
+        $global:LASTEXITCODE = -1
+        $out = & $python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') -p "test_$suite.py" 2>&1 | ForEach-Object { "$_" }
+        $code = $LASTEXITCODE
+        Write-Host "eval $suite unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
+        if ($code -ne 0) { $out | Write-Host; $errors += "TEST eval $suite unittest exit $code" }
+        elseif (-not ($out -match '^Ran [1-9]')) { $errors += "TEST eval $suite`: no tests ran" }
+    }
     $ErrorActionPreference = 'Stop'
-    Write-Host "eval unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
-    if ($code -ne 0) { $out | Write-Host; $errors += "TEST eval unittest exit $code" }
-    elseif (-not ($out -match '^Ran [1-9]')) { $errors += 'TEST eval: no tests ran' }
 }
 
 if ($errors) {
