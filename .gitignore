@@ -7,3 +7,6 @@ texts/
 # Isolated render dependencies and private visual fixtures
 .venv/
 files/
+.env
+.env.*
+!.env.example
