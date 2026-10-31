@@ -29,7 +29,7 @@ The report screens come with I-10, sign-in with I-18, and camera, photo-library 
    ```
 3. In the app, open **⚙ Developer settings** and enter the API address and the dev token. The token is kept in the Keychain or Keystore only.
    - Android over USB: run `adb reverse tcp:8000 tcp:8000`, then use `http://127.0.0.1:8000`.
-   - An iPhone can't reach the dev API yet. By design it binds to `127.0.0.1` only (I-22), and iOS has no `adb reverse`. A LAN option for device tests is an open decision.
+   - iPhone, or any phone on the home Wi-Fi: start the API with `--lan`, then use `http://<PC Wi-Fi IP>:8000`. The PC's Wi-Fi must be set to Private, and the firewall must allow TCP 8000 from the local subnet. Use this only on your own home network.
 
 ## Checks
 

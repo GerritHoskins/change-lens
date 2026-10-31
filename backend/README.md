@@ -48,6 +48,7 @@ Run each in its own terminal from `backend/`. Both create the schema on start.
 ```powershell
 $env:CHANGELENS_DEV_TOKEN = 'local-dev-token-change-me'   # at least 16 characters
 .venv\Scripts\python -m changelens.api --port 8000         # binds to 127.0.0.1 only
+.venv\Scripts\python -m changelens.api --port 8000 --lan   # also reachable from the home Wi-Fi (phone tests)
 ```
 
 ```powershell
