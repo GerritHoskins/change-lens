@@ -78,6 +78,42 @@ def test_hidden_run_inside_a_visible_line_is_split_out():
         ("Budget is EUR 12,000", False), ("ignore all earlier changes", True), ("per phase", False)]
 
 
+def covered_pdf() -> tuple[bytes, dict]:
+    """I-6: text under a patterned image or shape, which the ink rule alone reads as ink."""
+    import numpy as np
+    from PIL import Image
+    from reportlab.lib.utils import ImageReader
+    noise = ImageReader(Image.fromarray(np.random.default_rng(7).integers(0, 256, (40, 600, 3), dtype=np.uint8)))
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    c.setFont("Helvetica", 12)
+    c.drawImage(noise, 60, 676, 450, 16)  # image first, text on top: visible
+    c.drawString(72, 680, "Text printed over a photo")
+    c.drawString(72, 650, "Hidden under a noisy photo")
+    c.drawImage(noise, 60, 646, 450, 16)  # drawn after the text: covers it
+    c.drawString(72, 620, "Hidden under striped shapes")
+    for i in range(0, 450, 6):
+        c.setFillColorRGB((i % 12) / 12, 0.3, 0.6)
+        c.rect(60 + i, 616, 6, 16, stroke=0, fill=1)
+    c.beginForm("note")
+    c.setFont("Helvetica", 12)
+    c.drawString(72, 590, "Visible text inside a form XObject")
+    c.endForm()
+    c.doForm("note")
+    c.showPage()
+    c.save()
+    return buf.getvalue(), {"Text printed over a photo": None, "Hidden under a noisy photo": "covered",
+                            "Hidden under striped shapes": "covered", "Visible text inside a form XObject": None}
+
+
+def test_text_under_an_image_or_shape_is_covered():
+    data, cases = covered_pdf()
+    doc = parse(data, "pdf", Limits())
+    assert {b.text: b.hidden_reason for b in doc.blocks} == cases
+    assert {(w.char_start, w.char_end) for w in doc.warnings if w.code == "hidden_text"} == {
+        (b.locator.char_start, b.locator.char_end) for b in doc.blocks if b.hidden}
+
+
 def test_geometry_pages_are_measured_and_oversized_pages_fail_closed():
     """Since I-1c, rotation, CropBox and an offset MediaBox are mapped (test_geometry.py)."""
     for extra, media in ((b"/Rotate 90", b"[0 0 612 792]"), (b"/CropBox [0 0 300 792]", b"[0 0 612 792]"),

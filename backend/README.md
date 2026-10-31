@@ -92,8 +92,9 @@ Routes: `POST /projects`, `GET /projects/{id}`, `POST /projects/{id}/versions` (
 - **PDF blocks** are lines. A line is split where a run of words on it is hidden.
 - **Visibility.** Each block carries a `hidden` flag and a reason, decided by the eval rules (`changelens/pipeline/pdf_ink.py`, a copy of `scripts/eval/pdf_ink.py` that a unit test keeps in sync):
   - `off_page`;
-  - `no_ink`: white-on-white or covered text;
-  - `tiny`: at most 3 ink rows and glyphs no taller than 0.8 pt.
+  - `no_ink`: white-on-white text, or text under a plain opaque panel;
+  - `tiny`: at most 3 ink rows and glyphs no taller than 0.8 pt;
+  - `covered` (backend only, I-6): the span has "ink", but the page rendered again from a second copy with every text object removed (nested form XObjects included) looks the same there, so the ink belongs to an image or shape drawn over the text. One extra render per page. The eval validator does not have this rule; on the dataset's pages it flags nothing extra.
 - **Hidden blocks** raise a `hidden_text` warning (SA-9) with the page and span, and are left out of the comparison.
 - **Page geometry (I-1c).** Rotated pages (/Rotate 90, 180 or 270), a CropBox and a MediaBox off the origin are measured:
   - glyph boxes are mapped from PDF user space into the rendered page;

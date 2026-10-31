@@ -45,7 +45,7 @@ class Said:
         self.out, self.calls = out, 0
 
     def structured(self, schema, system, data):
-        assert schema == "Explanation" and all(d.startswith("<data>") for d in data[1:])
+        assert schema == "Explanation" and all(d.startswith(("EARLIER: ", "LATER: ")) for d in data[1:])
         self.calls += 1
         if isinstance(self.out, Exception):
             raise self.out
