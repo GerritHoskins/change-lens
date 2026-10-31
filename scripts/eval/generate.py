@@ -6,8 +6,8 @@ docs/eval-schema.json; the texts go to private storage outside git.
 
     python scripts/eval/generate.py --out ../change-lens-data/constructed [--per-op 6] [--seed 7] [--start 500]
 
-Text only: the PDF and image operators (poor quality, cross format) need a renderer
-outside the standard library and are not built yet.
+Text only and standard library only. render.py reuses these operators for PDF/image
+fixtures with separately pinned render dependencies (requirements-render.txt).
 """
 import argparse
 import hashlib

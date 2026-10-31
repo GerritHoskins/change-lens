@@ -43,7 +43,24 @@ Each pair starts from a base brief: a Tier A document, a public brief template, 
 | Render to PDF or image and degrade (blur, low resolution, crop) | Poor-quality, cross-format | as the text operator, with page or region locators |
 | Hidden text, embedded instructions, "treat as equivalent" steering | Prompt-injection fixtures | the injected text produces no finding; real changes still labelled |
 
-The generator is `scripts/eval/generate.py` (standard library only; base briefs in `scripts/eval/bases.py`). It writes the texts and `records.jsonl` to private storage, for example `python scripts/eval/generate.py --out ../change-lens-data/constructed`, and `scripts/eval/validate.py` checks every record against the schema, every stored text against its SHA-256 and every evidence span against its labelled value. It covers the text operators only; the PDF and image operators (poor quality, cross format) are still to be built.
+The text generator is `scripts/eval/generate.py` (standard library only; base briefs in `scripts/eval/bases.py`). Its output and golden digest are unchanged. It writes texts and `records.jsonl` to private storage, for example `python scripts/eval/generate.py --out ../change-lens-data/constructed` (P-500 to P-565 with the defaults).
+
+The separate `scripts/eval/render.py` imports those text operators and writes 13 visual pairs (P-600 to P-612): 5 text/image and 5 PDF/image cross-format pairs, plus 3 image/image poor-quality pairs. The cross-format mix uses value changes, qualifier flips, partial updates, no change and replacement with omissions; the image is on the newer side for 7 pairs and the older side for 3. Two poor-quality pairs remain legible (mild blur; 60% resolution with JPEG artefacts and a margin crop). The third heavily blurs one labelled region and expects a partial result. The owner reviews the actual output; automated checks do not certify legibility.
+
+Rendering requires `reportlab`, `pypdfium2` and `Pillow`, with `charset-normalizer` as a transitive dependency. All versions and wheel hashes are pinned in `scripts/eval/requirements-render.txt`; install into the gitignored project `.venv/`, never the global Python. From Git Bash on Windows:
+
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install --require-hashes -r scripts/eval/requirements-render.txt
+.venv/Scripts/python scripts/eval/render.py --out ../change-lens-data/constructed-visual --seed 7 --start 600
+.venv/Scripts/python scripts/eval/validate.py --records ../change-lens-data/constructed-visual/records.jsonl
+```
+
+The private output contains `records.jsonl`, `files/<sha256>.pdf|.png`, text sides under `texts/`, and `review.html`. The sheet shows labelled values beside image crops or PDF pages with highlighted evidence, links to both originals, and unreadable-region previews. Review both full documents for no-change and replacement cases. The renderer refuses output inside a Git worktree, including resolved symlinks. Hidden/white-on-white PDF text injection remains a separate D-6 follow-up.
+
+PDFs use invariant ReportLab output, built-in Helvetica and fixed layout; PDFium supplies the reference page text and per-character boxes. Rasterisation is at 144 DPI. Image boxes are in stored-image pixels after scaling and cropping, with origin at the top left. Exact source-line mapping distinguishes repeated values; a changed extraction or a value split across lines fails generation without changing its label. The seed controls the reused text operators; degradation parameters are fixed. Same-machine byte determinism is tested, and a separate visual record digest excludes byte hashes and storage references. The text golden remains independent.
+
+`validate.py` checks all formats: required stored files, SHA-256, PDF/PNG magic bytes, PDF page/span bounds and exact PDFium text slices, and PNG IHDR dimensions against every image box. Missing PDFium fails PDF validation explicitly. Text-only validation still needs only the standard library. Image pixels need human review; bounds and hashes cannot establish their meaning.
 
 A language model may draft paraphrases and emails for the operators, but it never writes the gold labels and it is never one of the two labellers. Every drafted text is read by a person, who confirms that it says what the operator claims. A paraphrase that changes meaning is relabelled or discarded.
 
@@ -73,7 +90,9 @@ A language model may draft paraphrases and emails for the operators, but it neve
 - **Approval wording:** changing the required action or its binding force is material (`approval`): "client signs off" → "client reviews" counts because review no longer explicitly requires sign-off. Record that wording change without inferring automatic acceptance or the removal of other approval clauses. A paraphrase that preserves the actor, required action and binding force is `equivalent`, not material.
 - **Units and formats:** a changed required file format, resolution, dimensions or measurement basis is material (`deliverable`, or `quantity` for amounts), even with the same number of assets: "PNG" → "SVG" and "1080p" → "4K" both count. An exact unit conversion with the same required value and tolerance ("1 m" → "100 cm") is `equivalent`, not material; do not assume rounded values or different formats are interchangeable.
 
-**Evidence locators:** text spans as character offsets in the normalised text; PDF spans as page plus character offsets in that page's text layer; image spans as a pixel box. Each finding has a locator in the old version, the new version, or both.
+**Evidence locators:** text spans use zero-based, end-exclusive `start` and `end` offsets. PDF spans add a one-based `page`, with offsets into that page's exact PDFium `get_text_range()` output (including its line endings). Image locators contain only `box: [x0, y0, x1, y1]`, in pixels of the stored image, origin top-left. Each finding has a locator in the old version, the new version, or both.
+
+**Unreadable visual content (D-6 owner decisions, 2026-10-31):** optional `expected_status` is `complete` or `partial`. Optional `unreadable` is a non-empty list of `{side: "old"|"new", locator: ...}` entries, using the same format-specific locator rules. A non-empty unreadable list requires `partial`, and `partial` requires that list. Every finding overlapping such a region becomes `uncertain` with `note: "unreadable"`; its original value remains a construction reference, not a claim of recoverability from the degraded input. Legible degradation leaves labels unchanged. Cropping never creates a `removed` label: the implemented crop only trims margins and refuses to cut through evidence. These optional fields preserve existing text labels; no dev/held-out split is created by the renderer.
 
 ## 5. Labelling process
 

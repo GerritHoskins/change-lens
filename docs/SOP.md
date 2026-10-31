@@ -10,7 +10,15 @@ Everything at once (the same entry point `.github/workflows/plan-checks.yml` run
 powershell -NoProfile -File scripts/ci.ps1
 ```
 
-It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and the evaluation generator's unit tests (`python -m unittest discover -s scripts/eval`, see 07 §3), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
+It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and separate text and visual evaluation test stages (see 07 §3), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
+
+CI creates `.venv/` if necessary and installs `scripts/eval/requirements-render.txt` with `pip --require-hashes` and wheels only, without changing the global Python. It checks imports and runs both `test_generate.py` and `test_render.py`; an install/import failure, a failing test or zero tests in either stage fails CI. The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
+
+```bash
+.venv/Scripts/python -m unittest discover -s scripts/eval
+```
+
+If Windows blocks the local script under its execution policy, use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1` for that process only; do not change machine policy. D-6 failure probes on 2026-10-31 confirmed `CI FAIL` with nonzero exit for a deliberately wrong visual golden and for a blocked `pypdfium2` import; sources were restored after the probes. Visual fixtures and `review.html` belong in private storage outside Git. Owner per-pair review and the independently arranged code review remain distinct from automated CI.
 
 Individual checks:
 
