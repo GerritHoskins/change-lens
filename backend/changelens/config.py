@@ -5,6 +5,7 @@ import os
 import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Optional
 
 # The single fixed dev tenant behind the dev token. I-8 replaces this with Logto memberships.
 DEV_TENANT_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -40,6 +41,9 @@ class Settings:
     job_max_attempts: int = 3
     job_lease_seconds: int = 300
     limits: Limits = Limits()
+    llm_provider: str = "fake"  # fake | ionos (I-2)
+    llm_model: str = "Qwen/Qwen3.5-397B-A17B"  # the only comparison model (06, 2026-10-31)
+    ionos_env_file: Optional[str] = None  # file holding IONOS_API_TOKEN, read in place
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -58,4 +62,7 @@ class Settings:
             dev_tokens={token: DEV_TENANT_ID},
             cost_ceiling_eur=Decimal(env.get("CHANGELENS_COST_CEILING_EUR", "1.50")),
             fake_llm_cost_eur=Decimal(env.get("CHANGELENS_FAKE_LLM_COST_EUR", "0.01")),
+            llm_provider=env.get("CHANGELENS_LLM", "fake"),
+            llm_model=env.get("CHANGELENS_LLM_MODEL", "Qwen/Qwen3.5-397B-A17B"),
+            ionos_env_file=env.get("CHANGELENS_IONOS_ENV_FILE"),
         )

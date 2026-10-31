@@ -2,13 +2,15 @@
 
 The port is one structured-output call: a schema name, a system prompt and delimited data blocks.
 No tools, no URL fetching, and prompts or responses are never logged (AC-18, AC-23). The IONOS
-AI Model Hub adapter is `changelens.llm.ionos` (D-17); the worker still uses the fake until I-2.
+AI Model Hub adapter is `changelens.llm.ionos` (D-17); the worker uses it when
+`CHANGELENS_LLM=ionos` (I-2) and the fake otherwise.
 """
 from __future__ import annotations
 
 from decimal import Decimal
 from typing import Protocol, Sequence
 
+from changelens.llm.errors import LlmError
 from changelens.metering import CostMeter
 
 
@@ -23,17 +25,21 @@ class LlmPort(Protocol):
 class FakeLlm:
     """Deterministic stand-in: costs a configurable fixed amount per call and returns template output."""
 
+    config_id = "fake-llm-0"
+
     def __init__(self, cost_per_call_eur: Decimal):
         self.cost = Decimal(cost_per_call_eur)
         self.calls = 0
 
     def estimate_cost(self, schema: str, data: Sequence[str]) -> Decimal:
-        return self.cost
+        return self.cost if schema == "Explanation" else Decimal("0")
 
     def structured(self, schema: str, system: str, data: Sequence[str]) -> tuple[dict, Decimal]:
         self.calls += 1
         if schema == "Explanation":
             return {"explanation": "Placeholder explanation (fake llm); no model was called."}, self.cost
+        if schema == "FactList":  # free, so the I-22 ceiling arithmetic is unchanged
+            return {"facts": []}, Decimal("0")
         raise ValueError("unknown schema")
 
 
@@ -46,6 +52,10 @@ class MeteredLlm:
 
     def structured(self, schema: str, system: str, data: Sequence[str]) -> dict:
         self.meter.check(self.port.estimate_cost(schema, data))
-        out, cost = self.port.structured(schema, system, data)
+        try:
+            out, cost = self.port.structured(schema, system, data)
+        except LlmError as e:  # failed calls still cost money and count (SA-4)
+            self.meter.record(e.cost)
+            raise
         self.meter.record(cost)
         return out
