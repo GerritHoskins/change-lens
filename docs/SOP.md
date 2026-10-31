@@ -12,7 +12,7 @@ powershell -NoProfile -File scripts/ci.ps1
 
 It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and separate text and visual evaluation test stages (see 07 §3), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
 
-CI creates `.venv/` if necessary and installs `scripts/eval/requirements-render.txt` with `pip --require-hashes` and wheels only, without changing the global Python. It checks imports and runs both `test_generate.py` and `test_render.py`; an install/import failure, a failing test or zero tests in either stage fails CI. The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
+CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs both `test_generate.py` and `test_render.py`; an install/import failure, a failing test or zero tests in either stage fails CI. The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
 
 ```bash
 .venv/Scripts/python -m unittest discover -s scripts/eval
