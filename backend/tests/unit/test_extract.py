@@ -181,4 +181,5 @@ def test_metered_llm_counts_the_cost_of_failed_calls():
 
 def test_fake_llm_extraction_is_free():
     llm = MeteredLlm(FakeLlm(Decimal("0.60")), CostMeter(Decimal("0.10")))
-    assert ex.extract(text_doc(DOC), llm).facts == []
+    facts = ex.extract(text_doc(DOC), llm).facts
+    assert len(facts) == len(DOC) and llm.meter.total == 0  # one fact per line, at no cost

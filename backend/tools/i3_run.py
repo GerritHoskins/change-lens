@@ -7,9 +7,12 @@ unknown_scope -> unknown, otherwise complete. Held-out pairs are refused (`dev_r
 
 Reports the D-17 metrics (`tools/d17_score.py`) for the fact pipeline, plus the I-3 acceptance
 checks: reportable findings on reordered pairs (AC-6, must be 0) and uncertain findings kept on
-ambiguous-date and contradiction pairs (AC-7). AC-8 is covered by unit tests.
+ambiguous-date and contradiction pairs (AC-7). AC-8 is covered by unit tests. With `--report` the
+drafts also go through verify and report (I-5), and the scores are on what the user would see; it
+adds the withheld, unexplained and presentation-only counts, the groups, and how many findings kept
+model wording rather than the template.
 
-    .venv\\Scripts\\python -m tools.i3_run --runs 2
+    .venv\\Scripts\\python -m tools.i3_run --runs 2 --report
 """
 from __future__ import annotations
 
@@ -28,6 +31,8 @@ from changelens.pipeline import extract as ex
 from changelens.pipeline.align import align
 from changelens.pipeline.compare import compare
 from changelens.pipeline.parse import parse
+from changelens.pipeline.report import MODEL_WORDED, report, template
+from changelens.pipeline.verify import verify
 from tools import d17_score as sc
 from tools.d17_run import DEFAULT_DATA, DEFAULT_SPLIT, dev_records, ensure_dev, load_side, load_split, refuse_in_git
 from tools.i2_run import MODEL, Budget, MemoryCache
@@ -73,6 +78,7 @@ def main(argv=None) -> int:
     ap.add_argument("--env-file", type=Path, default=os.environ.get("CHANGELENS_IONOS_ENV_FILE"))
     ap.add_argument("--max-calls", type=int, default=150)
     ap.add_argument("--tag", default="v1", help="output subfolder, e.g. a prompt version")
+    ap.add_argument("--report", action="store_true", help="also run verify and report (I-5)")
     args = ap.parse_args(argv)
 
     split = load_split(args.split)
@@ -96,10 +102,22 @@ def main(argv=None) -> int:
                 fe = facts_for(root, rec["old"], saved, llm, budget)
                 fl = facts_for(root, rec["new"], saved, llm, budget)
                 drafts = compare(align(fe, fl, budget), scope_of(rec), budget)
+                extra = {}
+                if args.report:  # I-5: verify against the parsed text, then word and rank
+                    pe = parse((root / rec["old"]["storage_ref"]).read_bytes(), rec["old"]["format"], Limits())
+                    pl = parse((root / rec["new"]["storage_ref"]).read_bytes(), rec["new"]["format"], Limits())
+                    checked = verify(drafts, pe, pl)
+                    drafts, templated = report(checked.findings, budget)
+                    extra = {"withheld": checked.withheld_count, "unexplained": len(checked.unexplained),
+                             "presentation_only": len(checked.presentation_only), "templated_at_ceiling": templated,
+                             "groups": [d.group for d in drafts],
+                             "model_worded": sum(d.change_type in MODEL_WORDED and d.explanation != template(d)
+                                                 for d in drafts),
+                             "wording_eligible": sum(d.change_type in MODEL_WORDED for d in drafts)}
                 findings = [as_finding(d) for d in drafts]
                 old, new = load_side(root, rec["old"]), load_side(root, rec["new"])
                 rows.append({"id": rec["id"], "run": run, "case_types": rec["case_types"], "scope": scope_of(rec),
-                             "findings": findings, "score": sc.score_pair(rec, findings, old, new),
+                             **extra, "findings": findings, "score": sc.score_pair(rec, findings, old, new),
                              "calls": [{"schema": c.schema, "outcome": c.outcome, "latency_s": round(c.latency_s, 3),
                                         "in": c.prompt_tokens, "out": c.completion_tokens, "cost": str(c.cost_eur)}
                                        for c in llm.calls[first:]]})
@@ -145,6 +163,11 @@ def main(argv=None) -> int:
         "identical_runs": f"{sum(len(s) == 1 for s in sigs.values())}/{len(sigs)}" if args.runs > 1 else None,
         "by_case_type": {k: dict(v) for k, v in sorted(by_case.items())},
     }
+    if args.report:
+        for k in ("withheld", "unexplained", "presentation_only", "templated_at_ceiling", "model_worded",
+                  "wording_eligible"):
+            summary[k] = sum(r[k] for r in rows)
+        summary["groups"] = {g: sum(r["groups"].count(g) for r in rows) for g in ("prioritised", "needs_review", "other")}
     gold_amb = 0
     for set_name, rec in usable:
         if {"ambiguous_date_entity", "contradiction"} & set(rec["case_types"]):

@@ -76,6 +76,9 @@ class Comparison(Base):
     cost_actual: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4))
     withheld_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # I-5 verify: changed blocks no finding explains (AC-18) and blocks that only moved (AC-5, AC-6).
+    unexplained: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    presentation_only: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now(), nullable=False)
@@ -91,6 +94,8 @@ class Finding(Base):
     evidence: Mapped[list] = mapped_column(JSONB, nullable=False)
     explanation: Mapped[Optional[str]] = mapped_column(Text)
     uncertainty: Mapped[Optional[str]] = mapped_column(String(40))
+    note: Mapped[Optional[str]] = mapped_column(String(40))
+    review_group: Mapped[str] = mapped_column(String(20), nullable=False, default="other")
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     supersedes_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))

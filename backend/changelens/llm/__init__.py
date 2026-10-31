@@ -7,6 +7,7 @@ AI Model Hub adapter is `changelens.llm.ionos` (D-17); the worker uses it when
 """
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Protocol, Sequence
 
@@ -22,8 +23,21 @@ class LlmPort(Protocol):
         ...
 
 
+_LINE = re.compile(r"^\[(\d+)\] (.+)$", re.M)
+
+
+def _fake_fact(n: int, line: str) -> dict:
+    """One fact per numbered line: "Budget: EUR 12,000" -> subject "Budget", value "EUR 12,000"."""
+    subject, sep, value = line.partition(":")
+    return {"type": "deliverable", "subject": subject.strip(), "value": (value if sep else line).strip(),
+            "block": n, "quote": line.strip(), "ambiguity": None, "confidence": "high"}
+
+
 class FakeLlm:
-    """Deterministic stand-in: costs a configurable fixed amount per call and returns template output."""
+    """Deterministic stand-in: costs a configurable fixed amount per Explanation call, answers the
+    other schemas for free (so the I-22 ceiling arithmetic only counts explanations): one fact per
+    line, no alignment proposals and no same-meaning verdicts (each such pair is then a change).
+"""
 
     config_id = "fake-llm-0"
 
@@ -38,8 +52,12 @@ class FakeLlm:
         self.calls += 1
         if schema == "Explanation":
             return {"explanation": "Placeholder explanation (fake llm); no model was called."}, self.cost
-        if schema == "FactList":  # free, so the I-22 ceiling arithmetic is unchanged
-            return {"facts": []}, Decimal("0")
+        if schema == "FactList":
+            return {"facts": [_fake_fact(int(n), s) for n, s in _LINE.findall(data[0]) if s.strip()]}, Decimal("0")
+        if schema == "FactMatches":
+            return {"matches": []}, Decimal("0")
+        if schema == "SameMeaning":
+            return {"verdicts": []}, Decimal("0")
         raise ValueError("unknown schema")
 
 

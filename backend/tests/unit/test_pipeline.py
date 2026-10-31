@@ -1,15 +1,13 @@
-"""Parse provenance, placeholder compare, stage interfaces and the cost ceiling (no Docker needed)."""
+"""Parse provenance and the cost meter (no Docker needed). Stages: test_align_compare, test_verify_report."""
 from decimal import Decimal
 
 import pytest
 
 from changelens.config import Limits
-from changelens.llm import FakeLlm, MeteredLlm
 from changelens.metering import CeilingReached, CostMeter
-from changelens.pipeline import stages
 from changelens.pipeline.parse import parse
 from changelens.pipeline.types import ParsedDocument, ParseRejected
-from helpers import EARLIER_LINES, LATER_LINES, make_pdf
+from helpers import make_pdf
 
 LIMITS = Limits()
 
@@ -66,35 +64,6 @@ def test_json_and_stored_round_trip():
     assert again.blocks == doc.blocks and again.pages == doc.pages and again.warnings == doc.warnings
 
 
-def test_placeholder_compare_reports_both_sides():
-    earlier, later = text_doc(EARLIER_LINES), text_doc(LATER_LINES)
-    drafts = stages.placeholder_compare(earlier, later)
-    assert [d.change_type for d in drafts] == ["changed", "changed"]
-    assert [(e.side, e.quote) for e in drafts[0].evidence] == [("earlier", "Budget: EUR 12,000"), ("later", "Budget: EUR 15,000")]
-    for d in drafts:
-        for ev in d.evidence:
-            assert (earlier if ev.side == "earlier" else later).slice(ev.locator) == ev.quote
-    added = stages.placeholder_compare(text_doc(["a"]), text_doc(["a", "b"]))
-    removed = stages.placeholder_compare(text_doc(["a", "b"]), text_doc(["a"]))
-    assert [d.change_type for d in added] == ["added"] and added[0].evidence[0].side == "later"
-    assert [d.change_type for d in removed] == ["removed"] and removed[0].evidence[0].side == "earlier"
-
-
-def test_placeholder_compare_ignores_hidden_blocks():
-    earlier = text_doc(["a", "b"])
-    later = text_doc(["a", "b", "injected"])
-    later.blocks[2] = type(later.blocks[2])(later.blocks[2].text, later.blocks[2].locator, True, "no_ink")
-    assert stages.placeholder_compare(earlier, later) == []
-
-
-def test_unimplemented_stages_are_explicit():
-    doc = text_doc(["a"])
-    llm = MeteredLlm(FakeLlm(Decimal("0")), CostMeter(Decimal("1")))
-    for call in (lambda: stages.verify([], doc, doc),):
-        with pytest.raises(NotImplementedError):
-            call()
-
-
 def test_meter_checks_before_each_call():
     meter = CostMeter(Decimal("1.00"))
     meter.check(Decimal("1.00"))
@@ -102,19 +71,3 @@ def test_meter_checks_before_each_call():
     with pytest.raises(CeilingReached):
         meter.check(Decimal("0.31"))
     assert meter.total == Decimal("0.70") and meter.calls == 1
-
-
-def test_report_stops_cleanly_at_the_ceiling():
-    drafts = stages.placeholder_compare(text_doc(["a", "b", "c", "d", "e"]), text_doc(["A", "b", "C", "d", "E", "f"]))
-    assert len(drafts) == 3
-    fake, meter = FakeLlm(Decimal("0.60")), CostMeter(Decimal("1.50"))
-    with pytest.raises(stages.ReportInterrupted) as stop:
-        stages.report(drafts, MeteredLlm(fake, meter))
-    assert len(stop.value.done) == 2 and stop.value.skipped == 1
-    assert fake.calls == 2 and meter.total == Decimal("1.20") <= meter.ceiling
-
-
-def test_report_explains_every_finding_under_the_ceiling():
-    drafts = stages.placeholder_compare(text_doc(EARLIER_LINES), text_doc(LATER_LINES))
-    done = stages.report(drafts, MeteredLlm(FakeLlm(Decimal("0.01")), CostMeter(Decimal("1.50"))))
-    assert len(done) == len(drafts) and all(f.explanation for f in done)
