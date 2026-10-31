@@ -195,9 +195,24 @@ $env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
 
 Results and the model choice are in `docs/06-decision-log.md` (D-17, 2026-10-31).
 
+## 8. Fact extraction (I-2)
+
+`changelens/pipeline/extract.py` sends a version's visible blocks, numbered and in chunks of about 6,000 characters, to the `FactList` schema. Hidden blocks are never sent. The model names a block number and a quote; the quote is located in that block's page text, so every locator is computed here and `raw_text` is always the exact parsed slice. Facts whose quote cannot be found are dropped and counted. A chunk whose output is still invalid after the adapter's one retry is marked *unextracted*, and the comparison gets an `unextracted` warning and becomes partial (AC-11). Unavailability and the cost ceiling propagate: there is no fallback model, so the job is retried later.
+
+Results are cached per version in the `fact_cache` table (tenant-scoped). The key covers the version hash, the extract prompt and schema, and the model config, so changing any of them re-extracts. Results with unextracted chunks are never cached. The worker extracts both versions before the placeholder comparison; the facts are not compared until I-3.
+
+The worker uses the fake llm unless `CHANGELENS_LLM=ionos` (model `CHANGELENS_LLM_MODEL`, default `Qwen/Qwen3.5-397B-A17B`; token from `CHANGELENS_IONOS_ENV_FILE`). The fake answers `FactList` with no facts, at no cost.
+
+**I-2 runner.** `tools/i2_run.py` extracts every distinct version of the usable development pairs once, then runs a second pass that must be answered entirely from the cache. It refuses held-out pairs, like the D-17 runner. It writes per-version results to `../../change-lens-data/i2/<model>/` and aggregates to stdout and `summary.json`. From `backend/`:
+
+```powershell
+$env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lensackend\.env'
+.venv\Scripts\python -m tools.i2_run
+```
+
 ## What is placeholder or out of scope
 
-- Comparison logic, fact extraction, alignment and verification (I-1 to I-5).
+- Comparison logic, alignment and verification (I-3 to I-5). Facts are extracted (I-2) but not yet compared.
 - Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.

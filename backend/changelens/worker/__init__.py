@@ -10,12 +10,13 @@ import time
 import uuid
 from typing import Optional
 
-from changelens import jobs
+from changelens import MODEL_CONFIG_ID, jobs
 from changelens.config import Settings
-from changelens.domain import Database
+from changelens.domain import Database, DbFactCache
 from changelens.domain.models import Finding
 from changelens.llm import FakeLlm, LlmPort, MeteredLlm
-from changelens.metering import CostMeter
+from changelens.metering import CeilingReached, CostMeter
+from changelens.pipeline.extract import extract_cached
 from changelens.pipeline.sandbox import parse_sandboxed
 from changelens.pipeline.stages import ReportInterrupted, placeholder_compare, report
 from changelens.pipeline.types import PARTIAL_WARNINGS, ParsedDocument, ParseRejected
@@ -120,6 +121,7 @@ class Worker:
             e, l = repo.version(c.earlier_id), repo.version(c.later_id)
             earlier = ParsedDocument.from_stored(e.kind, e.parsed_pages, e.blocks, e.page_count, e.parse_warnings)
             later = ParsedDocument.from_stored(l.kind, l.parsed_pages, l.blocks, l.page_count, l.parse_warnings)
+            sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
             ceiling = c.cost_ceiling
         meter = CostMeter(ceiling)
         llm = MeteredLlm(self.llm, meter)
@@ -131,15 +133,34 @@ class Worker:
             warnings.append({"code": "hidden_text"})
         if codes & PARTIAL_WARNINGS:
             warnings.append({"code": "parse_warnings"})
+        # Facts per version, cached (I-2). Not compared yet: I-3 aligns them; findings stay placeholder.
+        config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
+        unextracted = 0
+        try:
+            for version_id, sha, doc in sides:
+                res = extract_cached(doc, sha, config_id, DbFactCache(self.db, tenant_id, version_id), llm)
+                unextracted += len(res.unextracted)
+        except CeilingReached:
+            log.warning("comparison %s stopped at the cost ceiling during extraction", comparison_id)
+            self._finish(tenant_id, comparison_id, [], "failed",
+                         warnings + [{"code": "cost_ceiling", "stage": "extract"}], meter.total)
+            return
+        if unextracted:
+            warnings.append({"code": "unextracted", "chunks": unextracted})  # AC-11
         drafts = placeholder_compare(earlier, later)
+        partial = {"code": "parse_warnings"} in warnings or unextracted > 0
         try:
             done = report(drafts, llm)
-            status = "partial" if {"code": "parse_warnings"} in warnings else "complete"
+            status = "partial" if partial else "complete"
         except ReportInterrupted as stop:
             done = stop.done
             warnings.append({"code": "cost_ceiling", "skipped_findings": stop.skipped})
             status = "partial" if done else "failed"
             log.warning("comparison %s stopped at the cost ceiling after %d llm calls", comparison_id, meter.calls)
+        self._finish(tenant_id, comparison_id, done, status, warnings, meter.total)
+        log.info("comparison %s %s: %d findings, cost %s of %s", comparison_id, status, len(done), meter.total, ceiling)
+
+    def _finish(self, tenant_id, comparison_id, done, status, warnings, cost) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
             c = repo.comparison(comparison_id, lock=True)
             if c is None or c.status in TERMINAL:
@@ -150,5 +171,4 @@ class Worker:
                                                    "char_end": ev.locator.char_end}} for ev in f.evidence],
                             explanation=f.explanation, priority=f.priority) for f in done]
             repo.replace_findings(c.id, rows)
-            c.status, c.warnings, c.cost_actual = status, warnings, meter.total
-        log.info("comparison %s %s: %d findings, cost %s of %s", comparison_id, status, len(done), meter.total, ceiling)
+            c.status, c.warnings, c.cost_actual = status, warnings, cost
