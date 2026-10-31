@@ -25,7 +25,7 @@ from changelens.llm.errors import LlmOutputInvalid
 from changelens.llm.schemas import FACT_LIST
 from changelens.pipeline.types import Block, ExtractedFact, Locator, ParsedDocument
 
-EXTRACT_VERSION = "extract-v1"
+EXTRACT_VERSION = "extract-v3"  # v2: D-17 category boundaries; v3: whole-sentence quotes plus `context`
 CHUNK_CHARS = 6000
 CONFIDENCE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 
@@ -33,20 +33,23 @@ SYSTEM = """You extract the facts of a client brief so two versions can be compa
 
 The data block holds one version's visible text as numbered lines: "[n] text". Return every
 fact that a later version could add, change or drop:
-- deliverable: a thing to be produced or done (a page, a feature, a service, a document).
-- quantity: an amount, count, budget, price, size or other number tied to something.
+- deliverable: what is produced or done, including its format, technical spec, style or tone
+  (a page, a video, "exported in 1080p", "delivered as SVG", "warm and playful").
+- quantity: an amount of work; an item whose main point is a number of units (8 page templates,
+  3 videos, 24 pages, 15 photographs).
 - date_deadline: a date, deadline, duration or milestone.
-- responsibility_owner: who provides, does, hosts, pays for or owns something.
-- approval: who signs off, approves or must confirm something, and how.
-- other_material: any other requirement or condition that changes the work or the price.
+- responsibility_owner: who provides, does, organises or owns a task.
+- approval: who signs off, approves or must confirm something, and how binding it is.
+- other_material: budget, fees, prices, VAT, payment and any other material term or condition.
 
 For each fact:
 - subject: a short, stable name for what the fact is about, without its value
   (for example "budget", "deadline", "blog page", "hosting"), lower case.
 - value: the value as written (amount, date, name, "included", "excluded"), or null if none.
 - block: the number n of the line the quote comes from.
-- quote: an exact, contiguous copy of the shortest text in that line (it may continue onto the
-  next lines) that states the fact. Copy characters exactly; never paraphrase or complete it.
+- quote: an exact, contiguous copy of the whole sentence or list item in that line that states the
+  fact (it may continue onto the next lines). Copy characters exactly; never paraphrase, shorten or
+  complete it.
 - ambiguity: "ambiguous_date" if a date could be read two ways (03/04, next Friday),
   "ambiguous_entity" if it is unclear who or what is meant, "ambiguous_value" if the value is
   hedged or unclear (around, TBD, ca.), otherwise null.
@@ -134,6 +137,37 @@ def locate(doc: ParsedDocument, block: Block, quote: str) -> Optional[Locator]:
     return Locator(m.start(), m.end(), block.locator.page)
 
 
+_END = re.compile(r"[.!?;](?=\s|$)")
+_BULLET = re.compile(r"[\-*•\d\[(A-Z]")
+
+
+def _breaks_at(page: str, nl: int) -> bool:
+    """A line break at `nl` ends a unit unless the next line continues a wrapped sentence."""
+    before = page[:nl].rstrip(" \t\r")
+    after = page[nl + 1:].lstrip(" \t")
+    return not before or before[-1] in ".!?;:" or not after or bool(_BULLET.match(after)) or after.startswith("\n")
+
+
+def sentence_of(page: str, loc: Locator, limit: int = 400) -> str:
+    """The sentence or list item around a located quote, deterministic (I-3 compares these)."""
+    start = loc.char_start
+    while start > 0 and loc.char_start - start < limit:
+        if page[start - 1] == "\n" and _breaks_at(page, start - 1):
+            break
+        if _END.match(page, start - 1) and start - 1 < loc.char_start - 1:
+            break
+        start -= 1
+    end = loc.char_end
+    while end < len(page) and end - loc.char_end < limit:
+        if page[end] == "\n" and _breaks_at(page, end):
+            break
+        if _END.match(page, end) and end >= loc.char_end - 1:
+            end += 1
+            break
+        end += 1
+    return " ".join(page[start:end].split())
+
+
 def _data(chunk: Sequence[Block]) -> str:
     return "\n".join(f"[{i}] {b.text}" for i, b in enumerate(chunk, 1))
 
@@ -160,7 +194,7 @@ def extract(doc: ParsedDocument, llm: Llm) -> ExtractionResult:
                 type=f["type"], raw_text=doc.slice(loc), normalised_value=normalise(f["value"]),
                 locator=loc, status="ambiguous" if f["ambiguity"] else "ok",
                 confidence=CONFIDENCE[f["confidence"]], subject=normalise(f["subject"]),
-                ambiguity=f["ambiguity"]))
+                ambiguity=f["ambiguity"], context=sentence_of(doc.pages[(loc.page or 1) - 1], loc)))
     return result
 
 
