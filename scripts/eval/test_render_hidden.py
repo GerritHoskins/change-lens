@@ -10,13 +10,14 @@ import tempfile
 import unittest
 from unittest import mock
 
+import pdf_ink
 import pypdfium2
 import render
 import render_hidden
 import validate
 from test_render import semantic_digest
 
-GOLDEN = 'f561ef80925dce1a78bdbe52b978f71e2ff01c9a4a56a6aee36a3e1a10afdf5e'
+GOLDEN = '0eb2b0d4c83c24cbaec1fe7c4ffcdbd635d02b8e9663c6e8eb4d96160ecb1b28'
 
 
 def source_texts():
@@ -85,8 +86,11 @@ class HiddenFixtures(unittest.TestCase):
             data, span = self.hidden_bytes(rec)
             self.assertEqual(rec['hidden'][0]['side'], side)
             self.assertEqual(validate.pdf_texts(data)[span['page'] - 1][span['start']:span['end']], injection)
-            ink, on_page = validate.ink_rows(data, span)
-            self.assertLessEqual(ink, validate.MAX_INK_ROWS, technique)
+            ink, on_page, glyph = pdf_ink.measure(data, span)
+            self.assertIsNone(pdf_ink.visible_reason(data, span), technique)
+            self.assertLessEqual(ink, pdf_ink.MAX_INK_ROWS, technique)
+            if technique == 'tiny_text':
+                self.assertLess(glyph, pdf_ink.MAX_GLYPH_PT / 2)  # 0.5 pt text, well inside the limit
             if technique == 'off_page_text':
                 self.assertEqual(on_page, 0)
             else:
@@ -107,7 +111,9 @@ class HiddenFixtures(unittest.TestCase):
         # The records hold only locators, so the golden also covers each extracted hidden text.
         hidden = [validate.pdf_texts(data)[span['page'] - 1][span['start']:span['end']]
                   for data, span in map(self.hidden_bytes, self.records)]
-        digest = hashlib.sha256(json.dumps([semantic_digest(self.records), hidden]).encode()).hexdigest()
+        # The PDF bytes pin how the text is hidden (colour, size, opacity, panel), not just what it says.
+        pdfs = sorted(r[s]['sha256'] for r in self.records for s in ('old', 'new'))
+        digest = hashlib.sha256(json.dumps([semantic_digest(self.records), hidden, pdfs]).encode()).hexdigest()
         self.assertEqual(digest, GOLDEN)
         with tempfile.TemporaryDirectory() as tmp:
             other = Path(tmp)
@@ -173,6 +179,100 @@ class HiddenFixtures(unittest.TestCase):
             return change
         for i in range(4):
             self.changed(visible(i), 'span is visible', i)
+
+    def test_barely_hidden_variants_rejected(self):
+        # Each variant is readable or larger than tiny text; the validator must call it visible.
+        texts = source_texts()
+        variants = {
+            'light grey #dfdfdf': dict(rgb=(0xdf / 255,) * 3),
+            'light grey #f0f0f0': dict(rgb=(0xf0 / 255,) * 3),
+            'black at 12% opacity': dict(alpha=0.12),
+            '1.25 pt black': dict(size=1.25),
+            '1.5 pt black': dict(size=1.5),
+            '2 pt black': dict(size=2),
+            'under an 88%-opaque panel': dict(panel=(0.88, render_hidden.PANEL)),
+            'half under a panel': dict(panel=(1, render_hidden.PANEL[:3] + (render_hidden.HIDDEN_Y + 3,))),
+        }
+
+        def variant(size=12, rgb=(0, 0, 0), alpha=1, panel=None):
+            def change(rec, side, root):
+                injection = render_hidden.PAIRS[0][3]
+
+                def draw(pdf):
+                    pdf.saveState()
+                    pdf.setFillColorRGB(*rgb)
+                    pdf.setFillAlpha(alpha)
+                    pdf.setFont('Helvetica', size)
+                    pdf.drawString(48, render_hidden.HIDDEN_Y, injection)
+                    if panel:
+                        opacity, box = panel
+                        pdf.setFillAlpha(opacity)
+                        pdf.setFillColorRGB(0.85, 0.88, 0.92)
+                        pdf.rect(box[0], box[1], box[2] - box[0], box[3] - box[1], stroke=0, fill=1)
+                    pdf.restoreState()
+                data, _ = render.make_pdf(texts['P-504'][2], draw)
+                rec[side] = render.store(root, data, 'pdf')
+                start = validate.pdf_texts(data)[0].index(injection)
+                rec['hidden'][0]['locator'].update(start=start, end=start + len(injection))
+            return change
+        for name, kwargs in variants.items():
+            with self.subTest(name):
+                self.changed(variant(**kwargs), 'span is visible')
+
+    def test_cropped_or_rotated_page_fails_closed(self):
+        def reshape(how):
+            def change(rec, side, root):
+                path = root / rec[side]['storage_ref']
+                with pypdfium2.PdfDocument(path) as doc:
+                    page = doc[rec['hidden'][0]['locator']['page'] - 1]
+                    if how == 'crop':
+                        page.set_cropbox(0, 421, 842, 842)
+                    else:
+                        page.set_rotation(90)
+                    page.close()
+                    data = tempfile.SpooledTemporaryFile()
+                    doc.save(data)
+                    data.seek(0)
+                    rec[side] = render.store(root, data.read(), 'pdf')
+            return change
+        for how in ('crop', 'rotate'):
+            with self.subTest(how):
+                self.changed(reshape(how), 'unrotated page whose CropBox equals')
+
+    def test_invisible_evidence_rejected(self):
+        # Evidence for a real change hidden under a panel: the inverse of the hidden check.
+        texts = source_texts()
+
+        def cover(rec, side, root):
+            f = next(f for f in rec['findings'] if 'evidence_' + side in f)
+            span = f['evidence_' + side]
+            with pypdfium2.PdfDocument(root / rec[side]['storage_ref']) as doc,                     closing(doc[span['page'] - 1]) as page, closing(page.get_textpage()) as tp:
+                boxes = pdf_ink.page_boxes(page, tp, span['start'], span['end'], pypdfium2)
+            box = (min(b[0] for b in boxes) - 2, min(b[1] for b in boxes) - 2,
+                   max(b[2] for b in boxes) + 2, max(b[3] for b in boxes) + 2)
+
+            def draw(pdf):
+                pdf.setFillColorRGB(1, 1, 1)
+                pdf.rect(box[0], box[1], box[2] - box[0], box[3] - box[1], stroke=0, fill=1)
+            source = texts[rec['source']['derived_from']]
+            data, _ = render.make_pdf(source[1 if side == 'old' else 2], draw)
+            rec[side] = render.store(root, data, 'pdf')
+            del rec['hidden']
+        self.changed(cover, 'evidence is not visible', 3)
+
+    def test_hidden_text_over_visible_lines_refused(self):
+        y = 533  # a visible line of P-616's new side
+        with mock.patch.object(render_hidden, 'HIDDEN_Y', y),                 mock.patch.object(render_hidden, 'PANEL', (36, y - 16, 806, y + 24)):
+            with self.assertRaisesRegex(ValueError, 'overlaps visible text'):
+                render_hidden.write(self.root / 'y')
+
+    def test_extraction_count_guard(self):
+        injection = render_hidden.PAIRS[0][3]
+        original = validate.pdf_texts
+        twice = lambda data: [t + injection for t in original(data)]
+        with mock.patch.object(render_hidden.validate, 'pdf_texts', side_effect=twice):
+            with self.assertRaisesRegex(ValueError, 'exactly once'):
+                render_hidden.write(self.root / 'z')
 
     def test_hidden_span_on_text_side_rejected(self):
         def to_text(rec, side, root):
