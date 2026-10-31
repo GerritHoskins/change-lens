@@ -43,7 +43,40 @@ CHANGE_FINDINGS = {
     },
 }
 
-SCHEMAS = {"ChangeFindings": CHANGE_FINDINGS}
+FACT_TYPES = ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval",
+              "other_material"]
+CONFIDENCE = ["high", "medium", "low"]
+AMBIGUITY = ["ambiguous_date", "ambiguous_entity", "ambiguous_value", None]
+
+# I-2 extraction, one call per chunk of numbered blocks. `block` is the 1-based block number in
+# the chunk; `quote` is copied from that block and located there deterministically (no offsets
+# from the model). Ambiguity is an enum rather than a boolean (see the module note).
+FACT_LIST = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["facts"],
+    "properties": {
+        "facts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["type", "subject", "value", "block", "quote", "ambiguity", "confidence"],
+                "properties": {
+                    "type": {"type": "string", "enum": FACT_TYPES},
+                    "subject": {"type": "string"},
+                    "value": _NULLABLE_STR,
+                    "block": {"type": "integer"},
+                    "quote": {"type": "string"},
+                    "ambiguity": {"type": ["string", "null"], "enum": AMBIGUITY},
+                    "confidence": {"type": "string", "enum": CONFIDENCE},
+                },
+            },
+        },
+    },
+}
+
+SCHEMAS = {"ChangeFindings": CHANGE_FINDINGS, "FactList": FACT_LIST}
 
 _TYPES = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None),
           "integer": int, "number": (int, float)}
