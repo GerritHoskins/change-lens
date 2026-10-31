@@ -18,7 +18,7 @@ CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/req
 .venv/Scripts/python -m unittest discover -s scripts/eval
 ```
 
-The backend stage (I-22) creates `backend/.venv/` if necessary, reinstalls `backend/requirements.txt` and `backend/requirements-test.txt` the same way (`--force-reinstall --no-deps --require-hashes`) and runs the backend unit tests (`pytest backend/tests/unit`), which need no Docker. A failing test, an install failure or zero passed tests fails CI. The backend integration tests need the compose Postgres and MinIO and are not part of CI yet; run them locally as described in [backend/README.md](../backend/README.md) §5:
+The backend stage (I-22) creates `backend/.venv/` if necessary, reinstalls `backend/requirements.txt` and `backend/requirements-test.txt` the same way (`--force-reinstall --no-deps --require-hashes`) and runs the backend unit tests (`pytest backend/tests/unit`), which need no Docker. A failing test, an install failure or zero passed tests fails CI. The backend integration tests need the compose Postgres and MinIO and are not part of CI yet; run them locally as described in [backend/README.md](../backend/README.md) §6:
 
 ```powershell
 cd backend; docker compose up -d --wait; .venv\Scripts\python -m pytest tests/integration -q -rs
