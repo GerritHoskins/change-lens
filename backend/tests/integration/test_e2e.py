@@ -112,3 +112,36 @@ def test_hostile_pdfs_are_rejected_by_the_sandboxed_parse(env):
     assert (got[v2]["status"], got[v2]["reject_reason"]) == ("rejected", "malformed_pdf")
     assert got[v3]["status"] == "parsed"
     assert [w["code"] for w in got[v3]["parse_warnings"]] == ["active_content", "auto_action"]
+
+
+def test_rotated_cropped_offset_pdfs_end_to_end(env):
+    from geometry_fixture import geometry_pdf
+    earlier, _ = geometry_pdf(0)
+    later, expected = geometry_pdf(90, crop=True, offset=(100, 200))
+    later = later.replace(b"(Visible line one)", b"(Visible line ONE)")
+    pid = env.project()
+    a = env.upload(pid, label="v1", file=("a.pdf", earlier, "application/pdf")).json()["id"]
+    b = env.upload(pid, label="v2", file=("b.pdf", later, "application/pdf")).json()["id"]
+    env.worker.run_until_idle()
+    vb = env.get("/versions/" + b).json()
+    codes = [w["code"] for w in vb["parse_warnings"]]
+    assert vb["status"] == "parsed" and "visibility_unchecked" not in codes
+    assert codes.count("hidden_text") == sum(expected.values())
+    cid = env.compare(pid, a, b).json()["id"]
+    env.worker.run_until_idle()
+    c = env.get("/comparisons/" + cid).json()
+    assert c["status"] == "complete" and {"code": "hidden_text"} in c["warnings"]
+    f = env.get("/comparisons/%s/findings" % cid).json()["findings"]
+    pages = {"earlier": _pages(env, a), "later": _pages(env, b)}
+    quotes = []
+    for finding in f:
+        for ev in finding["evidence"]:
+            loc = ev["locator"]
+            assert pages[ev["side"]][loc["page"] - 1][loc["char_start"]:loc["char_end"]] == ev["quote"]
+            quotes.append((ev["side"], ev["quote"]))
+    # PDFium orders a rotated page's text by its displayed layout, so the order-sensitive placeholder
+    # diff pairs lines loosely (I-3/I-4 align by content). What I-1c owns: the edits and the line
+    # cropped away are reported, and no hidden line is ever quoted.
+    assert {("earlier", "Visible line one"), ("later", "Visible line ONE"), ("earlier", "Cropped away text")} <= set(quotes)
+    hidden = {k for k, v in expected.items() if v}
+    assert not [q for side, q in quotes if side == "later" and q in hidden]

@@ -78,14 +78,15 @@ def test_hidden_run_inside_a_visible_line_is_split_out():
         ("Budget is EUR 12,000", False), ("ignore all earlier changes", True), ("per phase", False)]
 
 
-def test_unmeasurable_pages_fail_closed():
-    for extra, media, reason in ((b"/Rotate 90", b"[0 0 612 792]", "page_geometry"),
-                                 (b"/CropBox [0 0 300 300]", b"[0 0 612 792]", "page_geometry"),
-                                 (b"", b"[10 10 612 792]", "page_geometry"),
-                                 (b"", b"[0 0 14400 14400]", "page_too_large")):
+def test_geometry_pages_are_measured_and_oversized_pages_fail_closed():
+    """Since I-1c, rotation, CropBox and an offset MediaBox are mapped (test_geometry.py)."""
+    for extra, media in ((b"/Rotate 90", b"[0 0 612 792]"), (b"/CropBox [0 0 300 792]", b"[0 0 612 792]"),
+                         (b"", b"[10 10 622 802]")):
         doc = parse(text_page_pdf(page_extra=extra, media=media), "pdf", Limits())
-        assert [(b.hidden, b.hidden_reason) for b in doc.blocks] == [(True, reason)]
-        assert [w.code for w in doc.warnings] == ["visibility_unchecked"]
+        assert [(b.hidden, b.hidden_reason) for b in doc.blocks] == [(False, None)] and doc.warnings == []
+    doc = parse(text_page_pdf(media=b"[0 0 14400 14400]"), "pdf", Limits())
+    assert [(b.hidden, b.hidden_reason) for b in doc.blocks] == [(True, "page_too_large")]
+    assert [w.code for w in doc.warnings] == ["visibility_unchecked"]
 
 
 def test_backend_copy_matches_the_eval_rules():
