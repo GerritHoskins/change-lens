@@ -3,8 +3,9 @@
 - Page text is PDFium's exact `get_text_range()` output; locators index into it (07 §4).
 - Blocks are lines, split further where a run of words is hidden on an otherwise visible line.
 - Visibility uses the eval rules (`pdf_ink.py`): hidden blocks carry a reason and an SA-9
-  `hidden_text` warning, and are excluded from comparison input (AC-18). Pages whose geometry or
-  size cannot be measured fail closed: their text is treated as hidden and the page is warned
+  `hidden_text` warning, and are excluded from comparison input (AC-18). Rotated pages, a CropBox
+  and an offset MediaBox are mapped and measured (I-1c); pages whose mapping disagrees with
+  PDFium's or that are too large to render fail closed: their text is treated as hidden and the page is warned
   `visibility_unchecked`, which makes the comparison partial.
 - Nothing in the document is executed or extracted: the PDFium build has no JavaScript engine,
   forms are never initialised, and attachments are only counted. Both are reported as warnings.

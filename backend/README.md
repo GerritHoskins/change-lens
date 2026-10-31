@@ -94,7 +94,12 @@ Routes: `POST /projects`, `GET /projects/{id}`, `POST /projects/{id}/versions` (
   - `no_ink`: white-on-white or covered text;
   - `tiny`: at most 3 ink rows and glyphs no taller than 0.8 pt.
 - **Hidden blocks** raise a `hidden_text` warning (SA-9) with the page and span, and are left out of the comparison.
-- **Fail closed.** Pages that cannot be measured (rotated, cropped, MediaBox not at the origin, or over 40 MP at 144 DPI) count as hidden and are warned `visibility_unchecked`.
+- **Page geometry (I-1c).** Rotated pages (/Rotate 90, 180 or 270), a CropBox and a MediaBox off the origin are measured:
+  - glyph boxes are mapped from PDF user space into the rendered page;
+  - text outside the CropBox is `off_page`;
+  - ink rows and glyph height are taken across the text's displayed direction, so sideways text gets the same tiny-text rule.
+- **Fail closed.** Each page's mapping is cross-checked against PDFium's own `FPDF_PageToDevice`. A page where they disagree, an empty visible box, or a page over 40 MP at 144 DPI counts as hidden and is warned `visibility_unchecked`.
+- **Eval validator.** `scripts/eval/pdf_ink.py` still refuses rotated and cropped pages; the dataset has none. On plain pages the two agree.
 - **Warnings** also cover pages without text (`no_text_layer`), image regions (`unextracted_region` above 15% of a page, otherwise `image_region`), JavaScript or launch actions (`active_content`), automatic actions (`auto_action`) and attachments (`embedded_files`).
 - **Nothing is executed or extracted.** The PDFium build has no JavaScript engine, forms are never initialised, and attachments are only counted.
 - **Partial comparisons.** `no_text_layer`, `unextracted_region` and `visibility_unchecked` make a comparison `partial`.
