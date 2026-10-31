@@ -90,8 +90,7 @@ def test_placeholder_compare_ignores_hidden_blocks():
 def test_unimplemented_stages_are_explicit():
     doc = text_doc(["a"])
     llm = MeteredLlm(FakeLlm(Decimal("0")), CostMeter(Decimal("1")))
-    for call in (lambda: stages.align([], [], llm),
-                 lambda: stages.compare([], "complete", llm), lambda: stages.verify([], doc, doc)):
+    for call in (lambda: stages.verify([], doc, doc),):
         with pytest.raises(NotImplementedError):
             call()
 

@@ -76,7 +76,53 @@ FACT_LIST = {
     },
 }
 
-SCHEMAS = {"ChangeFindings": CHANGE_FINDINGS, "FactList": FACT_LIST}
+# I-3 alignment: the model proposes which leftover earlier fact corresponds to which newer fact.
+# Indices refer to the numbered lists in the data blocks; the code checks them and never forces a
+# match the model is unsure of (AC-7).
+FACT_MATCHES = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["matches"],
+    "properties": {
+        "matches": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["earlier", "later", "confidence"],
+                "properties": {
+                    "earlier": {"type": "integer"},
+                    "later": {"type": "integer"},
+                    "confidence": {"type": "string", "enum": CONFIDENCE},
+                },
+            },
+        },
+    },
+}
+
+# I-3 compare, rule 3 (03 §4.1): matched pairs with equal values and qualifiers, judged for meaning.
+SAME_MEANING = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["verdicts"],
+    "properties": {
+        "verdicts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["pair", "verdict"],
+                "properties": {
+                    "pair": {"type": "integer"},
+                    "verdict": {"type": "string", "enum": ["equivalent", "meaning_changed"]},
+                },
+            },
+        },
+    },
+}
+
+SCHEMAS = {"ChangeFindings": CHANGE_FINDINGS, "FactList": FACT_LIST, "FactMatches": FACT_MATCHES,
+           "SameMeaning": SAME_MEANING}
 
 _TYPES = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None),
           "integer": int, "number": (int, float)}
