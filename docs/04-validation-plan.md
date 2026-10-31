@@ -2,6 +2,8 @@
 
 Plan section: §13.4. Tags: [E] established, [A] assumption, [U] unverified, [O] owner decision.
 
+> **Superseded in part, 2026-10-31 (owner decision, 06).** ChangeLens now follows *build first, then learn* (`05-backlog.md`). §1–§3 (customer research, paid pilot, competitive baseline) and Gates 1, 3 and 4 no longer block anything; they are kept as a record. §4–§5 (evaluation set and metrics) still apply. Gate 2's quality thresholds live on as the M1 exit criteria in task I-7, judged on the constructed held-out split. After launch, learning comes from real use (D-18).
+
 ## 1. Customer research (problem validation)
 
 - **Cohort (handoff v2 §11) [E].** **10 independent customer organisations** within one niche chosen *before* recruitment (O-1).

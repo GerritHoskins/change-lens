@@ -3,6 +3,8 @@
 Plan section: §13.1. Source: `ChangeLens_Planning_Agent_Handoff.md` (commit `a8280b9`).
 Status tags used throughout the plan: **[E]** established by the handoff, **[A]** assumption made by this plan, **[U]** unverified — needs evidence, **[O]** needs owner decision. See `06-decision-log.md`.
 
+> **Update 2026-10-31 (owner decision, 06).** Build first, then learn. The app is built as a hobby project that can grow into a paid product: a Flutter app for iOS and Android, EU market, English and German, freemium with in-app subscriptions. The launch copy aims at web/design freelancers and small studios, and the core stays domain-neutral, so the audience can widen later without a rebuild. The Gate 1 cohort below is no longer run.
+
 ## Recommendation
 
 Test one question before building a product: **is client-brief change tracking useful enough to pay for?** Pursue the agency/freelancer direction only. The consumer concept stays parked (handoff §3) and is not combined with it.
