@@ -2,8 +2,8 @@
 from helpers import EARLIER_LINES, LATER_LINES, make_pdf
 
 
-def _parsed_text(env, version_id):
-    return env.sql("SELECT parsed_text FROM source_versions WHERE id = :id", id=version_id)[0][0]
+def _pages(env, version_id):
+    return env.sql("SELECT parsed_pages FROM source_versions WHERE id = :id", id=version_id)[0][0]
 
 
 def _run_pair(env, upload_a, upload_b):
@@ -25,12 +25,12 @@ def _run_pair(env, upload_a, upload_b):
     assert 0 < float(c["cost_actual"]) <= float(c["cost_ceiling"])
     f = env.get("/comparisons/%s/findings" % cid).json()
     assert f["status"] == "complete" and f["placeholder"] is True and f["findings"]
-    texts = {"earlier": _parsed_text(env, va["id"]), "later": _parsed_text(env, vb["id"])}
+    pages = {"earlier": _pages(env, va["id"]), "later": _pages(env, vb["id"])}
     for finding in f["findings"]:
         assert finding["explanation"]
         for ev in finding["evidence"]:
             loc = ev["locator"]
-            assert texts[ev["side"]][loc["char_start"]:loc["char_end"]] == ev["quote"]
+            assert pages[ev["side"]][(loc["page"] or 1) - 1][loc["char_start"]:loc["char_end"]] == ev["quote"]
     return f["findings"]
 
 
@@ -78,3 +78,37 @@ def test_scanned_pdf_is_rejected_by_parse(env):
     env.worker.run_until_idle()
     got = env.get("/versions/" + v["id"]).json()
     assert got["status"] == "rejected" and got["reject_reason"] == "no_text_layer"
+
+
+def test_hidden_text_is_warned_and_never_compared(env):
+    from tests_visibility_fixture import injected_pair
+    pid = env.project()
+    earlier, later = injected_pair()
+    a = env.upload(pid, label="v1", file=("a.pdf", earlier, "application/pdf")).json()["id"]
+    b = env.upload(pid, label="v2", file=("b.pdf", later, "application/pdf")).json()["id"]
+    env.worker.run_until_idle()
+    vb = env.get("/versions/" + b).json()
+    assert vb["status"] == "parsed" and [w["code"] for w in vb["parse_warnings"]] == ["hidden_text"]
+    assert vb["parse_warnings"][0]["page"] == 1 and "text" not in vb["parse_warnings"][0]
+    cid = env.compare(pid, a, b).json()["id"]
+    env.worker.run_until_idle()
+    c = env.get("/comparisons/" + cid).json()
+    assert c["status"] == "complete" and {"code": "hidden_text"} in c["warnings"]
+    quotes = [e["quote"] for f in env.get("/comparisons/%s/findings" % cid).json()["findings"] for e in f["evidence"]]
+    assert quotes == ["Budget: EUR 12,000", "Budget: EUR 15,000"]  # the hidden line is not a finding
+
+
+def test_hostile_pdfs_are_rejected_by_the_sandboxed_parse(env):
+    from helpers import text_page_pdf
+    pid = env.project()
+    bomb = text_page_pdf().replace(b"/Kids [3 0 R] /Count 1", b"/Kids [" + b" ".join([b"3 0 R"] * 5000) + b"] /Count 5000")
+    js = text_page_pdf(catalog_extra=b"/OpenAction 6 0 R", extra_objects=[b"<< /S /JavaScript /JS (app.alert(1)) >>"])
+    v1 = env.upload(pid, file=("bomb.pdf", bomb, "application/pdf")).json()["id"]
+    v2 = env.upload(pid, file=("bad.pdf", b"%PDF-1.7\n" + bytes(range(256)) * 4, "application/pdf")).json()["id"]
+    v3 = env.upload(pid, file=("js.pdf", js, "application/pdf")).json()["id"]
+    env.worker.run_until_idle()
+    got = {v: env.get("/versions/" + v).json() for v in (v1, v2, v3)}
+    assert (got[v1]["status"], got[v1]["reject_reason"]) == ("rejected", "limit_exceeded_pages")
+    assert (got[v2]["status"], got[v2]["reject_reason"]) == ("rejected", "malformed_pdf")
+    assert got[v3]["status"] == "parsed"
+    assert [w["code"] for w in got[v3]["parse_warnings"]] == ["active_content", "auto_action"]

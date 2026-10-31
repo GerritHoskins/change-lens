@@ -2,7 +2,7 @@
 
 A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Authentication is a single dev token. **Never deploy this publicly.** I-8 replaces the dev token with Logto JWTs, tenants and row-level security.
 
-The comparison itself is a **placeholder** (`pipeline_version = "placeholder-0"`): a line-level diff of added, removed and changed lines, with a fake LLM that costs a configurable amount per call. The real pipeline arrives with I-1 to I-5. Use synthetic documents only.
+The comparison itself is a **placeholder** (`pipeline_version = "placeholder-0"`): a line-level diff of added, removed and changed lines, with a fake LLM that costs a configurable amount per call. Parsing is real (I-1): exact text with 07 §4 locators, visibility flags for hidden text, and a resource-capped parse sandbox for PDFs. Extraction and comparison arrive with I-2 to I-5. Use synthetic documents only.
 
 Module layout follows `docs/03-technical-design.md` §9.1:
 
@@ -13,7 +13,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `storage` | `changelens/storage/` | S3 adapter; tenant-prefixed keys; in-memory store for unit tests |
 | `jobs` | `changelens/jobs/` | Postgres queue: ID-only payloads, idempotency keys, `SKIP LOCKED`, retries, leases |
 | `worker` | `changelens/worker/` | Runs `parse` and `compare` jobs under the cost ceiling |
-| `pipeline` | `changelens/pipeline/` | Pure stages: placeholder `parse` and compare; `extract`, `align`, `compare` and `verify` signatures |
+| `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1), the parse sandbox, placeholder compare; `extract`, `align`, `compare` and `verify` signatures |
 | `llm` | `changelens/llm/` | The `llm` port, the fake adapter and the metered wrapper |
 | `metering` | `changelens/metering/` | Per-comparison cost meter and ceiling |
 | logging | `changelens/logs.py` | Log scrubbing (AC-23) |
@@ -84,7 +84,43 @@ curl -s localhost:8000/comparisons/$C/findings -H "$H"
 
 Routes: `POST /projects`, `GET /projects/{id}`, `POST /projects/{id}/versions` (multipart: `label` plus exactly one of `file` or `text`), `GET /versions/{id}`, `POST /projects/{id}/comparisons` (returns 202), `GET /comparisons/{id}` and `GET /comparisons/{id}/findings`. Errors are `application/problem+json` with a stable `code`. Another tenant's resources return `not_found`.
 
-## 5. Tests
+## 5. Parsing (I-1)
+
+- **Text** is decoded as UTF-8 exactly as uploaded, with no newline or BOM changes. Locators are `char_start` and `char_end` offsets into that text, and blocks are its non-empty lines.
+- **PDF** text is PDFium's exact `get_text_range()` output for each page, line endings included. Locators are a one-based `page` plus offsets into that page's text: the same rules as the eval records (07 §4).
+- **PDF blocks** are lines. A line is split where a run of words on it is hidden.
+- **Visibility.** Each block carries a `hidden` flag and a reason, decided by the eval rules (`changelens/pipeline/pdf_ink.py`, a copy of `scripts/eval/pdf_ink.py` that a unit test keeps in sync):
+  - `off_page`;
+  - `no_ink`: white-on-white or covered text;
+  - `tiny`: at most 3 ink rows and glyphs no taller than 0.8 pt.
+- **Hidden blocks** raise a `hidden_text` warning (SA-9) with the page and span, and are left out of the comparison.
+- **Fail closed.** Pages that cannot be measured (rotated, cropped, MediaBox not at the origin, or over 40 MP at 144 DPI) count as hidden and are warned `visibility_unchecked`.
+- **Warnings** also cover pages without text (`no_text_layer`), image regions (`unextracted_region` above 15% of a page, otherwise `image_region`), JavaScript or launch actions (`active_content`), automatic actions (`auto_action`) and attachments (`embedded_files`).
+- **Nothing is executed or extracted.** The PDFium build has no JavaScript engine, forms are never initialised, and attachments are only counted.
+- **Partial comparisons.** `no_text_layer`, `unextracted_region` and `visibility_unchecked` make a comparison `partial`.
+
+The API checks only magic bytes, size and text word count. It never opens a PDF. The worker parses PDFs in a child process (`changelens/pipeline/sandbox.py`):
+- The child gets no credentials in its environment. It runs the base interpreter with `-I` and the venv's site-packages added to its path explicitly, because a Windows venv's `python.exe` is a launcher that would start a second process.
+- The child checks the page count before any page is parsed.
+- On a breach the child is killed and the version is `rejected` with a reason:
+
+| Cap (default) | How | Reason |
+|---|---|---|
+| Wall clock, 60 s | Parent timeout | `parse_timeout` |
+| Memory, 512 MB | Windows Job Object (Linux: `RLIMIT_AS`) | `parse_memory_limit` |
+| CPU, 60 s | Windows Job Object (Linux: `RLIMIT_CPU`) | `parse_cpu_limit` |
+| One process, kill on close | Windows Job Object | — |
+| 20 pages, 10 MB, 15,000 words, 5 M characters | Checked in the child | `limit_exceeded_pages`, `limit_exceeded_bytes`, `limit_exceeded_words`, `limit_exceeded_text` |
+| Unreadable file | PDFium refuses it | `malformed_pdf` |
+
+Limitations:
+- The child keeps network access on both platforms. It makes no network calls, but production should restrict the worker's outbound traffic.
+- The Linux limits are written but have not been run here.
+- On Windows the interpreter starts before the job is applied, but before it receives the document.
+
+**Schema change:** `parsed_text` became `parsed_pages`. There are no migrations until I-8, so reset the dev database after pulling: `docker compose down -v; docker compose up -d --wait`. The integration tests rebuild their own schema.
+
+## 6. Tests
 
 Unit tests need no Docker; CI runs them (`scripts/ci.ps1`, backend stage):
 
@@ -102,16 +138,33 @@ docker compose up -d --wait
 ```
 
 They cover:
-- end to end with two text versions and two PDF versions;
+- end to end with two text versions and two PDF versions, hidden injected text, and hostile PDFs through the worker;
 - AC-23: a unique marker in the uploaded documents and filenames never appears in the logs, the jobs table or the object keys;
 - AC-21: the ceiling stops a run as `partial` (some findings explained) or `failed` (none);
 - tenant isolation and `not_found`;
 - job idempotency, `SKIP LOCKED`, retries, permanent failure and crash recovery after the lease expires.
 
+The constructed-dataset round trip reads the private data in place and is skipped when it is absent. It is not in CI. It reports counts and record IDs only:
+
+```powershell
+cd backend
+.venv\Scripts\python -m pytest tests/dataset -q -s     # CHANGELENS_EVAL_DATA overrides ../../change-lens-data
+```
+
+The unit tests include the hostile-file fixtures, all generated in the tests:
+- oversized, truncated and garbage files;
+- JavaScript and OpenAction;
+- an embedded file;
+- a 400 MB deflate bomb in a 0.4 MB file;
+- page-count bombs;
+- a 14,400 pt page.
+
+They also check the sandbox caps against misbehaving child probes (`tests/unit/sandbox_probes.py`).
+
 ## What is placeholder or out of scope
 
 - Comparison logic, fact extraction, alignment and verification (I-1 to I-5).
-- The parse sandbox with CPU, memory and output caps, hidden-text and image-region checks (I-1).
+- Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.
 - Images, notifications, retention, sharing and the remaining 03 §9.4 routes.

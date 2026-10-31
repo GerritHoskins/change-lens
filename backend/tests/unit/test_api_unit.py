@@ -68,7 +68,6 @@ def _upload(client, **parts):
     (b"PK\x03\x04 docx", 415, "unsupported_type"),
     (b"text with a \x00 byte", 415, "unsupported_type"),
     (b"caf\xe9 latin-1", 415, "unsupported_type"),
-    (b"%PDF-1.7 broken", 415, "unsupported_type"),
     (b"word " * 60, 413, "limit_exceeded"),
 ])
 def test_rejected_uploads_are_never_stored(client_store, payload, status, code):
@@ -78,11 +77,8 @@ def test_rejected_uploads_are_never_stored(client_store, payload, status, code):
     assert store.objects == {}
 
 
-def test_pdf_page_and_size_limits(client_store):
+def test_pdf_size_limit(client_store):
     client, store = client_store
-    r = _upload(client, label="v1", file=("a.pdf", make_pdf([["a"], ["b"], ["c"]]), "application/pdf"))
-    _is_problem(r, 413, "limit_exceeded")
-    assert r.json()["detail"] == "pages"
     r = _upload(client, label="v1", file=("a.pdf", b"%PDF-1.7" + b"0" * 250_000, "application/pdf"))
     _is_problem(r, 413, "limit_exceeded")
     assert store.objects == {}
@@ -101,4 +97,12 @@ def test_sniff_ignores_claimed_type():
     assert uploads.sniff("Plain brief, UTF-8: café".encode()) == "text"
     with pytest.raises(ApiError):
         uploads.sniff(b"")
-    assert uploads.check_limits(make_pdf([["a"], ["b"]]), "pdf", LIMITS) == 2
+    uploads.check_limits(make_pdf([["a"], ["b"], ["c"]]), "pdf", Limits(max_pdf_pages=1))  # pages: sandbox's job
+
+
+def test_api_never_opens_pdfs():
+    """Page count and malformed files are checked in the parse sandbox, not the API process (I-1)."""
+    import changelens.api.app
+    import changelens.api.routes
+    for mod in (uploads, changelens.api.routes, changelens.api.app):
+        assert "pypdfium2" not in open(mod.__file__, encoding="utf-8").read()

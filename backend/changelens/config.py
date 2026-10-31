@@ -18,6 +18,12 @@ class Limits:
     max_pdf_bytes: int = 10 * 1024 * 1024
     max_pdf_pages: int = 20
     max_label_chars: int = 100
+    # Parse sandbox caps (03 §6 Upload validation). Text cap in characters (~5 MB).
+    max_extracted_chars: int = 5_000_000
+    max_render_pixels: int = 40_000_000  # visibility render; larger pages fail closed
+    parse_wall_seconds: float = 60.0
+    parse_cpu_seconds: int = 60
+    parse_memory_mb: int = 512
 
 
 @dataclass(frozen=True)
