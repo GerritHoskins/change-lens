@@ -61,9 +61,12 @@ if (-not (Test-Path $python)) {
 if (-not (Test-Path $python)) { $errors += 'TEST eval: project venv missing' }
 else {
     $ErrorActionPreference = 'Continue'
-    $install = & $python -m pip install --disable-pip-version-check --require-hashes -r (Join-Path $PSScriptRoot 'eval/requirements-render.txt') 2>&1 | ForEach-Object { "$_" }
+    # pip skips hash checks for packages already installed, so reinstall every pinned wheel each run.
+    $global:LASTEXITCODE = -1
+    $install = & $python -m pip install --disable-pip-version-check --force-reinstall --no-deps --require-hashes -r (Join-Path $PSScriptRoot 'eval/requirements-render.txt') 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { $install | Write-Host; $errors += 'TEST render: dependency installation failed' }
-    else { Write-Host 'PASS render dependency install: pinned requirements with --require-hashes' }
+    else { Write-Host 'PASS render dependency install: every pinned wheel reinstalled with --require-hashes' }
+    $global:LASTEXITCODE = -1
     $deps = & $python -c "import reportlab, pypdfium2, PIL" 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { $deps | Write-Host; $errors += 'TEST render: required dependencies not importable' }
     foreach ($suite in 'generate', 'render') {

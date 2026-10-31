@@ -5,18 +5,22 @@ from contextlib import closing
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
+import struct
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
+import zlib
 
 import pypdfium2
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 import render
 import validate
 
-GOLDEN = '1346c8d4583d4cbd2a2f58e020c83b2726f1855d1ed600699275ef09973d3099'
+GOLDEN = '78d454edd4418a07bf8fa7f5ae0e3a2a4675249c552204ddd7c4ebedaeef1038'
 
 
 def semantic_digest(records):
@@ -111,21 +115,65 @@ class VisualFixtures(unittest.TestCase):
         self.assertEqual(locs['F-1']['page'], 2)
         self.assertEqual(validate.pdf_texts(data)[1][locs['F-1']['start']:locs['F-1']['end']], value)
 
+    def test_every_pair_records_a_distinct_text_source(self):
+        texts = {r['id']: (r, o, n) for r, o, n in render.generate.generate(per_op=6, seed=7)}
+        self.assertEqual(len({r['source']['derived_from'] for r in self.records}), 13)
+        for rec in self.records:
+            source, old, new = texts[rec['source']['derived_from']]
+            self.assertEqual(rec['source']['operators'][0], source['source']['operators'][0])
+            self.assertEqual(rec['source']['base_pair'], source['source']['base_pair'])
+            for side, text in (('old', old), ('new', new)):
+                path = self.root / rec[side]['storage_ref']
+                if rec[side]['format'] == 'text':
+                    self.assertEqual(path.read_text(encoding='utf-8'), text)
+                elif rec[side]['format'] == 'pdf':
+                    page, pos = ''.join(validate.pdf_texts(path.read_bytes())), 0
+                    for line in filter(None, text.splitlines()):
+                        pos = page.index(line, pos) + len(line)
+
     def test_degradation_preserves_labels_except_unreadable_region(self):
-        sources = [t for t in render.generate.generate(per_op=6, seed=7) if t[0]['source']['operators'] == ['value_change']]
+        texts = {r['id']: r for r, _, _ in render.generate.generate(per_op=6, seed=7)}
         for i, rec in enumerate(self.records[10:], 10):
-            original = sources[i % 6][0]
+            original = texts[rec['source']['derived_from']]
             self.assertEqual(rec['expected_status'], 'partial' if i == 12 else 'complete')
+            self.assertEqual(len(rec['findings']), len(original['findings']))
+            regions = [r['locator'] for r in rec.get('unreadable', []) if r['side'] == 'new']
+            hidden = {f['id'] for f in rec['findings']
+                      if any(validate.overlaps(f.get('evidence_new', {}), r) for r in regions)}
+            self.assertEqual(bool(hidden), i == 12)
             for before, after in zip(original['findings'], rec['findings']):
                 expected = {k: v for k, v in before.items() if not k.startswith('evidence_')}
                 actual = {k: v for k, v in after.items() if not k.startswith('evidence_')}
-                if after.get('note') == 'unreadable':
+                if after['id'] in hidden:
                     expected.update(change_type='uncertain', material=True, note='unreadable')
                 self.assertEqual(actual, expected)
-        partial = self.records[12]
-        self.assertTrue(partial['unreadable'])
-        self.assertTrue(any(f.get('note') == 'unreadable' for f in partial['findings']))
-        self.assertNotIn('removed', [f['change_type'] for f in partial['findings']])
+        self.assertNotIn('removed', [f['change_type'] for f in self.records[12]['findings']])
+
+    def test_degradations_change_pixels_within_legible_bounds(self):
+        texts = {r['id']: n for r, _, n in render.generate.generate(per_op=6, seed=7)}
+
+        def clean(rec):
+            data, _ = render.make_pdf(texts[rec['source']['derived_from']])
+            with pypdfium2.PdfDocument(data) as doc, closing(doc[0]) as page:
+                return render.raster(page)
+
+        def stored(rec):
+            with Image.open(self.root / rec['new']['storage_ref']) as im:
+                return im.convert('RGB')
+
+        def mad(a, b):
+            return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3
+        blur, jpeg, unreadable = self.records[10:]
+        self.assertTrue(0.3 < mad(clean(blur), stored(blur)) < 1.0, 'light blur missing or too strong')
+        small, _ = render.transform(clean(jpeg), {}, 0.6, (12, 12, 12, 12))
+        self.assertTrue(0.2 < mad(small, stored(jpeg)) < 0.8, 'JPEG loss missing or too strong')
+        before, after = clean(unreadable), stored(unreadable)
+        box = unreadable['unreadable'][0]['locator']['box']
+        self.assertEqual(validate.dark_pixels(render.png(after), box), 0)
+        self.assertGreater(validate.dark_pixels(render.png(before), box), 100)
+        before.paste((255, 255, 255), tuple(box))
+        after.paste((255, 255, 255), tuple(box))
+        self.assertIsNone(ImageChops.difference(before, after).getbbox(), 'pixels changed outside the region')
 
     def test_deterministic_bytes_and_semantic_golden(self):
         self.assertEqual(semantic_digest(self.records), GOLDEN)
@@ -218,6 +266,56 @@ class VisualFixtures(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'IHDR'):
             validate.png_size(b'\x89PNG\r\n\x1a\n')
 
+    def test_undecodable_png_rejected(self):
+        def rewrite(fn):
+            def change(rec, side, finding, root):
+                path = root / rec[side]['storage_ref']
+                data = fn(path.read_bytes())
+                path.write_bytes(data)
+                rec[side]['sha256'] = hashlib.sha256(data).hexdigest()
+            return change
+
+        def short_idat(b):
+            body = zlib.compress(b'\x00' * 10)
+            chunk = struct.pack('>I', len(body)) + b'IDAT' + body + struct.pack('>I', zlib.crc32(b'IDAT' + body))
+            return b[:33] + chunk + b[-12:]
+        self.changed('image', rewrite(lambda b: b[:33]), 'IEND')
+        self.changed('image', rewrite(lambda b: b[:33] + b'garbage' * 50), 'checksum')
+        self.changed('image', rewrite(lambda b: b + b'trailing'), 'nothing after')
+        self.changed('image', rewrite(short_idat), 'does not match IHDR')
+
+    def test_storage_suffix_must_match_format(self):
+        def rename(rec, side, finding, root):
+            path = root / rec[side]['storage_ref']
+            path.rename(path.with_suffix('.png'))
+            rec[side]['storage_ref'] = rec[side]['storage_ref'][:-4] + '.png'
+        self.changed('pdf', rename, 'must end in .pdf')
+
+    def test_unreadable_regions_need_an_image_side_no_ink_and_a_finding(self):
+        def text_side(rec, side, finding, root):
+            other = next(s for s in ('old', 'new') if rec[s]['format'] != 'image')
+            rec.update(expected_status='partial', unreadable=[{'side': other, 'locator': {'start': 0, 'end': 5}}])
+        self.changed('image', text_side, 'only allowed on image sides')
+        self.changed('image', lambda r, s, f, p: r['unreadable'][0].update(side='old'), 'still contains ink', True)
+
+        def corner(rec, side, finding, root):
+            rec['unreadable'][0]['locator']['box'] = [0, 0, 10, 10]
+            for f in rec['findings']:
+                if f.get('note') == 'unreadable':
+                    f.pop('note')
+                    f['change_type'] = 'changed'
+        self.changed('image', corner, 'overlaps no finding', True)
+
+    def test_schema_only_mode_accepts_records_without_storage(self):
+        rec = copy.deepcopy(self.records[0])
+        for side in ('old', 'new'):
+            rec[side].pop('storage_ref')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'manifest.jsonl'
+            path.write_text(json.dumps(rec) + '\n', encoding='utf-8')
+            self.assertEqual(validate.validate_file(path, storage=False), (1, []))
+            self.assertTrue(validate.validate_file(path)[1])
+
     def test_refuses_output_inside_git_and_text_id_range(self):
         for out in (Path(__file__).parent / 'out', Path(__file__).parent / 'sub' / '..' / 'out'):
             with self.assertRaises(SystemExit):
@@ -225,6 +323,23 @@ class VisualFixtures(unittest.TestCase):
             self.assertFalse(out.exists())
         with self.assertRaises(ValueError):
             render.write(self.root, start=500)
+
+    def test_refuses_output_through_a_link_into_git(self):
+        here = Path(__file__).parent
+        with tempfile.TemporaryDirectory() as tmp:
+            link = Path(tmp) / 'link'
+            if os.name == 'nt':
+                made = subprocess.run(['cmd', '/c', 'mklink', '/J', str(link), str(here)], capture_output=True)
+                self.assertEqual(made.returncode, 0, made.stderr)
+            else:
+                link.symlink_to(here, target_is_directory=True)
+            try:
+                self.assertFalse(render.generate.inside_git(os.path.abspath(link / 'out')))
+                with self.assertRaises(SystemExit):
+                    render.write(link / 'out')
+                self.assertFalse((here / 'out').exists())
+            finally:
+                os.rmdir(link) if os.name == 'nt' else link.unlink()  # removes the link, never its target
 
 
 if __name__ == '__main__':

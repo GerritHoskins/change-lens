@@ -6,9 +6,11 @@ schema uses (type, enum, const, pattern, format: date, required, properties,
 additionalProperties, items, minItems, maxItems, minimum, anyOf, local $ref). Any other
 keyword raises an error, so tightening the schema can never silently pass bad records.
 On top of the schema it checks IDs, stored-file hashes and magic bytes, exact text/PDF
-slices, image geometry and unreadable-region semantics. Image pixels require human review.
+slices, full PNG decoding, image geometry and unreadable regions (image sides only, no ink,
+overlapping a finding). Whether image pixels show the labelled value needs human review.
+Storage checks need storage_ref; use --schema-only for records without stored files.
 
-    python scripts/eval/validate.py --records <dir>/records.jsonl [--texts-root <dir>]
+    python scripts/eval/validate.py --records <dir>/records.jsonl [--texts-root <dir>] [--schema-only]
 """
 import argparse
 from contextlib import closing
@@ -28,6 +30,9 @@ TYPES = {"object": dict, "array": list, "string": str, "boolean": bool}
 SUPPORTED = {"$ref", "type", "enum", "const", "pattern", "format", "minimum", "minItems", "maxItems",
              "items", "required", "properties", "additionalProperties", "anyOf"}
 ANNOTATIONS = {"$schema", "$id", "$defs", "title", "description"}
+SUFFIX = {"text": ".txt", "pdf": ".pdf", "image": ".png"}
+CHANNELS = {0: 1, 2: 3, 4: 2, 6: 4}  # 8-bit greyscale, RGB, grey+alpha, RGBA; no palettes
+UNREADABLE_INK = 128  # an unreadable region holds no pixel darker than this (07 §4)
 
 
 def _type_ok(value, t):
@@ -98,16 +103,79 @@ def check(value, schema, root, path="$"):
     return errs
 
 
-def png_size(data):
+def png_decode(data, pixels=False):
+    """Check a non-interlaced 8-bit PNG with the standard library: (width, height, channels, rows).
+
+    Every chunk CRC is checked, IHDR must come first and IEND last, and the inflated
+    IDAT stream must hold exactly one valid filter byte plus one row of pixels per line.
+    Rows are unfiltered only when pixels is true (slow in pure Python); otherwise None.
+    """
     if (len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or
             data[8:16] != b"\x00\x00\x00\x0dIHDR"):
         raise ValueError("wrong PNG magic bytes or missing IHDR")
-    if zlib.crc32(data[12:29]) != struct.unpack(">I", data[29:33])[0]:
-        raise ValueError("invalid PNG IHDR checksum")
-    size = struct.unpack(">II", data[16:24])
-    if min(size) == 0:
-        raise ValueError("invalid PNG dimensions")
-    return size
+    pos, chunks = 8, []
+    while pos < len(data):
+        if pos + 12 > len(data):
+            raise ValueError("truncated PNG chunk")
+        length, kind = struct.unpack(">I", data[pos:pos + 4])[0], data[pos + 4:pos + 8]
+        body, end = data[pos + 8:pos + 8 + length], pos + 12 + length
+        if end > len(data) or zlib.crc32(kind + body) != struct.unpack(">I", data[end - 4:end])[0]:
+            raise ValueError("invalid PNG %s chunk checksum or length" % kind.decode("latin-1"))
+        chunks.append((kind, body))
+        pos = end
+        if kind == b"IEND":
+            break
+    if chunks[-1][0] != b"IEND" or pos != len(data):
+        raise ValueError("PNG must end with IEND and nothing after it")
+    width, height, depth, colour, _, _, interlace = struct.unpack(">IIBBBBB", chunks[0][1])
+    if min(width, height) == 0 or depth != 8 or colour not in CHANNELS or interlace:
+        raise ValueError("unsupported PNG: need non-empty, 8-bit, non-interlaced, no palette")
+    try:
+        raw = zlib.decompress(b"".join(b for k, b in chunks if k == b"IDAT"))
+    except zlib.error as exc:
+        raise ValueError("PNG image data does not decompress") from exc
+    bpp = CHANNELS[colour]
+    stride = width * bpp
+    if len(raw) != height * (stride + 1):
+        raise ValueError("PNG image data does not match IHDR dimensions")
+    rows, prev = [], bytearray(stride)
+    for y in range(height):
+        kind = raw[y * (stride + 1)]
+        line = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        if kind > 4:
+            raise ValueError("invalid PNG filter type")
+        if not pixels:
+            continue
+        if kind:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                b, c = prev[i], (prev[i - bpp] if i >= bpp else 0)
+                if kind == 1:
+                    line[i] = (line[i] + a) & 255
+                elif kind == 2:
+                    line[i] = (line[i] + b) & 255
+                elif kind == 3:
+                    line[i] = (line[i] + (a + b) // 2) & 255
+                else:
+                    p = a + b - c
+                    pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                    line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        rows.append(bytes(line))
+        prev = line
+    return width, height, bpp, rows if pixels else None
+
+
+def png_size(data):
+    return png_decode(data)[:2]
+
+
+def dark_pixels(data, box, threshold=UNREADABLE_INK):
+    """Pixels inside box whose darkest colour channel is below threshold, i.e. ink."""
+    width, height, bpp, rows = png_decode(data, pixels=True)
+    x0, y0, x1, y1 = math.floor(box[0]), math.floor(box[1]), math.ceil(box[2]), math.ceil(box[3])
+    colour = 1 if bpp in (1, 2) else 3
+    return sum(1 for y in range(y0, y1) for x in range(x0, x1)
+               if min(rows[y][x * bpp:x * bpp + colour]) < threshold)
 
 
 def pdf_texts(data):
@@ -126,6 +194,8 @@ def pdf_texts(data):
 def read_version(ver, root):
     if "storage_ref" not in ver:
         raise ValueError("missing storage_ref")
+    if not ver["storage_ref"].endswith(SUFFIX.get(ver["format"], "\0")):
+        raise ValueError("storage_ref must end in %s for format %s" % (SUFFIX.get(ver["format"]), ver["format"]))
     root = Path(root).resolve()
     path = (root / ver["storage_ref"]).resolve()
     if not path.is_relative_to(root):
@@ -140,7 +210,7 @@ def read_version(ver, root):
             raise ValueError("text format has PDF/PNG magic bytes")
         return data.decode("utf-8")
     if ver["format"] == "image":
-        return png_size(data)
+        return png_decode(data)[:2] + (data,)
     if ver["format"] == "pdf":
         if not data.startswith(b"%PDF-"):
             raise ValueError("wrong PDF magic bytes")
@@ -198,9 +268,20 @@ def check_texts(rec, root):
         errs.append(rec["id"] + ": partial requires unreadable regions")
     for region in regions:
         side, span = region["side"], region["locator"]
-        if side in contents:
-            errs += locator_errors(span, None, rec[side]["format"], contents[side],
-                                   rec["id"] + " unreadable " + side, check_value=False)
+        where = rec["id"] + " unreadable " + side
+        if rec[side]["format"] != "image":
+            errs.append(where + ": unreadable regions are only allowed on image sides")
+            continue
+        if side not in contents:
+            continue
+        bad = locator_errors(span, None, "image", contents[side], where, check_value=False)
+        errs += bad
+        if bad:
+            continue
+        if dark_pixels(contents[side][2], span["box"]):
+            errs.append(where + ": region still contains ink, so it is not unreadable")
+        if not any(overlaps(f.get("evidence_" + side, {}), span) for f in rec["findings"]):
+            errs.append(where + ": region overlaps no finding's evidence on that side")
     for f in rec["findings"]:
         affected = False
         for side in ("old", "new"):
@@ -220,11 +301,12 @@ def check_texts(rec, root):
     return errs
 
 
-def validate_file(records, texts_root=None, schema_path=SCHEMA):
+def validate_file(records, texts_root=None, schema_path=SCHEMA, storage=True):
+    """Schema-check every record; with storage, also check each one against its stored files."""
     with open(schema_path, encoding="utf-8") as fh:
         schema = json.load(fh)
     errs, n, seen = [], 0, set()
-    texts_root = texts_root or os.path.dirname(os.path.abspath(records))
+    texts_root = (texts_root or os.path.dirname(os.path.abspath(records))) if storage else None
     with open(records, encoding="utf-8") as fh:
         for lineno, line in enumerate(fh, 1):
             if not line.strip():
@@ -251,8 +333,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--records", required=True)
     ap.add_argument("--texts-root", help="directory that storage_ref paths are relative to")
+    ap.add_argument("--schema-only", action="store_true",
+                    help="check the schema only, e.g. a manifest in git without storage_ref")
     a = ap.parse_args(argv)
-    n, errs = validate_file(a.records, a.texts_root or os.path.dirname(os.path.abspath(a.records)))
+    n, errs = validate_file(a.records, a.texts_root, storage=not a.schema_only)
     for e in errs:
         print("FAIL " + e)
     print("%s: %d records, %d errors" % ("PASS" if not errs else "FAIL", n, len(errs)))

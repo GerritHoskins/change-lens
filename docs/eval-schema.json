@@ -18,6 +18,7 @@
         "licence": { "type": "string" },
         "retrieved": { "type": "string", "format": "date" },
         "base_pair": { "type": "string", "description": "For constructed pairs: the base document's ID" },
+        "derived_from": { "type": "string", "pattern": "^P-[0-9]{3,}$", "description": "The pair this one re-renders; both always go to the same split (07 §5)" },
         "operators": { "type": "array", "items": { "type": "string" } },
         "anonymised": { "type": "boolean" }
       }

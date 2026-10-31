@@ -261,17 +261,23 @@ def write(out, seed=7, start=600):
     if start < 600:
         raise ValueError('visual record IDs must start at 600 or later')
     out.mkdir(parents=True, exist_ok=True)
-    sources = {op: [] for op in OPS}
+    sources, sources_ids = {op: [] for op in OPS}, []
     for rec, old, new in generate.generate(per_op=6, seed=seed):
+        sources_ids.append(rec['id'])
         op = rec['source']['operators'][0]
         if op in sources:
             sources[op].append((rec, old, new))
-    records = []
+    records, used = [], set()
     for i in range(13):
         op = OPS[i % 5] if i < 10 else 'value_change'
-        source, old, new = sources[op][i % 6]
+        # Each visual pair re-renders a distinct text pair and records it, so the split keeps them together (07 §5).
+        source, old, new = sources[op][i % 6 if i < 10 else i - 9]
+        if source['id'] in used:
+            raise ValueError('two visual pairs would share text source ' + source['id'])
+        used.add(source['id'])
         rec = copy.deepcopy(source)
         rec['id'], rec['expected_status'] = 'P-%03d' % (start + i), 'complete'
+        rec['source']['derived_from'] = source['id']
         degradation = None
         if i < 10:
             other = 'text' if i < 5 else 'pdf'
@@ -286,6 +292,8 @@ def write(out, seed=7, start=600):
         for side, text, fmt in zip(('old', 'new'), (old, new), formats):
             visual_side(out, rec, side, text, fmt, degradation if side == 'new' else None)
         records.append(rec)
+    if {r['id'] for r in records} & set(sources_ids):
+        raise ValueError('visual record IDs collide with the text pairs they derive from')
     (out / 'records.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False) + '\n' for r in records), encoding='utf-8')
     review(out, records)
     return records
