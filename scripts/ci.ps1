@@ -80,6 +80,24 @@ else {
     $ErrorActionPreference = 'Stop'
 }
 
+# Backend unit tests (I-22) in their own venv; integration tests need Docker and run locally (backend/README.md).
+$bpy = Join-Path $root 'backend/.venv/Scripts/python.exe'
+if (-not (Test-Path $bpy) -and (Get-Command python -ErrorAction SilentlyContinue)) { & python -m venv (Join-Path $root 'backend/.venv') }
+if (-not (Test-Path $bpy)) { $errors += 'TEST backend: venv missing' }
+else {
+    $ErrorActionPreference = 'Continue'
+    $global:LASTEXITCODE = -1
+    $install = & $bpy -m pip install --disable-pip-version-check --force-reinstall --no-deps --require-hashes -r backend/requirements.txt -r backend/requirements-test.txt 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) { $install | Write-Host; $errors += 'TEST backend: dependency installation failed' }
+    $global:LASTEXITCODE = -1
+    $out = & $bpy -m pytest backend/tests/unit -q -c backend/pytest.ini 2>&1 | ForEach-Object { "$_" }
+    $code = $LASTEXITCODE
+    Write-Host "backend unit pytest: $($out | Select-Object -Last 1)"
+    if ($code -ne 0) { $out | Write-Host; $errors += "TEST backend unit pytest exit $code" }
+    elseif (-not ($out -match '^[1-9][0-9]* passed')) { $errors += 'TEST backend: no tests ran' }
+    $ErrorActionPreference = 'Stop'
+}
+
 if ($errors) {
     $errors | Where-Object { $_ -like 'TEST*' } | ForEach-Object { Write-Host "FAIL $_" }
     Write-Host "CI FAIL ($($errors.Count) problems)"; exit 1
