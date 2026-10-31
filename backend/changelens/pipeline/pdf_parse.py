@@ -108,9 +108,10 @@ def parse_pdf(data: bytes, limits: Limits) -> ParsedDocument:
         raise ParseRejected("limit_exceeded_bytes")
     try:
         pdf = pdfium.PdfDocument(data)
+        spare = pdfium.PdfDocument(data)  # second copy: its pages lose their text for the cover check
     except pdfium.PdfiumError:
         raise ParseRejected("malformed_pdf") from None
-    with closing(pdf):
+    with closing(pdf), closing(spare):
         n = len(pdf)
         if n == 0:
             raise ParseRejected("malformed_pdf")
@@ -122,7 +123,7 @@ def parse_pdf(data: bytes, limits: Limits) -> ParsedDocument:
         chars = 0
         for i in range(n):
             page_no = i + 1
-            with closing(pdf[i]) as page, closing(page.get_textpage()) as tp:
+            with closing(pdf[i]) as page, closing(page.get_textpage()) as tp, closing(spare[i]) as spare_page:
                 text = tp.get_text_range()
                 chars += len(text)
                 if chars > limits.max_extracted_chars:
@@ -134,7 +135,7 @@ def parse_pdf(data: bytes, limits: Limits) -> ParsedDocument:
                     continue
                 ink, unmeasurable = None, None
                 try:
-                    ink = PageInk(page, tp, limits.max_render_pixels)
+                    ink = PageInk(page, tp, limits.max_render_pixels, spare_page)
                 except Unmeasurable as u:
                     unmeasurable = u.code
                     warnings.append(ParseWarning("visibility_unchecked", page_no))
