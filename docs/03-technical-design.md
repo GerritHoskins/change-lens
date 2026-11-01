@@ -109,9 +109,9 @@ The six logical records from handoff §8, plus supporting records for review, sh
 | Project | id, tenant_id, name, client_label, created_at, deleted_at | Mutable metadata |
 | SourceVersion | id, project_id, label, kind, original_object_key, sha256, parsed_text, parse_warnings, user_order_index, scope (complete / partial / unknown), confirmed_at | Immutable after confirm (AC-15) |
 | ExtractedFact | id, source_version_id, type, raw_text, normalised_value, locator, status (ok / ambiguous / unextracted), confidence, model_config_id | Immutable |
-| Comparison | id, project_id, earlier_id, later_id, scope_snapshot, pipeline_version, model_config_id, status (queued / running / complete / partial / failed), cost_estimate, cost_actual, warnings | Status only |
-| Finding | id, comparison_id, category, change_type, before, after, evidence[], explanation, uncertainty, priority, revision, supersedes_id | New revision on correction |
-| ReviewEvent | id, finding_id, actor_id, action (confirmed / corrected / dismissed / note), at | Append-only |
+| Comparison | id, project_id, earlier_id, later_id, scope_snapshot, pipeline_version, model_config_id, status (waiting_for_versions / queued / running / complete / partial / failed), idempotency_key, cost_estimate, cost_actual, warnings | Status only |
+| Finding | id, comparison_id, category, topic (derived from category, O-14), change_type, before, after, evidence[], explanation, uncertainty, priority, revision, supersedes_id | New revision on correction |
+| ReviewEvent | id, finding_id, actor_id, action (confirmed / corrected / dismissed / note), evidence_mode_before and evidence_mode_after (pdf_highlight / text_fallback / text_only), page_opened, at | Append-only |
 | ClientApprovalRecord | id, finding_id, evidence_text_or_object, stated_by, stated_at, recorded_by | Append-only, separate from review (AC-12) |
 | SharedReport | id, comparison_id, token_hash, snapshot_json, included_finding_ids, expires_at, revoked_at, view_log | Snapshot never edited; set to null on revocation or expiry (03a P7); revocation state mutable |
 | User | id, idp_subjects[], email, apple_refresh_token_enc (encrypted with a key from the secret store; only for Apple sign-in), deleted_at | Deleted users become a tombstone ID, so `actor_id` and `recorded_by` in append-only records stay valid without personal data (03a P8) |
@@ -251,10 +251,10 @@ Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the us
 | `GET /versions/{id}` | Version metadata, parse status and warnings | — |
 | `GET /versions/{id}/original` | Short-lived signed URL for the original | Streamed into memory by the app (AC-25) |
 | `GET /versions/{id}/text` | Parsed text with block locators | Evidence fallback |
-| `POST /projects/{id}/comparisons` | Body: `earlier_id`, `later_id`, `scope` | This call *is* the user's order and scope confirmation (AC-14); allowance check (AC-21); returns 202 with an ID |
-| `GET /comparisons/{id}` | Status (queued / running / complete / partial / failed), warnings | Polling fallback |
-| `GET /comparisons/{id}/findings` | Prioritised, needs-review, all differences, withheld count, unexplained differences | — |
-| `POST /findings/{id}/reviews` | Confirm / correct / dismiss / note | A correction creates a new finding revision (AC-15) |
+| `POST /projects/{id}/comparisons` | Body: `earlier` and `later` (each an existing version ID or a new upload or paste with a label) and `scope`, plus an `Idempotency-Key` header. One request creates any new versions and the comparison (O-15) | This call *is* the user's order and scope confirmation (AC-14). A retry with the same key returns the same comparison and creates nothing. An early allowance check rejects with `allowance_exhausted`, but nothing is charged until processing starts (AC-21). Returns 202 with an ID |
+| `GET /comparisons/{id}` | Status (waiting_for_versions / queued / running / complete / partial / failed), warnings; a failed comparison names the rejected version and its reason | Polling fallback |
+| `GET /comparisons/{id}/findings` | Prioritised, needs-review, all differences, withheld count, unexplained differences, each finding's topic and the per-topic counts (O-14) | — |
+| `POST /findings/{id}/reviews` | Confirm / correct / dismiss / note, with `evidence_mode` per side and `page_opened` (O-17) | A correction creates a new finding revision (AC-15) |
 | `POST /findings/{id}/client-approvals` | Record external approval evidence | Separate record; never set by a review (AC-12) |
 | `POST /comparisons/{id}/shares` | Create a snapshot from selected finding IDs, with expiry | Token returned once; only its hash is stored |
 | `GET /comparisons/{id}/shares`, `DELETE /shares/{id}` | List and revoke | AC-17 |
@@ -271,9 +271,9 @@ Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`,
 
 1. **Import.** The app calls `POST /projects/{id}/versions` (from paste, picker, camera or the share extension). The API checks limits and type, stores the original under a tenant-prefixed key, writes `SourceVersion(status=uploaded)` and enqueues `parse(version_id)`.
 2. **Parse.** The worker runs the sandboxed parse, producing parsed text, blocks, locators and warnings. Status becomes `parsed`, or `rejected` with a reason.
-3. **Confirm.** The user picks the pair and scope, and the app calls `POST /comparisons`. `metering` checks the allowance, a `Comparison(queued)` row is written, and `compare(comparison_id)` is enqueued.
+3. **Compare screen.** The user fills both slots (existing versions or new imports), the scope and the project, then presses Start. The app sends one `POST /comparisons` with an idempotency key. New versions are stored and their `parse` jobs enqueued as in step 1. If either version isn't `parsed` yet, the comparison is written as `waiting_for_versions`; otherwise it is written as `queued` and `compare(comparison_id)` is enqueued. When the last parse finishes, the worker moves a waiting comparison to `queued` and enqueues `compare`, or to `failed` with the rejected version's reason. `metering` charges the allowance when the compare job starts (queued → running), so waiting and early failures are free (O-15).
 4. **Compare.** The worker uses cached facts or runs `extract`, then `align`, `compare`, `verify` and `report`, all under the cost ceiling. It persists findings, cost and the final status; `notify` then sends a content-free push.
-5. **Inspect.** The app fetches the findings, the original's signed URL and the locators. `pdfrx` highlights the passages, with the parsed text as fallback.
+5. **Inspect.** The app fetches the findings, the original's signed URL and the locators. `pdfrx` highlights the passages, with the parsed text as fallback; the app records which mode each side was shown in (O-17).
 6. **Review.** Review events are appended, corrections create new revisions, and client approval is recorded separately.
 7. **Share.** The API builds an immutable snapshot of the selected findings and their excerpts and returns the token once. The recipient opens `GET /s/{token}`.
 8. **Delete.** `DELETE /projects/{id}` cascades, purges the object prefix and revokes shares; backups expire within 30 days.
