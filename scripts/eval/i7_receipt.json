@@ -1,0 +1,149 @@
+{
+ "split": "held_out",
+ "model": "Qwen/Qwen3.5-397B-A17B",
+ "fingerprint": "2d7509d7c222a47f",
+ "commit": "bbb30e39505494c0b6c0521aa436ad32ee40c28d",
+ "date": "2026-11-01",
+ "runs": 2,
+ "skipped_image_pairs": 8,
+ "real_pairs": 0,
+ "rerun_reason": null,
+ "calls": 449,
+ "pairs": 46,
+ "comparisons": 92,
+ "status": {
+  "complete": 92,
+  "partial": 0,
+  "failed": 0
+ },
+ "precision": 0.885,
+ "precision_ci": [
+  0.792,
+  0.958
+ ],
+ "recall": 0.936,
+ "recall_ci": [
+  0.864,
+  0.987
+ ],
+ "material_recall": 0.922,
+ "material_recall_ci": [
+  0.833,
+  0.984
+ ],
+ "tp_pred_gold": [
+  146,
+  165,
+  156
+ ],
+ "material_tp_gold": [
+  118,
+  128
+ ],
+ "change_type_agreement_on_matches": "138/146",
+ "false_removals": 0,
+ "scope_pairs": 8,
+ "false_removal_rate_upper_95": 0.375,
+ "evidence_location": 1.0,
+ "evidence_location_ci": [
+  0.984,
+  1.0
+ ],
+ "located_locatable": [
+  232,
+  232
+ ],
+ "unsupported_rate": 0.0,
+ "unsupported_ci": [
+  0.0,
+  0.015
+ ],
+ "unsupported_shown": [
+  0,
+  247
+ ],
+ "fabricated_scope_changes": 0,
+ "withheld": 0,
+ "cost_p50_eur": 0.0051,
+ "cost_p90_typical_eur": 0.0063,
+ "cost_p90_heavy_eur": null,
+ "typical_heavy_comparisons": [
+  92,
+  0
+ ],
+ "latency_p50_s": 14.3,
+ "latency_p90_s": 24.4,
+ "cost_eur_total": 0.4827,
+ "identical_runs": "39/46",
+ "gates": {
+  "false_removals": {
+   "value": 0,
+   "limit": "== 0",
+   "pass": true
+  },
+  "material_recall": {
+   "value": 0.922,
+   "limit": ">= 0.95",
+   "pass": false
+  },
+  "recall": {
+   "value": 0.936,
+   "limit": ">= 0.9",
+   "pass": true
+  },
+  "precision": {
+   "value": 0.885,
+   "limit": ">= 0.9",
+   "pass": false
+  },
+  "evidence_location": {
+   "value": 1.0,
+   "limit": ">= 0.98",
+   "pass": true
+  },
+  "unsupported_rate": {
+   "value": 0.0,
+   "limit": "<= 0.02",
+   "pass": true
+  },
+  "fabricated_scope_changes": {
+   "value": 0,
+   "limit": "== 0",
+   "pass": true
+  },
+  "cost_p90_typical_eur": {
+   "value": 0.0063,
+   "limit": "<= 0.2",
+   "pass": true
+  },
+  "cost_p90_heavy_eur": {
+   "value": null,
+   "limit": "<= 0.6",
+   "pass": null
+  },
+  "advantage_over_baseline": {
+   "value": {
+    "false_removals": [
+     0,
+     0
+    ],
+    "missed_material": [
+     10,
+     16
+    ]
+   },
+   "pass": true,
+   "directional": true
+  }
+ },
+ "baseline": {
+  "precision": 0.933,
+  "recall": 0.897,
+  "material_recall": 0.875,
+  "false_removals": 0,
+  "fabricated_scope_changes": 0,
+  "missed_material": 16,
+  "failed": 0
+ },
+ "verdict": "FAIL"
+}
