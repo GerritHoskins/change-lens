@@ -10,9 +10,11 @@ Rules:
 
 The output lists record IDs only (no content), so it is kept in git: `scripts/eval/split.json`.
 Held-out pairs are frozen: never used for prompt tuning, D-17 or debugging (07 §5.4).
+A development-only set (I-7 owner decision Q2 = A, 2026-11-01) is built after the split for tuning
+only: all its pairs go to development, and the seeded split of the other sets is unchanged by it.
 Standard library only.
 
-    python scripts/eval/split.py --data ../change-lens-data --seed 17
+    python scripts/eval/split.py --data ../change-lens-data --seed 17 --dev-only-sets constructed-dev2
 """
 from __future__ import annotations
 
@@ -96,15 +98,34 @@ def split(records: list[dict], seed: int, fraction: float = DEV_FRACTION) -> dic
             "strata": strata, "development": sorted(dev), "held_out": sorted(held)}
 
 
+def add_dev_only(result: dict, records: list[dict]) -> dict:
+    """Append a development-only set to a finished split; its pairs never touch the seeded split."""
+    ids = [r["id"] for r in records]
+    clash = set(ids) & (set(result["development"]) | set(result["held_out"]))
+    if clash or len(set(ids)) != len(ids):
+        raise SplitError(f"development-only ids already in the split or repeated: {sorted(clash) or ids}")
+    known = set(ids) | set(result["development"]) | set(result["held_out"])
+    if any(r["derived_from"] and r["derived_from"] not in known for r in records):
+        raise SplitError("a development-only pair derives from an unknown pair")
+    if any(r["derived_from"] in set(result["held_out"]) for r in records):
+        raise SplitError("a development-only pair derives from a held-out pair")
+    by = Counter(r["tier"] + "/" + "+".join(r["case_types"]) for r in records)
+    return result | {"development": sorted(result["development"] + ids),
+                     "development_only": {"pairs": len(ids), "strata": dict(sorted(by.items()))}}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data", type=Path, required=True, help="private data folder (change-lens-data)")
     ap.add_argument("--sets", nargs="+", default=list(DEFAULT_SETS))
+    ap.add_argument("--dev-only-sets", nargs="*", default=[], help="sets whose pairs all go to development")
     ap.add_argument("--seed", type=int, default=17)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
     result = split(load(args.data, args.sets), args.seed)
-    result["sets"] = list(args.sets)
+    if args.dev_only_sets:
+        result = add_dev_only(result, load(args.data, args.dev_only_sets))
+    result["sets"] = list(args.sets) + list(args.dev_only_sets)
     args.out.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8", newline="\n")
     counts = Counter(s.split("/")[0] for s in result["strata"])
     print(f"split seed={args.seed}: development {len(result['development'])}, held-out "
