@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import generate  # noqa: E402
 import validate  # noqa: E402
-from bases import BASES  # noqa: E402
+from bases import BASES, DEV2_BASES  # noqa: E402
 
 with open(validate.SCHEMA, encoding="utf-8") as _fh:
     SCHEMA = json.load(_fh)
@@ -170,12 +170,55 @@ class LabelRules(unittest.TestCase):
 
     def test_paraphrases_keep_binding_words(self):
         binding = ("must", "only", "capped", "including", "excluding")
-        for base in BASES:
+        for base in BASES + DEV2_BASES:
             for sec in base["sections"]:
                 for it in sec["items"]:
                     for w in binding:
                         if (" %s " % w) in (" " + it["tpl"].lower()):
                             self.assertIn(w, it["para"].lower(), (base["id"], it["id"], w))
+
+
+DEV2_OPS = ["value_change", "qualifier_flip", "replacement", "partial_update", "unknown_scope"]
+
+
+def dev2(per_op=4, seed=101):
+    return list(generate.generate(per_op=per_op, seed=seed, start=700, bases=DEV2_BASES, ops=DEV2_OPS))
+
+
+class Dev2(unittest.TestCase):
+    """The second development set (I-7, Q2 = A): material-heavy, its own bases, IDs from P-700."""
+
+    def test_valid_spans_and_material(self):
+        recs = dev2()
+        self.assertEqual(len(recs), 20)
+        for rec, old, new in recs:
+            self.assertEqual(validate.check(rec, SCHEMA, SCHEMA), [], rec["id"])
+            self.assertIn(rec["source"]["base_pair"], {b["id"] for b in DEV2_BASES})
+            texts = {"old": old, "new": new}
+            for f in rec["findings"]:
+                for side in ("old", "new"):
+                    if f.get("evidence_" + side):
+                        span = f["evidence_" + side]
+                        self.assertEqual(texts[side][span["start"]:span["end"]], f[side + "_value"], rec["id"])
+        material = sum(f["material"] for r, _, _ in recs for f in r["findings"])
+        self.assertGreaterEqual(material, 40)
+
+    def test_ops_filter_keeps_operator_order_and_rejects_unknown_names(self):
+        ops = [r["source"]["operators"][0] for r, _, _ in dev2(per_op=1)]
+        self.assertEqual(ops, DEV2_OPS)
+        with self.assertRaises(ValueError):
+            list(generate.generate(ops=["no_such_op"]))
+
+    def test_ids_do_not_collide_with_the_existing_sets(self):
+        ids = {r["id"] for r, _, _ in dev2()}
+        self.assertEqual(ids, {"P-%03d" % i for i in range(700, 720)})  # text 500s, visual and hidden 600s
+
+    def test_flip_words_are_in_the_template_and_not_in_the_value(self):
+        for base in DEV2_BASES:
+            for it in generate.items(base):
+                if it.get("flip"):
+                    self.assertIn(it["flip"][0], it["tpl"].replace("{v}", ""), it["id"])
+                    self.assertNotIn(it["flip"][0], it["v"], it["id"])
 
 
 class Validator(unittest.TestCase):

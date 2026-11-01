@@ -98,6 +98,24 @@ def test_contradiction_marks_the_group_and_pairs_every_value():
     assert [p.status for p in pairs] == ["ambiguous", "ambiguous"]
 
 
+def test_two_readings_of_one_sentence_are_not_a_contradiction():
+    # dev pair P-708: one sentence extracted twice, as "6" and as the whole clause
+    s = "- Record and edit 6 launch episodes."
+    twice = [fact("6", subject="episodes", context=s),
+             fact("record and edit 6 launch episodes", subject="episodes", context=s)]
+    assert [f.ambiguity for f in mark_contradictions(twice)] == [None, None]
+
+
+def test_a_second_passage_with_another_value_is_still_a_contradiction():
+    s = "- Record and edit 6 launch episodes."
+    group = [fact("6", subject="episodes", context=s),
+             fact("record and edit 6 launch episodes", subject="episodes", context=s),
+             fact("8", subject="episodes", context="- Notes: record and edit 8 launch episodes.")]
+    assert [f.ambiguity for f in mark_contradictions(group)] == ["contradiction"] * 3
+    repeated = group[:2] + [fact("6", subject="episodes", context="- Notes: 6 launch episodes.")]
+    assert [f.ambiguity for f in mark_contradictions(repeated)] == [None] * 3
+
+
 def test_llm_match_needs_high_confidence_and_one_to_one():
     e = [fact("Logo", "deliverable", "logo"), fact("Icons", "deliverable", "icons")]
     l = [fact("Brand mark", "deliverable", "brand mark"), fact("Icon set", "deliverable", "icon set")]
@@ -176,6 +194,26 @@ def test_added_and_ambiguous():
     drafts = compare([FactPair("unmatched_later", None, fact("Video")),
                       FactPair("ambiguous", fact("Logo"), fact("Mark"))], "complete", Never())
     assert [(d.change_type, d.uncertainty) for d in drafts] == [("added", None), ("uncertain", "ambiguous_match")]
+
+
+def test_an_ambiguous_pair_on_the_same_sentence_is_unchanged():
+    # Extraction typed one unchanged sentence as a quantity on one side and a deliverable on the other
+    # (dev pair P-526): whichever way the facts pair up, the sentence is on both sides unchanged.
+    s = "- Produce 3 short videos for social media."
+    cross = FactPair("ambiguous", fact("for social media", "deliverable", "videos", context=s),
+                     fact("3", "quantity", "videos", context=s))
+    same = FactPair("ambiguous", fact("3", subject="videos", context=s), fact("3", subject="videos", context=s))
+    assert compare([cross, same], "complete", Never()) == []
+
+
+def test_an_ambiguous_pair_stays_uncertain_when_the_sentence_changed_or_contradicts():
+    reworded = FactPair("ambiguous", fact("3", context="- Produce 3 short videos for social media."),
+                        fact("3", context="- 3 short social media videos are to be produced."))
+    clash = FactPair("ambiguous", fact("EUR 12,000", ambiguity="contradiction", context="Budget EUR 12,000."),
+                     fact("EUR 12,000", ambiguity="contradiction", context="Budget EUR 12,000."))
+    drafts = compare([reworded, clash], "complete", Never())
+    assert [(d.change_type, d.uncertainty) for d in drafts] == [
+        ("uncertain", "ambiguous_match"), ("uncertain", "contradiction")]
 
 
 def test_ambiguous_date_or_contradiction_is_never_a_silent_guess():

@@ -13,7 +13,8 @@ Matched pairs, deterministic guards first (03 §4.1):
 Unmatched earlier facts follow the scope table (03 §4.2; I-4 owns its acceptance): complete ->
 `removed` (absent from the replacement, never "cancelled"), partial -> `not_addressed`, unknown ->
 `uncertain`. Unmatched newer facts are `added`. Ambiguous pairs and any finding that touches an
-ambiguous fact become `uncertain` and are flagged for review (AC-7).
+ambiguous fact become `uncertain` and are flagged for review (AC-7), except that rule 0 applies to an
+ambiguous pair too: two facts in the same sentence are unchanged whichever way they pair up (I-7).
 """
 from __future__ import annotations
 
@@ -84,7 +85,13 @@ def compare(pairs: list[FactPair], later_scope: Scope, llm: Llm) -> list[DraftFi
                 drafts.append(_draft("equivalent", p))  # placeholder until the verdict below
                 to_judge.append((len(drafts) - 1, p))
         elif p.status == "ambiguous":
-            drafts.append(_draft("uncertain", p, "ambiguous_match"))
+            ec, lc = e.context or e.raw_text, l.context or l.raw_text
+            if canonical(ec) == canonical(lc):
+                # Rule 0 holds whichever way the facts pair up; contradictions still need review.
+                if "contradiction" in (e.ambiguity, l.ambiguity):
+                    drafts.append(_draft("equivalent", p))  # becomes uncertain (AC-7)
+            else:
+                drafts.append(_draft("uncertain", p, "ambiguous_match"))
         elif p.status == "unmatched_earlier":
             change_type, note = OMISSION[later_scope]
             drafts.append(_draft(change_type, p, note if change_type == "uncertain" else None))
