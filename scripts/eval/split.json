@@ -99,7 +99,27 @@
   "P-604",
   "P-611",
   "P-614",
-  "P-615"
+  "P-615",
+  "P-700",
+  "P-701",
+  "P-702",
+  "P-703",
+  "P-704",
+  "P-705",
+  "P-706",
+  "P-707",
+  "P-708",
+  "P-709",
+  "P-710",
+  "P-711",
+  "P-712",
+  "P-713",
+  "P-714",
+  "P-715",
+  "P-716",
+  "P-717",
+  "P-718",
+  "P-719"
  ],
  "held_out": [
   "P-501",
@@ -157,9 +177,20 @@
   "P-613",
   "P-616"
  ],
+ "development_only": {
+  "pairs": 20,
+  "strata": {
+   "constructed/numeric_negation_qualifier": 4,
+   "constructed/partial_update": 4,
+   "constructed/replacement_with_omissions": 4,
+   "constructed/unknown_scope": 4,
+   "constructed/value_change": 4
+  }
+ },
  "sets": [
   "constructed",
   "constructed-visual",
-  "constructed-hidden"
+  "constructed-hidden",
+  "constructed-dev2"
  ]
 }

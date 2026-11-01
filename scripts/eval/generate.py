@@ -5,6 +5,7 @@ labels as it goes, so every label is known by construction. Each record follows
 docs/eval-schema.json; the texts go to private storage outside git.
 
     python scripts/eval/generate.py --out ../change-lens-data/constructed [--per-op 6] [--seed 7] [--start 500]
+    python scripts/eval/generate.py --out ../change-lens-data/constructed-dev2 --bases dev2 --per-op 4 --seed 101 --start 700 --ops value_change,qualifier_flip,replacement,partial_update,unknown_scope
 
 Text only and standard library only. render.py reuses these operators for PDF/image
 fixtures with separately pinned render dependencies (requirements-render.txt).
@@ -17,7 +18,9 @@ import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bases import BASES  # noqa: E402
+from bases import BASES, DEV2_BASES  # noqa: E402
+
+BASE_SETS = {"default": BASES, "dev2": DEV2_BASES}
 
 INJECTIONS = [
     # explicit instruction, "treat as equivalent" steering, and text hidden from a human reader
@@ -243,13 +246,19 @@ def sha(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def generate(per_op=6, seed=7, start=500):
-    """Yield (record, old_text, new_text). Deterministic for a given seed."""
+def generate(per_op=6, seed=7, start=500, bases=BASES, ops=None):
+    """Yield (record, old_text, new_text). Deterministic for a given seed. `ops` picks operators
+    by name, in OPERATORS order; the defaults reproduce the original set exactly."""
+    unknown = set(ops or ()) - set(OPERATORS)
+    if unknown:
+        raise ValueError("unknown operators: %s" % ", ".join(sorted(unknown)))
     rng = random.Random(seed)
     n = start
     for name, op in OPERATORS.items():
+        if ops is not None and name not in ops:
+            continue
         for k in range(per_op):
-            base = BASES[k % len(BASES)]
+            base = bases[k % len(bases)]
             old, new, fs, cases = op(base, rng, k // len(BASES)) if op is op_flip else op(base, rng)
             for i, f in enumerate(fs, 1):
                 f["id"] = "F-%d" % i
@@ -277,13 +286,13 @@ def inside_git(path):
         p = parent
 
 
-def write(out, per_op, seed, start):
+def write(out, per_op, seed, start, bases=BASES, ops=None):
     if inside_git(out):
         raise SystemExit("refusing to write texts inside a git working tree: %s" % os.path.abspath(out))
     os.makedirs(os.path.join(out, "texts"), exist_ok=True)
     count = 0
     with open(os.path.join(out, "records.jsonl"), "w", encoding="utf-8", newline="\n") as fh:
-        for rec, old, new in generate(per_op, seed, start):
+        for rec, old, new in generate(per_op, seed, start, bases, ops):
             for side, text in (("old", old), ("new", new)):
                 with open(os.path.join(out, rec[side]["storage_ref"]), "w", encoding="utf-8", newline="") as t:
                     t.write(text)
@@ -298,8 +307,12 @@ def main(argv=None):
     ap.add_argument("--per-op", type=int, default=6)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--start", type=int, default=500, help="first pair number (P-NNN)")
+    ap.add_argument("--bases", choices=sorted(BASE_SETS), default="default")
+    ap.add_argument("--ops", help="comma-separated operator names (default: all)")
     a = ap.parse_args(argv)
-    print("wrote %d pairs to %s" % (write(a.out, a.per_op, a.seed, a.start), a.out))
+    ops = a.ops.split(",") if a.ops else None
+    n = write(a.out, a.per_op, a.seed, a.start, BASE_SETS[a.bases], ops)
+    print("wrote %d pairs to %s" % (n, a.out))
 
 
 if __name__ == "__main__":
