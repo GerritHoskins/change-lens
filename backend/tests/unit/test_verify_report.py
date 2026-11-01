@@ -54,6 +54,21 @@ class Said:
 
 # verify -------------------------------------------------------------------------------------------
 
+def test_an_exact_duplicate_is_dropped_but_a_different_reading_is_kept():
+    # dev pair P-715: one fact extracted twice gave the same finding twice
+    other_category = DraftFinding("changed", "other_material", budget().evidence)
+    other_values = budget(old_value="12000", new_value="15000")
+    res = verify([budget(), budget(), other_category, other_values], E, L)
+    assert [(f.category, f.old_value) for f in res.findings] == [
+        ("quantity", None), ("other_material", None), ("quantity", "12000")]
+    assert res.withheld_count == 0
+
+
+def test_a_duplicate_that_needs_review_sends_the_kept_finding_to_review():
+    [kept] = verify([budget(confidence=0.6), budget(confidence=0.3)], E, L).findings
+    assert (kept.group, kept.confidence) == ("needs_review", 0.3)
+
+
 def test_exact_quotes_are_kept_and_anything_else_is_withheld():
     tampered = budget()
     tampered.evidence[1] = replace(tampered.evidence[1], quote="EUR 16,000")
@@ -67,7 +82,7 @@ def test_exact_quotes_are_kept_and_anything_else_is_withheld():
 
 def test_uncertain_and_low_confidence_need_review():
     unsure = DraftFinding("uncertain", "deliverable", [ev(E, "earlier", "Hosting")], note="scope_unknown")
-    out = verify([unsure, budget(confidence=0.3), budget(confidence=0.6)], E, L)
+    out = verify([unsure, budget(confidence=0.3), budget(confidence=0.6, old_value="12000")], E, L)
     assert [f.group for f in out.findings] == ["needs_review", "needs_review", "other"]
 
 
