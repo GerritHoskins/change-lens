@@ -1,7 +1,8 @@
 """The `align` stage (03 §2, 03a P5.2; I-3): earlier facts + newer facts -> FactPairs.
 
-0. Contradictions inside one version (same type and subject, different canonical values) mark
-   every fact of that group ambiguous; they are never resolved by picking one (AC-7).
+0. Contradictions inside one version (same type and subject, two sentences whose values have
+   nothing in common) mark every fact of that group ambiguous; they are never resolved by picking
+   one (AC-7). Two readings of one sentence are not a contradiction (I-7).
 1. Deterministic: a key of (type, subject) that occurs exactly once on each side is a match. Keys
    ignore position, so a reordered brief aligns the same way (AC-6).
 2. The rest goes to one `FactMatches` call. A proposal becomes a match only with high confidence and
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import replace
+from itertools import combinations
 from typing import Protocol, Sequence
 
 from changelens.pipeline.types import ExtractedFact, FactPair
@@ -42,11 +44,15 @@ def key(f: ExtractedFact) -> tuple[str, str]:
 
 
 def mark_contradictions(facts: list[ExtractedFact]) -> list[ExtractedFact]:
-    groups: dict[tuple[str, str], set[str]] = defaultdict(set)
+    """A contradiction needs two passages that disagree: two sentences (as in compare's rule 0) whose
+    values for the key have nothing in common. Two readings of one sentence ("6" and "record and edit
+    6 launch episodes", dev pair P-708) are not one."""
+    groups: dict[tuple[str, str], dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     for f in facts:
         if f.normalised_value:
-            groups[key(f)].add(canonical(f.normalised_value))
-    clash = {k for k, values in groups.items() if len(values) > 1}
+            groups[key(f)][canonical(f.context or f.raw_text)].add(canonical(f.normalised_value))
+    clash = {k for k, by_sentence in groups.items()
+             if any(a.isdisjoint(b) for a, b in combinations(by_sentence.values(), 2))}
     return [replace(f, status="ambiguous", ambiguity="contradiction") if key(f) in clash else f for f in facts]
 
 

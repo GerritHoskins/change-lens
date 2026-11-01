@@ -25,7 +25,7 @@ from changelens.llm.errors import LlmOutputInvalid
 from changelens.llm.schemas import FACT_LIST
 from changelens.pipeline.types import Block, ExtractedFact, Locator, ParsedDocument
 
-EXTRACT_VERSION = "extract-v5"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs; v5: counted deliverables are quantities
+EXTRACT_VERSION = "extract-v6"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs; v5: counted deliverables are quantities; v6: counts are quantities and measurements deliverables, wherever the number sits
 CHUNK_CHARS = 6000
 CONFIDENCE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 
@@ -124,14 +124,23 @@ def normalise(s: Optional[str]) -> str:
     return _SEP.sub("", _WS.sub(" ", s).strip(_TRIM).casefold())
 
 
-_COUNT = re.compile(r"\d+(?:\s|$)")
+# The first standalone number in a value (not part of "PDF/X-4" or "v2.1"), and what follows it.
+_NUMBER = re.compile(r"(?<![\w/.\-])\d+(?:[.,]\d+)?")
+_UNIT = re.compile(r"\s?(?:mm|cm|m|km|inch(?:es)?|ft|px|pt|dpi|ppi|[kmg]b|tb|k?hz|mhz|[km]bps|fps|p|k|"
+                   r"s|secs?|seconds?|mins?|minutes?|hrs?|hours?|%|x)(?![\w%])", re.I)
+_SIZED = frozenset({"deliverable", "quantity"})
 
 
 def fact_type(model_type: str, value: str) -> str:
-    """The prompt's own boundary, enforced: a deliverable whose value is a count of units ("3",
-    "24 pages", "3 short videos") is a quantity. The model does not always follow it (I-7), and the
-    two versions must type the same item alike to align."""
-    return "quantity" if model_type == "deliverable" and _COUNT.match(value) else model_type
+    """The 07 §4 boundary, enforced between deliverable and quantity: a count of things ("3",
+    "24 pages", "design packaging for 5 tea flavours") is a quantity, and a measurement of the thing
+    delivered ("1080p", "30 seconds", "48 kHz", "3 mm bleed", "2 m by 1 m") is a deliverable. The
+    first standalone number decides. The model does not always follow the prompt (I-7), and the two
+    versions must type the same item alike to align. Other types are never changed."""
+    m = _NUMBER.search(value or "")
+    if model_type not in _SIZED or m is None:
+        return model_type
+    return "deliverable" if _UNIT.match(value, m.end()) else "quantity"
 
 
 def locate(doc: ParsedDocument, block: Block, quote: str) -> Optional[Locator]:

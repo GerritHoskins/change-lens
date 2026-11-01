@@ -2,6 +2,8 @@
 carry the current prompt and model fingerprint (05, I-7)."""
 import json
 
+import pytest
+
 from tools import d17_score as sc, i7_metrics as im
 from tools.i7_run import RECEIPT
 
@@ -94,3 +96,22 @@ def test_a_counted_deliverable_is_a_quantity():
     assert fact_type("deliverable", "1080p") == "deliverable"
     assert fact_type("deliverable", "delivered as svg files") == "deliverable"
     assert fact_type("date_deadline", "3 march 2027") == "date_deadline"
+
+
+@pytest.mark.parametrize("value,expected", [
+    # counts of things: quantity, wherever the number sits (dev pairs P-701, P-717)
+    ("3", "quantity"), ("design packaging for 5 tea flavours", "quantity"),
+    ("provide 2 rounds of photorealistic mockups", "quantity"), ("3 short videos of 30 seconds", "quantity"),
+    # measurements of the thing delivered: deliverable (07 §4 units and formats; P-710, P-718)
+    ("1080p", "deliverable"), ("30 seconds", "deliverable"), ("wav at 48 khz", "deliverable"),
+    ("print-ready pdf with 3 mm bleed", "deliverable"), ("2 m by 1 m", "deliverable"),
+    ("mp3 at 320 kbps", "deliverable"), ("4k", "deliverable"), ("300 dpi", "deliverable"),
+    # a number inside a name is not a count, and no number leaves the model's type alone
+    ("print-ready pdf/x-4", None), ("svg files", None), ("several", None),
+])
+def test_counts_are_quantities_and_measurements_deliverables(value, expected):
+    from changelens.pipeline.extract import fact_type
+    for model_type in ("deliverable", "quantity"):
+        assert fact_type(model_type, value) == (expected or model_type), (model_type, value)
+    assert fact_type("other_material", "eur 9600") == "other_material"
+    assert fact_type("date_deadline", "30 june 2027") == "date_deadline"
