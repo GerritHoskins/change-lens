@@ -1,0 +1,48 @@
+# D-8: a throwaway local Logto for the checks in CHECKLIST.md (ADR-0020). Not for production.
+# Images are pinned by tag and digest. Logto 1.45.0 is later than 1.37.1 (CVE-2026-15611).
+# Ports bind to localhost only. Dev-only credentials. Start: docker compose up -d --wait
+# Stop and delete everything: docker compose down -v
+name: changelens-d8-logto
+services:
+  postgres:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    environment:
+      POSTGRES_USER: logto
+      POSTGRES_PASSWORD: logto-d8-dev-only
+      POSTGRES_DB: logto
+    volumes:
+      - logto-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logto -d logto"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  logto:
+    image: svhd/logto:1.45.0@sha256:9a9aff9423ab7863f00c881c31408e0bfe4def730bac2182d0097367002f5854
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    environment:
+      TRUST_PROXY_HEADER: "1"
+      DB_URL: postgres://logto:logto-d8-dev-only@postgres:5432/logto
+      ENDPOINT: http://localhost:3001
+      ADMIN_ENDPOINT: http://localhost:3002
+    ports:
+      - "127.0.0.1:3001:3001"  # sign-in and OIDC
+      - "127.0.0.1:3002:3002"  # admin console
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/status >/dev/null || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+
+  mailpit:
+    # Catches the one-time-code emails: Logto's SMTP connector sends to mailpit:1025.
+    image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
+    ports:
+      - "127.0.0.1:8025:8025"  # web inbox
+
+volumes:
+  logto-pg:
