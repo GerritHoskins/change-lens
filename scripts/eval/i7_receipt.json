@@ -1,0 +1,149 @@
+{
+ "split": "held_out",
+ "model": "Qwen/Qwen3.5-397B-A17B",
+ "fingerprint": "351e258033e959cd",
+ "commit": "bda6712cfb88fbcbcb2d6f3ff534ec90d16fb969",
+ "date": "2026-11-01",
+ "runs": 2,
+ "skipped_image_pairs": 8,
+ "real_pairs": 0,
+ "rerun_reason": "Second look after Q1=A: extract-v6 category rule, duplicate merge, same-sentence rules; tuned on development only incl. P-700..P-719. Last held-out look for I-7 (owner).",
+ "calls": 461,
+ "pairs": 46,
+ "comparisons": 92,
+ "status": {
+  "complete": 92,
+  "partial": 0,
+  "failed": 0
+ },
+ "precision": 0.945,
+ "precision_ci": [
+  0.871,
+  0.994
+ ],
+ "recall": 1.0,
+ "recall_ci": [
+  1.0,
+  1.0
+ ],
+ "material_recall": 1.0,
+ "material_recall_ci": [
+  1.0,
+  1.0
+ ],
+ "tp_pred_gold": [
+  156,
+  165,
+  156
+ ],
+ "material_tp_gold": [
+  128,
+  128
+ ],
+ "change_type_agreement_on_matches": "149/156",
+ "false_removals": 0,
+ "scope_pairs": 8,
+ "false_removal_rate_upper_95": 0.375,
+ "evidence_location": 1.0,
+ "evidence_location_ci": [
+  0.985,
+  1.0
+ ],
+ "located_locatable": [
+  250,
+  250
+ ],
+ "unsupported_rate": 0.0,
+ "unsupported_ci": [
+  0.0,
+  0.015
+ ],
+ "unsupported_shown": [
+  0,
+  248
+ ],
+ "fabricated_scope_changes": 2,
+ "withheld": 0,
+ "cost_p50_eur": 0.0051,
+ "cost_p90_typical_eur": 0.0061,
+ "cost_p90_heavy_eur": null,
+ "typical_heavy_comparisons": [
+  92,
+  0
+ ],
+ "latency_p50_s": 23.7,
+ "latency_p90_s": 38.3,
+ "cost_eur_total": 0.4858,
+ "identical_runs": "34/46",
+ "gates": {
+  "false_removals": {
+   "value": 0,
+   "limit": "== 0",
+   "pass": true
+  },
+  "material_recall": {
+   "value": 1.0,
+   "limit": ">= 0.95",
+   "pass": true
+  },
+  "recall": {
+   "value": 1.0,
+   "limit": ">= 0.9",
+   "pass": true
+  },
+  "precision": {
+   "value": 0.945,
+   "limit": ">= 0.9",
+   "pass": true
+  },
+  "evidence_location": {
+   "value": 1.0,
+   "limit": ">= 0.98",
+   "pass": true
+  },
+  "unsupported_rate": {
+   "value": 0.0,
+   "limit": "<= 0.02",
+   "pass": true
+  },
+  "fabricated_scope_changes": {
+   "value": 2,
+   "limit": "== 0",
+   "pass": false
+  },
+  "cost_p90_typical_eur": {
+   "value": 0.0061,
+   "limit": "<= 0.2",
+   "pass": true
+  },
+  "cost_p90_heavy_eur": {
+   "value": null,
+   "limit": "<= 0.6",
+   "pass": null
+  },
+  "advantage_over_baseline": {
+   "value": {
+    "false_removals": [
+     0,
+     0
+    ],
+    "missed_material": [
+     0,
+     16
+    ]
+   },
+   "pass": true,
+   "directional": true
+  }
+ },
+ "baseline": {
+  "precision": 0.933,
+  "recall": 0.897,
+  "material_recall": 0.875,
+  "false_removals": 0,
+  "fabricated_scope_changes": 0,
+  "missed_material": 16,
+  "failed": 0
+ },
+ "verdict": "FAIL"
+}

@@ -249,6 +249,32 @@ Routes in `changelens/api/reviews.py`:
 
 The actor is the fixed `dev-token-user` until real auth (I-8).
 
+## 12. Evaluation harness (I-7)
+
+`tools/i7_run.py` runs the worker's comparison code (`changelens/pipeline/run.py`, shared with the worker) on a constructed split. Each comparison starts from an empty fact cache, so its cost includes extracting both versions. It scores the result with the 04 §5 metrics against the Gate 2 thresholds (04 §6) and the backlog's M1 recall floor. Definitions are in the `tools/i7_metrics.py` docstring. It reports:
+
+- precision, recall and material recall, with 95% bootstrap intervals over pairs;
+- false removals, with the rule-of-three bound when there are none;
+- evidence-location accuracy and the unsupported rate, with Wilson intervals;
+- fabricated scope changes on reordered and no-change pairs;
+- statuses, latency, and p90 cost per comparison for typical (≤ 5,000 words) and heavy documents.
+
+`--baseline` also runs the D-17 single-prompt detector on the same pairs as the general-purpose baseline. Pairs with an image side are skipped until I-1b. From `backend/`:
+
+```powershell
+$env:CHANGELENS_IONOS_ENV_FILE = ".env"
+.venv\Scripts\python -m tools.i7_run --split development --runs 1 --baseline   # try changes here
+.venv\Scripts\python -m tools.i7_run --split held_out --runs 2 --baseline      # the gate run
+```
+
+**The held-out split is frozen (07 §5.4).** Never use it to tune or debug.
+
+- A held-out run refuses a working tree with uncommitted changes, and records the commit.
+- It refuses a second run for the same fingerprint unless `--rerun-reason` gives a reason.
+- It writes `../scripts/eval/i7_receipt.json`. The receipt holds aggregates only; per-pair output with quotes stays in `../../change-lens-data/i7/`.
+
+**Regression check.** The fingerprint is a hash of every prompt, output schema, the extraction prompt version, the pipeline version, the model configuration and its prices. `tests/unit/test_i7.py` fails in CI when the committed receipt's fingerprint differs from the current one. A prompt or model change therefore needs a new held-out run and a decision-log row before it can merge.
+
 ## What is placeholder or out of scope
 
 - Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.

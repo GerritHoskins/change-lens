@@ -20,7 +20,7 @@ def _run_pair(env, upload_a, upload_b):
     assert env.get("/comparisons/" + cid).json()["status"] == "queued"
     assert env.worker.run_until_idle() == 1
     c = env.get("/comparisons/" + cid).json()
-    assert c["status"] == "complete" and c["placeholder"] is False and c["pipeline_version"] == "facts-1"
+    assert c["status"] == "complete" and c["placeholder"] is False and c["pipeline_version"] == "facts-2"
     assert 0 < float(c["cost_actual"]) <= float(c["cost_ceiling"])
     f = env.get("/comparisons/%s/findings" % cid).json()
     assert f["status"] == "complete" and f["placeholder"] is False and f["findings"]
