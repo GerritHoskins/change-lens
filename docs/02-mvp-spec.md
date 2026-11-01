@@ -7,10 +7,12 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 1. **Project.** The user signs in to the iOS or Android app (email one-time code, Google, or Sign in with Apple), then creates a project for a client engagement or opens an existing one.
 2. **Earlier version.** In the iOS or Android app, the user imports it by pasting text, picking a PDF, taking or choosing a screenshot, or sharing it into ChangeLens from another app. They give it a label (for example "Brief v1, 3 Oct").
 3. **Newer input.** The user imports the revised brief or a partial update.
-4. **Confirm the pair** (required, no defaults inferred):
-   - which input is the earlier one and which is the newer one
-   - the scope of the newer input: **complete replacement**, **partial update** or **unknown**
-   - The app may *suggest* an order from dates found in the text. Upload time and filenames are never used. The user must confirm either way (AC-14).
+4. **Compare screen** (the only place processing starts; no defaults inferred; O-15). The user reaches it from the projects list ("Compare two briefs") or from the project timeline ("Compare v2 → v3", which fills both slots). On one screen they:
+   - fill the *earlier* and the *newer* slot, each with an existing version or a new import (steps 2 and 3 can happen here). The slot sets the order, whatever the upload time
+   - choose the scope of the newer input: **complete replacement**, **partial update** or **unknown**
+   - choose the project, if the entry point did not set it
+   - Nothing is preselected except slots the user's own entry point filled. Start stays disabled until both slots, a scope and a project are set. The app may *suggest* an order from dates found in the text. Upload time and filenames are never used (AC-14).
+   - A version that is still being read does not block Start: the comparison waits for it ("Reading Brief v3…"), and the user may leave the screen. A rejected version fails the comparison with its reason and spends no allowance.
 5. **Process.** The app shows progress, and any partial-processing warnings before the report.
 6. **Report.**
    - prioritised findings, uncertainties, and a link to all other differences
@@ -22,7 +24,7 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 | Limit | Prototype | Thin slice | Rationale |
 |---|---|---|---|
-| Formats | Pasted text; PDF with an extractable text layer; PNG/JPEG screenshots | Same, entered through the PDF picker, paste, camera / photo library, or the OS share sheet | Mobile-first owner decision (2026-10-30) overrides handoff §5 staging; screenshots are evaluated in Gate 2 |
+| Formats | Pasted text; PDF with an extractable text layer; PNG/JPEG screenshots | Same, entered through the PDF picker, paste, camera / photo library, or the OS share sheet | Mobile-first owner decision (2026-10-30) overrides handoff §5 staging; screenshots are evaluated in Gate 2, and are sold only once highlight placement on them meets the D-15 bar of ≥ 95% (O-16, D-19) |
 | Size per input | ≤ 15,000 words; PDF ≤ 20 pages and ≤ 10 MB; image ≤ 5 MB, short side ≥ 800 px, ≤ 40 MP | Same | Typical briefs are 1–10 pages [U]; caps cost per comparison |
 | Language | English only | English; others evaluated after the pilot | Evaluation dataset is English |
 | Scanned PDFs | Rejected, with the message "no text layer" | Allowed only through the screenshot path, with warnings | No custom OCR |
@@ -44,9 +46,10 @@ Facts that appear in both inputs follow the comparison rules in `03-technical-de
 
 ## 4. Report behaviour
 
-- **Finding categories:** deliverable, quantity, date or deadline, responsibility or owner, approval-related statement, other material.
+- **Finding categories:** deliverable, quantity, date or deadline, responsibility or owner, approval-related statement, budget (fees, prices, payment), other material.
+- **Topics (O-14).** Every finding has exactly one topic, derived from its category: *deadlines* (date or deadline), *deliverables* (deliverable, quantity), *responsibilities*, *approval wording* (approval-related statement), *budget*, and *other* (other material, structure). A sentence that touches two topics yields two findings. The report is grouped and filtered by topic, with per-topic counts from the API; labels are client-side strings (EN and DE). The topic is a second axis next to the change type, never merged with it, and it never decides whether a finding needs review. *Approval wording* is about the brief's own text; it is unrelated to the client approval record (§5).
 - **Each finding shows:**
-  - category and change type (added, changed, absent, not addressed, uncertain, equivalent)
+  - topic, category and change type (added, changed, absent, not addressed, uncertain, equivalent)
   - before and after values, in raw wording plus the normalised value where relevant
   - one or two sentences of explanation
   - evidence links to source version and location (character range for text; page plus text span for PDF; region for images)
@@ -64,7 +67,9 @@ There are three separate states, stored separately and never derived from each o
 | User-reviewed | User action: confirmed, corrected or dismissed | The user checked the finding |
 | Client approval recorded | User attaches external evidence, such as a pasted email excerpt or file, plus a date | Someone has stated that the client approved. ChangeLens does not verify it. This is a single record, not an approval workflow. It exists because handoff §7 requires this state to be kept separate |
 
-- Corrections create a new finding revision. The original AI output is kept (AC-15).
+- Corrections create a new finding revision. The original AI output is kept (AC-15). A correction can change the topic; the new revision carries it and the original keeps its own.
+- **Confirm and go to next (O-17).** Confirming doesn't require opening the page, because the before and after quotes are on the finding screen. When a quote comes from the parsed-text fallback because the passage couldn't be placed on the PDF page, a banner saying so is pinned above the Confirm button, and screen readers reach it before the button. Needs-review findings stay on screen after Confirm; certain findings advance to the next.
+- Each review stores the evidence mode of each side (PDF highlight, text fallback, or text only for pasted text) as the app showed it, and whether the user opened the page view. This is for product analysis only: it is never shown as a badge and never counts as client approval (AC-12).
 - No UI wording may present a reviewed finding as "approved" or "agreed".
 
 ## 6. Sharing behaviour

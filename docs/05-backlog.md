@@ -4,7 +4,7 @@ Plan section: §13.5. Effort is in person-days for one experienced developer [A]
 
 **Approach: build first, then learn (owner decision 2026-10-31, 06).** ChangeLens is built as a hobby app that can grow into a paid product, not as a gated validation programme. Discovery gates no longer block building. Milestones M1–M5 replace the earlier Gates 1–4; where a gate's quality thresholds still apply, the milestone's exit criteria say so. v1 is:
 - a Flutter app for iOS and Android, in English and German, for the EU market, with launch copy aimed at freelancers and small studios;
-- comparing PDFs and pasted text, plus screenshots and import from the share sheet;
+- comparing PDFs and pasted text, plus screenshots (sold once their highlight placement passes D-19, O-16) and import from the share sheet;
 - freemium, with subscriptions sold through the app stores;
 - running on IONOS: FastAPI, Postgres, a worker, self-hosted Logto, and IONOS AI Model Hub.
 
@@ -30,6 +30,19 @@ Share links and teams are not in v1. There is no fixed launch date. Task IDs fro
 
 **M1 exit:** on both test phones, you paste or pick two versions and get a report whose evidence highlights land on the right passage, and the I-7 thresholds hold.
 
+## M1b — Freelancer-first redesign (screens P0–P7)
+
+From the redesign handoff of 2026-11-01. The owner decided O-14 to O-17 on 2026-11-01 (06), all as recommended, and scheduled this work after M1 and before M2, so the account screens are built in the new style and testers see it. Screen IDs P0–P7 are the v1 screens canvas IDs, not the 03a pipeline steps P0–P8; write "screen P3" to keep them apart. Effort is [A].
+
+| ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
+|---|---|---|---|---|---|
+| I-23 | Finding topics (O-14): `topic` derived from `category` by a fixed mapping (02 §4), required and never null (`other` is the fallback); `budget` split out of other_material in extraction (extract-v7) and counted as material; `approval` renamed `approval_wording`; a sentence touching two topics yields two findings; per-topic counts in the findings response; a correction can change the topic in the new revision only (AC-15); EN/DE labels on the client, keyed by the enum | I-7 | I-7 gates hold on the development split after extract-v7; per-topic precision reported on ≥ 30 labelled findings across the six topics (most mapped from existing `category` labels, budget vs other labelled new); share of findings in `other` reported (above about 20% means the topic list needs revising); topic never changes `needs_review` | 2–4 | Budget vs other is the only new label |
+| I-24 | One-screen compare backend (O-15): one create request for new versions plus the comparison, with an idempotency key; comparison state `waiting_for_versions` (migration: the status column is 10 characters) → `queued` when both versions are parsed, → `failed` with the version's reject reason; allowance charged on queued → running; version and comparison status refresh in the app without a manual pull (M1 Android finding 2) | I-22, I-9 | A retried create makes no duplicate versions or comparisons; a rejected version fails the comparison without spending allowance (AC-21); order is the user's, never upload time (AC-14); jobs still carry IDs only (AC-23) | 2–3 | Interaction with I-14 metering, which isn't built yet |
+| I-25 | App screens P0–P7 from the v1 screens canvas: topic vocabulary (P0), projects list entry point "Compare two briefs" (P1), one-screen compare (P2), report grouped and filtered by topic (P3), finding detail with Confirm and go to next and the text-fallback guardrail (P4), timeline in the user's order with "Compare v2 → v3" (P6). Confirm screen 4 (`confirm_screen.dart`) is removed; P2 is the only start path. The user may leave P2 while versions are read; the projects list shows the comparison as reading | I-23, I-24, I-26, I-10 | Nothing preselected beyond the entry point's slots; Start enabled only with both slots, a scope and a project (AC-14); on screen P4 the fallback banner is pinned above Confirm and read before it by screen readers; needs-review findings do not auto-advance; review never sets approval (AC-12) | 6–10 | P4 must try passage placement before Confirm without opening the page view |
+| I-26 | Review evidence telemetry (O-17): the app derives `evidence_mode` per side (`pdf_highlight`, `text_fallback`, `text_only`); the review request and `review_events` store it with `page_opened` | I-10 | Stored on every review; content-free (AC-23); not shown as a badge and never read as approval (AC-12); the post-launch share of `text_fallback` confirmations with `page_opened = false` can be queried | 0.5–1 | — |
+
+**M1b exit:** on both test phones, a comparison started from screen P2 while a version is still being read completes; the report is grouped by topic with counts from the API; confirming a text-fallback finding shows the banner above the button; screen 4 is gone.
+
 ## M2 — Accounts, storage and privacy
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
@@ -47,14 +60,15 @@ Share links and teams are not in v1. There is no fixed launch date. Task IDs fro
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
 | I-1b | Screenshot input in the pipeline: text extraction by a vision model (LightOnOCR-2 or Qwen on IONOS) with region locators; unreadable regions reported; a second independent pass, with blocks that differ routed to needs-review (I-6) | I-1, D-17 | Cross-format constructed pairs (P-600..P-612) meet the I-7 thresholds; unreadable regions warned (AC-11); misleading-screenshot fixtures flagged or sent to needs-review (AC-18) | 4–8 | Vision-model location accuracy [U] |
-| I-16 | Share-sheet import: an iOS Share Extension (Swift) and the Android `ACTION_SEND` intent, both handing off to the project picker. Adds camera and photo-library import to I-9 | I-9 | Sharing a PDF, an image or text from Mail and Files lands in the chosen project on both platforms; the app-group container and app sandbox hold no document files after import (AC-24, AC-25) | 3–5 | iOS extension memory limits |
+| I-16 | Share-sheet import: an iOS Share Extension (Swift) and the Android `ACTION_SEND` intent, both handing off to the project picker. Adds camera and photo-library import to I-9, behind a flag until D-19 passes (O-16) | I-9 | Sharing a PDF, an image or text from Mail and Files lands in the chosen project on both platforms; the app-group container and app sandbox hold no document files after import (AC-24, AC-25) | 3–5 | iOS extension memory limits |
+| D-19 | Screenshot placement gate (O-16, option 1): a photo eval set (screenshots of development-split briefs, never held-out) and a region-placement metric reported like D-15: the share of passages whose highlighted region on the image covers the quoted text | I-1b | ≥ 95% placement, recorded in 06. Until it passes, screenshot import stays behind a flag, and the paywall (screen 16) and the import sheet's Pro badges leave screenshots out | 1–2 | Vision-model location accuracy [U] |
 
 ## M4 — Freemium and billing
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| I-14 | Metering: comparison allowance, weighting for heavy documents, one unit per screenshot parse, token and cost logging. Free tier: 3 comparisons a month, PDF and text only. Paid: screenshots, unlimited comparisons within fair use, and history. All limits are config values [O] | I-8 | No unmetered path (AC-21); limits change without a release | 2–3 | — |
-| I-19 | Subscriptions through App Store and Google Play in-app purchase, using RevenueCat. The backend reads entitlements from RevenueCat webhooks and verified receipts; the app never decides entitlement by itself. Restore purchases; prices in EUR; trial optional | I-14, I-18 | A purchase in the sandbox and the Play test track unlocks the paid tier on both platforms; cancellation and expiry return the account to the free tier; webhook signatures are verified | 3–5 | Store review; RevenueCat fees above the free tier; VAT is handled by the stores |
+| I-14 | Metering: comparison allowance, weighting for heavy documents, one unit per screenshot parse, token and cost logging. Free tier: 3 comparisons a month, PDF and text only. Paid: screenshots (once D-19 passes, O-16), unlimited comparisons within fair use, and history. All limits are config values [O] | I-8 | No unmetered path (AC-21); limits change without a release | 2–3 | — |
+| I-19 | Subscriptions through App Store and Google Play in-app purchase, using RevenueCat. The backend reads entitlements from RevenueCat webhooks and verified receipts; the app never decides entitlement by itself. Restore purchases; prices in EUR; trial optional | I-14, I-18 | A purchase in the sandbox and the Play test track unlocks the paid tier on both platforms; cancellation and expiry return the account to the free tier; webhook signatures are verified; the paywall lists screenshots only after D-19 passes (O-16) | 3–5 | Store review; RevenueCat fees above the free tier; VAT is handled by the stores |
 
 ## M5 — Testers, launch and learning
 
@@ -95,10 +109,11 @@ The earlier validation plan (04 §1–§3, Gates 1 and 4) is superseded by the b
 | Milestone | Effort |
 |---|---|
 | M1 Compare end to end | 31–51 d |
+| M1b Freelancer-first redesign | 10.5–18 d |
 | M2 Accounts and privacy | 10.5–18 d |
-| M3 Screenshots and share sheet | 7–13 d |
+| M3 Screenshots and share sheet | 8–15 d |
 | M4 Freemium and billing | 5–8 d |
 | M5 Testers and learning | 7–12 d |
-| **Total** | **about 60–100 person-days**: roughly 6–12 months at 10–20 hours a week |
+| **Total** | **about 72–122 person-days**: roughly 7–15 months at 10–20 hours a week |
 
 Main risk: the evidence-highlight fidelity of PDFs and screenshots on a small screen. D-15 tests it first. Main assumption: IONOS AI Model Hub gives schema-valid extraction at the cost in `03-technical-design.md` §8. D-17 checks it before I-2.
