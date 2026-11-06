@@ -367,17 +367,17 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            revoke every share they created; call Apple /auth/revoke with the stored Apple refresh token, retried until it
            succeeds (AR-1: first,
            while the row still holds it); then replace the user row with a tombstone ID (apple_refresh_token_enc ← null),
-           delete the IdP user and all linked identities, delete device tokens  [AC-22, AC-26]
+           delete the IdP user and all linked identities, delete device tokens (with I-27)  [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
   tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,
-           DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens), then
+           DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens with I-27), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,
-            vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs),
+            vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs; only with I-27, not in v1),
             email_sender, ci, mobile_crash_and_analytics, apple_token_park}  # SA-7, SA-8, AR-5
   for s in stores: assert s is in the deletion plan or holds no document content  [AC-23]
   # The same list is the published sub-processor list and the store privacy declarations (SA-5).
@@ -407,7 +407,7 @@ TRACING_CONFIG (OpenTelemetry, incl. the setup reused from mobile-engineering-in
   db instrumentation: capture statement parameters = off      # SQL parameters can contain text  [AC-23]
   llm calls: record token counts and cost only, never prompts or completions    [AC-23]
 
-NOTIFY(comparison):
+NOTIFY(comparison):                                           # after v1 (O-18, I-27); a no-op in v1
   push(device_tokens(owner), title="Comparison ready", data={comparison_id})
   # never document text or finding content                    [AC-25]
 ```
@@ -445,7 +445,7 @@ FINDING_SCREEN(f):                                           # screen P4 (O-17)
   on Confirm: REVIEW(f, confirmed, evidence_mode=mode, page_opened)    # never approval  [AC-12]
               if f.group = needs_review: stay on f, shown as confirmed; else go to the next finding
 ON_APP_BACKGROUND or LOGOUT: clear in-memory documents        [AC-25]
-LOGOUT: revoke refresh token at the IdP; DELETE /devices/{id}; delete Keychain / Keystore tokens  # SA-11  [AC-26]
+LOGOUT: revoke refresh token at the IdP; DELETE /devices/{id} (with I-27); delete Keychain / Keystore tokens  # SA-11  [AC-26]
 ```
 
 ## Coverage

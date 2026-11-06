@@ -1,5 +1,6 @@
-# CI entry point, run locally and by .github/workflows/plan-checks.yml. The plan has no code to
-# compile, so the "build" stage checks the documents themselves; the test stage runs the suite.
+# CI entry point, run locally and by .github/workflows/plan-checks.yml. The "build" stage checks the
+# tracked documents and files; the test stage runs the plan checks, evaluation tests and backend unit
+# tests. The Flutter app and the backend integration tests are not run here.
 # Exits 1 if any stage fails. See docs/SOP.md.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
