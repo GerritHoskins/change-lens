@@ -2,7 +2,7 @@
 
 A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Authentication is a single dev token. **Never deploy this publicly.** I-8 replaces the dev token with Logto JWTs, tenants and row-level security.
 
-The comparison runs the fact pipeline (`pipeline_version = "facts-1"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
+The comparison runs the fact pipeline (`pipeline_version = "facts-2"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
 
 Module layout follows `docs/03-technical-design.md` §9.1:
 
@@ -277,7 +277,7 @@ $env:CHANGELENS_IONOS_ENV_FILE = ".env"
 
 ## What is placeholder or out of scope
 
-- Image (screenshot) parsing and its vision passes (I-16); image regions in PDFs are only warned.
+- Image (screenshot) parsing and its vision passes (I-1b); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.
 - Images, notifications, retention, sharing and the remaining 03 §9.4 routes.
