@@ -30,7 +30,9 @@ services:
     volumes:
       - miniodata:/bitnami/minio/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      # The image first runs a temporary background MinIO to create the default bucket, stops it,
+      # then execs the real server as PID 1. health/live alone can pass on the temporary one.
+      test: ["CMD-SHELL", "grep -qx minio /proc/1/comm && curl -fsS http://127.0.0.1:9000/minio/health/ready"]
       interval: 2s
       timeout: 3s
       retries: 30
