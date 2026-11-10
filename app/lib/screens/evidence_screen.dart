@@ -2,20 +2,24 @@
 // backend's character offsets, which D-15 showed pdfrx numbers the same way (23/23 on iOS and
 // Android). If the text at those offsets is not the quote, the parsed text is shown instead with
 // the span marked (03 §9.4, AC-9). Documents stay in memory only (AC-25).
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../api.dart';
+import '../design/calm_theme.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
+import 'evidence_resolution.dart';
 
 class EvidenceScreen extends StatefulWidget {
-  const EvidenceScreen({super.key, required this.version, required this.evidence});
+  const EvidenceScreen({super.key, required this.version, required this.evidence,
+    this.presentation, this.onPageOpened});
 
   final Version version;
   final Evidence evidence;
+  final EvidencePresentation? presentation;
+  final VoidCallback? onPageOpened;
 
   @override
   State<EvidenceScreen> createState() => _EvidenceScreenState();
@@ -23,89 +27,119 @@ class EvidenceScreen extends StatefulWidget {
 
 class _EvidenceScreenState extends State<EvidenceScreen> {
   final controller = PdfViewerController();
-  Uint8List? pdf;
-  List<PdfRect> boxes = const [];
-  List<String>? pages; // parsed text fallback
-  bool fellBack = false;
+  EvidencePresentation? presentation;
+  List<String>? pages;
+  bool loading = false, opened = false, sourceOpened = false, textView = false;
   String? error;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (pdf == null && pages == null && error == null) _load();
+    if (!loading && presentation == null && error == null) _load();
   }
 
   Future<void> _load() async {
+    if (loading) return;
     final api = ServicesScope.of(context).api;
-    final e = widget.evidence;
+    setState(() { loading = true; error = null; });
     try {
-      if (widget.version.kind == 'pdf' && e.page != null) {
-        final bytes = await api.original(widget.version.id);
-        final rects = await _locate(bytes, e);
-        if (rects != null) {
-          if (mounted) {
-            setState(() {
-              pdf = bytes;
-              boxes = rects;
-            });
-          }
-          return;
-        }
-        fellBack = true;
+      // Counts an explicit source view even when its presentation was prefetched in memory.
+      // Separate from pageOpened, which deliberately excludes parsed-text fallback.
+      if (!sourceOpened) {
+        await api.versionOpened(widget.version.id);
+        sourceOpened = true;
       }
-      final text = await api.versionText(widget.version.id);
-      if (mounted) setState(() => pages = text);
+      if (!mounted) return;
+      final resolved = widget.presentation ?? await resolveEvidence(api, widget.version, widget.evidence);
+      final text = resolved.pdf == null ? resolved.pages ?? await api.versionText(widget.version.id) : null;
+      if (!mounted) return;
+      setState(() { presentation = resolved; pages = text; textView = resolved.pdf == null; });
     } on Exception catch (err) {
       if (mounted) setState(() => error = '$err');
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
-  /// The quote's character boxes, or null when pdfrx's text there is not the quote.
-  static Future<List<PdfRect>?> _locate(Uint8List bytes, Evidence e) async {
-    final doc = await PdfDocument.openData(bytes, sourceName: 'evidence');
-    try {
-      if (e.page! < 1 || e.page! > doc.pages.length) return null;
-      final text = await doc.pages[e.page! - 1].loadText();
-      if (text == null || e.charEnd > text.charRects.length) return null;
-      if (text.fullText.substring(e.charStart, e.charEnd) != e.quote) return null;
-      final rects = [for (final r in text.charRects.sublist(e.charStart, e.charEnd)) if (r.isNotEmpty) r];
-      return rects.isEmpty ? null : rects;
-    } finally {
-      await doc.dispose();
-    }
+  void _pageOpened() {
+    // This observation means the physical PDF page viewer, never parsed-text fallback.
+    if (!mounted || opened || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    opened = true;
+    widget.onPageOpened?.call();
   }
 
   Future<void> _reveal() async {
-    if (boxes.isEmpty) return;
+    final boxes = presentation!.boxes;
+    final duration = calmReduceMotion(context) ? Duration.zero : const Duration(milliseconds: 180);
+    final page = widget.evidence.page;
+    if (boxes.isEmpty) {
+      if (page != null && page > 0 && page <= controller.pageCount) {
+        await controller.goToPage(pageNumber: page, duration: duration);
+      }
+      _pageOpened();
+      return;
+    }
     final area = boxes.reduce((a, b) => a.merge(b));
     final pad = PdfRect(area.left - 24, area.top + 48, area.right + 24, area.bottom - 48);
-    await controller.goToRectInsidePage(pageNumber: widget.evidence.page!, rect: pad);
+    await controller.goToRectInsidePage(pageNumber: page!, rect: pad, duration: duration);
+    _pageOpened();
   }
 
   void _paint(Canvas canvas, Rect pageRect, PdfPage page) {
     if (page.pageNumber != widget.evidence.page) return;
-    final fill = Paint()..color = Colors.amber.withValues(alpha: 0.45);
-    for (final r in boxes) {
+    final fill = Paint()..color = CalmColors.light.marker.withValues(alpha: 0.6);
+    for (final r in presentation!.boxes) {
       canvas.drawRect(r.toRectInDocument(page: page, pageRect: pageRect), fill);
     }
+  }
+
+  Future<void> _showText() async {
+    if (loading) return;
+    if (pages != null) { setState(() => textView = true); return; }
+    setState(() => loading = true);
+    try {
+      final text = await ServicesScope.of(context).api.versionText(widget.version.id);
+      if (mounted) setState(() { pages = text; textView = true; });
+    } on Exception {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).contentLoadFailed)));
+      }
+    } finally { if (mounted) setState(() => loading = false); }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final e = widget.evidence;
+    final pdf = presentation?.pdf ?? presentation?.originalPdf;
     Widget body;
-    if (pdf != null) {
-      body = PdfViewer.data(pdf!, sourceName: widget.version.label, controller: controller,
+    if (pdf != null && !textView) {
+      body = PdfViewer.data(pdf, sourceName: widget.version.label, controller: controller,
           params: PdfViewerParams(pagePaintCallbacks: [_paint], onViewerReady: (_, _) => _reveal()));
     } else if (pages != null) {
-      body = ParsedTextView(pages: pages!, evidence: e, note: fellBack ? l.highlightFallback : null);
+      body = ParsedTextView(pages: pages!, evidence: e,
+          note: presentation!.mode == 'text_fallback' ? l.highlightFallback : null);
     } else {
-      body = Center(child: error == null ? const CircularProgressIndicator() : Text(l.loadFailed(error!)));
+      body = error == null ? const Center(child: CircularProgressIndicator()) :
+        CalmLoadError(onRetry: loading ? null : _load);
     }
     return Scaffold(
       appBar: AppBar(title: Text('${e.earlier ? l.sideEarlier : l.sideNewer}: ${widget.version.label}')),
-      body: body,
+      body: SafeArea(top: false, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (pdf != null) Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Wrap(spacing: 8, children: [
+            ChoiceChip(label: Text(l.pdfPage), selected: !textView,
+              onSelected: (_) => setState(() => textView = false)),
+            ChoiceChip(label: Text(l.readableText), selected: textView,
+              onSelected: loading ? null : (_) => _showText()),
+          ])),
+        if (pdf != null && !textView && presentation?.mode == 'text_fallback')
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: CalmWarning(text: l.evidenceFallbackReview)),
+        if (loading && presentation != null) const LinearProgressIndicator(),
+        Expanded(child: body),
+      ])),
     );
   }
 }
@@ -122,13 +156,14 @@ class ParsedTextView extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = evidence;
     final index = (e.page ?? 1) - 1;
-    final text = index < pages.length ? pages[index] : '';
-    final ok = e.charEnd <= text.length && text.substring(e.charStart, e.charEnd) == e.quote;
-    final mark = TextStyle(backgroundColor: Colors.amber.withValues(alpha: 0.6), fontWeight: FontWeight.w600);
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      if (note != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(note!,
-          style: Theme.of(context).textTheme.bodySmall)),
-      SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyMedium, children: ok
+    final text = index >= 0 && index < pages.length ? pages[index] : '';
+    final ok = e.charStart >= 0 && e.charEnd >= e.charStart && e.charEnd <= text.length &&
+        text.substring(e.charStart, e.charEnd) == e.quote;
+    final colors = CalmColors.of(context);
+    final mark = TextStyle(backgroundColor: colors.marker, color: colors.onMarker, fontWeight: FontWeight.w600);
+    return ListView(padding: const EdgeInsets.all(20), children: [
+      if (note != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: CalmWarning(text: note!)),
+      SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyLarge, children: ok
           ? [
               TextSpan(text: text.substring(0, e.charStart)),
               TextSpan(text: e.quote, style: mark),

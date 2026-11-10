@@ -1,10 +1,15 @@
 // Project list and creation, plus the developer settings for the dev API connection.
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_theme.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'project_screen.dart';
+import 'compare_screen.dart';
+import 'comparison_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -18,36 +23,49 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   String? error;
   bool loading = false;
   Services? _services;
+  Api? _api;
+  Timer? _timer;
+  bool _fetching = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final s = ServicesScope.of(context);
-    if (!identical(s.api, _services?.api) || _services == null) {
+    if (!identical(s.api, _api) || _services == null) {
       _services = s;
+      _api = s.api;
+      projects = [];
       _load();
     }
+    _timer ??= Timer.periodic(const Duration(seconds: 3), (_) {
+      if (ModalRoute.of(context)?.isCurrent == true) _load();
+    });
   }
+
+  @override
+  void dispose() { _timer?.cancel(); super.dispose(); }
 
   Future<void> _load() async {
     final s = ServicesScope.of(context);
-    if (!s.configured) return;
-    setState(() => loading = true);
+    if (!s.configured || _fetching) return;
+    final api = s.api;
+    _fetching = true;
+    setState(() => loading = projects.isEmpty);
     try {
-      final p = await s.api.projects();
-      if (!mounted) return;
+      final p = await api.projects();
+      if (!mounted || !identical(api, s.api)) return;
       setState(() {
         projects = p;
         loading = false;
         error = null;
       });
     } on Exception catch (e) {
-      if (!mounted) return;
+      if (!mounted || !identical(api, s.api)) return;
       setState(() {
         loading = false;
         error = '$e';
       });
-    }
+    } finally { _fetching = false; }
   }
 
   Future<void> _create() async {
@@ -56,6 +74,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(l.newProject),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(key: const Key('project-name'), controller: name, decoration: InputDecoration(labelText: l.projectName)),
@@ -84,36 +103,72 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final s = ServicesScope.of(context);
+    final colors = CalmColors.of(context);
+    final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: Text(l.projectsTitle), actions: [
+      appBar: AppBar(title: Text(l.appTitle), actions: [
         IconButton(
             key: const Key('settings'),
             tooltip: l.devSettings,
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevSettingsScreen()))),
       ]),
-      floatingActionButton: s.configured
-          ? FloatingActionButton.extended(
-              key: const Key('new-project'), onPressed: _create, icon: const Icon(Icons.add), label: Text(l.newProject))
-          : null,
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))
-          : RefreshIndicator(
+          : SafeArea(top: false, child: RefreshIndicator(
               onRefresh: _load,
-              child: ListView(children: [
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                children: [
+                CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro),
+                const SizedBox(height: 24),
                 if (loading) const LinearProgressIndicator(),
-                if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!)),
+                if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
+                  child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
+                if (projects.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 24),
+                  child: FilledButton.icon(key: const Key('compare-briefs'),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
+                    icon: const Icon(Icons.compare_arrows), label: Text(l.compareBriefs))),
                 if (!loading && error == null && projects.isEmpty)
-                  Padding(padding: const EdgeInsets.all(24), child: Text(l.projectsEmpty)),
+                  CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 for (final p in projects)
-                  ListTile(
-                    title: Text(p.name),
-                    subtitle: p.clientLabel == null ? null : Text(p.clientLabel!),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProjectScreen(project: p))),
-                  ),
+                  Material(color: Colors.transparent, child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      final deleted = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(builder: (_) => ProjectScreen(project: p)));
+                      if (!mounted) return;
+                      await _load();
+                      if (!context.mounted || deleted == null) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
+                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(p.name, style: text.titleMedium),
+                          if (p.clientLabel != null) Padding(padding: const EdgeInsets.only(top: 5),
+                            child: Text(p.clientLabel!, style: text.bodyMedium?.copyWith(color: colors.muted))),
+                          if (p.comparisonCounts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8),
+                            child: Text([
+                              for (final entry in p.comparisonCounts.entries)
+                                '${comparisonStatusLabel(l, entry.key)} (${entry.value})',
+                            ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
+                        ])),
+                        const SizedBox(width: 12),
+                        Icon(Icons.chevron_right, color: colors.muted),
+                      ]),
+                    ),
+                  )),
+                const SizedBox(height: 20),
+                Align(alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(key: const Key('new-project'), onPressed: _create,
+                    icon: const Icon(Icons.add), label: Text(l.newProject))),
               ]),
-            ),
+            )),
     );
   }
 }
@@ -127,14 +182,21 @@ class DevSettingsScreen extends StatefulWidget {
 
 class _DevSettingsScreenState extends State<DevSettingsScreen> {
   late final TextEditingController base, token;
+  bool initialized = false, saving = false;
+  String? error;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (initialized) return;
+    initialized = true;
     final s = ServicesScope.of(context);
     base = TextEditingController(text: s.baseUrl);
     token = TextEditingController(text: s.token);
   }
+
+  @override
+  void dispose() { base.dispose(); token.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -157,13 +219,19 @@ class _DevSettingsScreenState extends State<DevSettingsScreen> {
             autocorrect: false,
             decoration: InputDecoration(labelText: l.devToken)),
         const SizedBox(height: 16),
+        if (error != null) Text(error!),
         FilledButton(
           key: const Key('save-settings'),
-          onPressed: () async {
-            await ServicesScope.of(context).save(base.text, token.text);
-            if (context.mounted) Navigator.pop(context);
+          onPressed: saving ? null : () async {
+            setState(() { saving = true; error = null; });
+            try {
+              await ServicesScope.of(context).save(base.text, token.text);
+              if (context.mounted) Navigator.pop(context);
+            } on Exception {
+              if (mounted) setState(() { saving = false; error = l.settingsSaveFailed; });
+            }
           },
-          child: Text(l.save),
+          child: Semantics(liveRegion: true, child: Text(saving ? l.saving : l.save)),
         ),
       ]),
     );

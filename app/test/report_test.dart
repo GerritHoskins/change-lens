@@ -42,6 +42,9 @@ class ReportBackend {
   Future<http.Response> handle(http.Request r) async {
     requests.add(r);
     final p = r.url.path;
+    if (r.method == 'POST' && RegExp(r'^/(comparisons/c1|versions/v[12])/opened$').hasMatch(p)) {
+      return http.Response('', 204);
+    }
     if (r.method == 'GET' && p == '/comparisons/c1/findings') {
       return http.Response(jsonEncode({
         'status': 'partial', 'earlier_id': 'v1', 'later_id': 'v2', 'findings': findings,
@@ -124,11 +127,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Other findings'), findsOneWidget);
     expect(find.textContaining('Explanation of f3'), findsOneWidget);
-    await tester.scrollUntilVisible(find.textContaining('Other text differences (1)'), 200);
+    final vertical = find.byWidgetPredicate((widget) => widget is Scrollable && widget.axisDirection == AxisDirection.down);
+    await tester.scrollUntilVisible(find.textContaining('Other text differences (1)'), 200, scrollable: vertical);
     await tester.tap(find.textContaining('Other text differences (1)'));
     await tester.pumpAndSettle();
     expect(find.text('Hi,'), findsOneWidget);
-    await tester.scrollUntilVisible(find.textContaining('Moved or reformatted (1)'), 200);
+    await tester.scrollUntilVisible(find.textContaining('Moved or reformatted (1)'), 200, scrollable: vertical);
     await tester.tap(find.textContaining('Moved or reformatted (1)'));
     await tester.pumpAndSettle();
     expect(find.text('* Logo'), findsOneWidget);
@@ -137,22 +141,24 @@ void main() {
   testWidgets('AC-12: confirming is a review only; recording approval is a separate record only', (tester) async {
     final backend = ReportBackend();
     final report = await loadReport(backend);
-    final b = await pump(tester, FindingScreen(findingId: 'f1', report: report, versions: versions));
-    await tester.tap(find.text('Confirm'));
+    report.findings.removeWhere((finding) => finding.id != 'f1'); // last finding stays for the separate approval action
+    final b = await pump(tester, FindingScreen(comparisonId: 'c1', findingId: 'f1', report: report, versions: versions));
+    await tester.tap(find.byKey(const Key('review-confirm')));
     await tester.pumpAndSettle();
-    expect(b.posts(), ['/findings/f1/reviews']);
+    expect(b.posts(), ['/comparisons/c1/opened', '/findings/f1/reviews']);
     expect(jsonDecode(b.requests.lastWhere((r) => r.method == 'POST').body), containsPair('action', 'confirmed'));
     expect(find.text('Confirmed by you'), findsWidgets);
     expect(find.text('No client approval recorded.'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Record client approval'), 200);
+    await tester.scrollUntilVisible(find.text('Record client approval'), 200,
+      scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)));
     await tester.tap(find.text('Record client approval'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('approval-evidence')), 'Mail: fine by us.');
     await tester.enterText(find.byKey(const Key('approval-by')), 'Client contact');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(b.posts(), ['/findings/f1/reviews', '/findings/f1/client-approvals']);
+    expect(b.posts(), ['/comparisons/c1/opened', '/findings/f1/reviews', '/findings/f1/client-approvals']);
     expect(find.text('Client approval recorded (not verified by ChangeLens)'), findsOneWidget);
     for (final word in ['Approved', 'approved', 'Agreed', 'agreed']) {
       expect(find.textContaining(RegExp('\\b$word\\b')), findsNothing);
@@ -162,7 +168,7 @@ void main() {
   testWidgets('AC-15: a correction is sent as a correction and the screen follows the new revision', (tester) async {
     final backend = ReportBackend();
     final report = await loadReport(backend);
-    final b = await pump(tester, FindingScreen(findingId: 'f1', report: report, versions: versions));
+    final b = await pump(tester, FindingScreen(comparisonId: 'c1', findingId: 'f1', report: report, versions: versions));
     await tester.tap(find.text('Correct'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('category-field')));
@@ -172,7 +178,8 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     final post = b.requests.lastWhere((r) => r.method == 'POST' && r.url.path.endsWith('/reviews'));
-    expect(jsonDecode(post.body), {'action': 'corrected', 'note': null, 'correction': {'category': 'other_material'}});
+    expect(jsonDecode(post.body), {'action': 'corrected', 'note': null, 'correction': {'category': 'other_material'},
+      'evidence_mode': {'before': 'text_only', 'after': 'text_only'}, 'page_opened': false});
     expect(b.requests.last.url.path, '/findings/f1r2'); // reloaded the new revision
     expect(find.text('Changed · Other'), findsOneWidget);
   });
