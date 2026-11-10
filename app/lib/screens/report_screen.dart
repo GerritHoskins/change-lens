@@ -81,7 +81,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final reviewed = r?.findings.where((f) =>
       const {'confirmed', 'corrected', 'dismissed'}.contains(f.review?.action)).length ?? 0;
     return Scaffold(
-      appBar: AppBar(title: Text(l.reportTitle)),
+      appBar: AppBar(title: r == null ? Text(l.reportTitle) : null),
       body: r == null
           ? error == null ? const Center(child: CircularProgressIndicator()) :
               CalmLoadError(onRetry: loading ? null : _load)
@@ -93,13 +93,9 @@ class _ReportScreenState extends State<ReportScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
                 CalmPageHeader(title: l.reportHeading),
                 SourcePairSummary(earlier: _label(r.earlierId, l), newer: _label(r.laterId, l), scope: r.scope ?? widget.scope),
-                Padding(padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 12, runSpacing: 4, children: [
-                      Text(l.reviewProgress(reviewed, r.findings.length),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.muted)),
-                      TextButton(onPressed: _allDifferences, child: Text(l.allDifferencesTitle)),
-                    ])),
+                Padding(padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(l.reviewProgress(reviewed, r.findings.length),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.muted))),
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) CalmWarning(text: l.contentLoadFailed,
                   child: TextButton(onPressed: loading ? null : _load, child: Text(l.retry))),
@@ -107,14 +103,11 @@ class _ReportScreenState extends State<ReportScreen> {
                 TopicFilters(counts: r.topicCounts, selected: topic, onSelected: (value) => setState(() => topic = value)),
                 if (needsReview.isNotEmpty) Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  child: Row(children: [
                     const CalmReviewDisc(),
                     const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${l.groupNeedsReview} · ${needsReview.length}',
-                        style: Theme.of(context).textTheme.titleSmall),
-                      Text(l.reviewAcrossTopics, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.muted)),
-                    ])),
+                    Expanded(child: Text('${l.groupNeedsReview} · ${needsReview.length}',
+                      style: Theme.of(context).textTheme.titleSmall)),
                   ])),
                 TextButton(onPressed: _allDifferences,
                   style: TextButton.styleFrom(alignment: AlignmentDirectional.centerStart,
@@ -188,7 +181,7 @@ class _AllDifferencesScreenState extends State<AllDifferencesScreen> {
                   builder: (_) => EvidenceScreen(version: _version(e)!, evidence: e))),
         );
     return Scaffold(
-      appBar: AppBar(title: Text(l.allDifferencesTitle)),
+      appBar: AppBar(),
       body: ListView(
         key: PageStorageKey('all-differences-${report.earlierId}-${report.laterId}'),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [

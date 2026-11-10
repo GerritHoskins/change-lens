@@ -94,14 +94,6 @@
   "startComparison": "Vergleich starten",
   "confirmMissing": "Wähle beide Versionen und den Umfang aus, um fortzufahren.",
   "comparisonTitle": "Vergleich",
-  "comparisonStatus": "Status: {status}",
-  "@comparisonStatus": {
-    "placeholders": {
-      "status": {
-        "type": "String"
-      }
-    }
-  },
   "comparisonQueued": "In der Warteschlange",
   "comparisonRunning": "Wird verarbeitet",
   "comparisonComplete": "Abgeschlossen",
