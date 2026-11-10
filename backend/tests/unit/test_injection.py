@@ -102,14 +102,39 @@ def test_omissions_never_depend_on_model_wording():
     assert not any("cancel" in f.explanation.lower() for f in omitted)
 
 
-def _imports(path: Path) -> set[str]:
+def _imports_source(source: str, relative_path: str) -> set[str]:
     names = set()
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+    for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             names |= {a.name.split(".")[0] for a in node.names}
         elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            # This exact parser import cannot fetch URLs. Keep urllib.request and
+            # every broader urllib import subject to the network boundary.
+            if (relative_path == "auth/jwt_verifier.py" and node.module == "urllib.parse"
+                    and all(alias.name == "urlsplit" for alias in node.names)):
+                continue
             names.add(node.module.split(".")[0])
     return names
+
+
+def _imports(path: Path) -> set[str]:
+    return _imports_source(path.read_text(encoding="utf-8"), path.relative_to(PACKAGE).as_posix())
+
+
+@pytest.mark.parametrize("source,relative_path,expected", [
+    ("from urllib.parse import urlsplit", "auth/jwt_verifier.py", set()),
+    ("from urllib.parse import urlsplit as split", "auth/jwt_verifier.py", set()),
+    ("from urllib.parse import urlsplit", "pipeline/align.py", {"urllib"}),
+    ("from urllib.request import urlopen", "auth/jwt_verifier.py", {"urllib"}),
+    ("from urllib import request", "auth/jwt_verifier.py", {"urllib"}),
+    ("import urllib.request", "auth/jwt_verifier.py", {"urllib"}),
+    ("import urllib.parse", "auth/jwt_verifier.py", {"urllib"}),
+    ("from urllib.parse import *", "auth/jwt_verifier.py", {"urllib"}),
+    ("from urllib.parse import urlsplit, urljoin", "auth/jwt_verifier.py", {"urllib"}),
+    ("from urllib.parse import urlsplit\nfrom urllib.request import urlopen", "auth/jwt_verifier.py", {"urllib"}),
+])
+def test_only_exact_auth_url_parser_import_is_exempt(source, relative_path, expected):
+    assert _imports_source(source, relative_path) & NETWORK == expected
 
 
 def test_only_the_model_adapter_and_storage_can_open_connections():
