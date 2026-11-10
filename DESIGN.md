@@ -62,6 +62,7 @@ Source: app/lib/design/calm_theme.dart. ThemeMode.system follows the device them
 | ground (canvas) | #F5F5F2 | #121214 |
 | surface / quote | #FFFFFF | #1E1E22 |
 | line | #DCDCD6 | #34343A |
+| control-border (text field outline) | #86868E | #76767E |
 | ink | #111114 | #F3F3EF |
 | muted | #5E5E66 | #A6A6AE |
 | action / on-action | #111114 / #FFFFFF | #F3F3EF / #111114 |
