@@ -9,8 +9,12 @@ Error messages name the path and rule only, never the offending value (AC-23).
 """
 from __future__ import annotations
 
-CATEGORIES = ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval",
-              "other_material", "structure"]
+from changelens.topics import CATEGORIES
+
+# D-17 is an independent, frozen baseline. Its prompt still uses the original vocabulary;
+# I-23 changes FactList, not the baseline prompt/schema pair.
+_BASELINE_CATEGORIES = ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval",
+                        "other_material", "structure"]
 CHANGE_TYPES = ["added", "changed", "removed", "not_addressed", "uncertain", "equivalent"]
 SCOPES = ["complete", "partial", "unknown"]
 
@@ -31,7 +35,7 @@ CHANGE_FINDINGS = {
                 "required": ["category", "change_type", "old_value", "new_value",
                              "evidence_old", "evidence_new"],
                 "properties": {
-                    "category": {"type": "string", "enum": CATEGORIES},
+                    "category": {"type": "string", "enum": _BASELINE_CATEGORIES},
                     "change_type": {"type": "string", "enum": CHANGE_TYPES},
                     "old_value": _NULLABLE_STR,
                     "new_value": _NULLABLE_STR,
@@ -43,8 +47,7 @@ CHANGE_FINDINGS = {
     },
 }
 
-FACT_TYPES = ["deliverable", "quantity", "date_deadline", "responsibility_owner", "approval",
-              "other_material"]
+FACT_TYPES = [category for category in CATEGORIES if category != "structure"]
 CONFIDENCE = ["high", "medium", "low"]
 AMBIGUITY = ["ambiguous_date", "ambiguous_entity", "ambiguous_value", None]
 

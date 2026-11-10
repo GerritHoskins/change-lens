@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from changelens.llm import LlmPort, MeteredLlm
-from changelens.metering import CeilingReached, CostMeter
+from changelens.metering import Budget, CeilingReached, CostMeter
 from changelens.pipeline.align import align
 from changelens.pipeline.compare import compare
 from changelens.pipeline.extract import FactCache, extract_cached
@@ -26,9 +26,10 @@ class Outcome:
 
 
 def run_comparison(sides: list[tuple[str, ParsedDocument, FactCache]], scope: str, llm: LlmPort,
-                   ceiling: Decimal, config_id: str) -> Outcome:
+                   ceiling: Decimal, config_id: str, *, meter: Budget | None = None) -> Outcome:
     """`sides` is (sha256, parsed document, fact cache) for the earlier and then the newer version."""
-    meter = CostMeter(ceiling)
+    if meter is None:
+        meter = CostMeter(ceiling)
     metered = MeteredLlm(llm, meter)
     earlier, later = sides[0][1], sides[1][1]
     warnings = []
@@ -56,5 +57,11 @@ def run_comparison(sides: list[tuple[str, ParsedDocument, FactCache]], scope: st
     checked.findings, templated = report(checked.findings, metered)
     if templated:  # verified findings are kept with template wording, never dropped (AC-21)
         warnings.append({"code": "cost_ceiling", "stage": "report", "templated_findings": templated})
-    partial = {"code": "parse_warnings"} in warnings or unextracted > 0 or templated > 0
-    return Outcome(checked, "partial" if partial else "complete", warnings, meter.total, meter.calls)
+    total = meter.total
+    over_budget = total > ceiling
+    if over_budget:
+        # Provider usage is authoritative, even above our conservative reservation. A last
+        # successful response must not hide that overage merely because no next call occurs.
+        warnings.append({"code": "cost_ceiling", "stage": "report", "reason": "reported_usage_exceeded_estimate"})
+    partial = {"code": "parse_warnings"} in warnings or unextracted > 0 or templated > 0 or over_budget
+    return Outcome(checked, "partial" if partial else "complete", warnings, total, meter.calls)

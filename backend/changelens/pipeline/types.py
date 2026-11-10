@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Literal, Optional
 
+from changelens.topics import topic_for_category
+
 Kind = Literal["text", "pdf"]
 Scope = Literal["complete", "partial", "unknown"]
 
@@ -105,6 +107,10 @@ class DraftFinding:
     confidence: float = 1.0  # lowest fact confidence; routing only, never shown as evidence (AC-10)
     group: str = "other"  # prioritised | needs_review | other (03a P5.5)
 
+    @property
+    def topic(self) -> str:
+        return topic_for_category(self.category)
+
 
 @dataclass(frozen=True)
 class ExtractedFact:
@@ -117,6 +123,10 @@ class ExtractedFact:
     subject: str = ""  # normalised subject: the I-3 alignment key is (type, subject)
     ambiguity: Optional[str] = None  # ambiguous_date | ambiguous_entity | ambiguous_value | contradiction
     context: str = ""  # the whole sentence or list item around the quote, whitespace-collapsed
+
+    @property
+    def topic(self) -> str:
+        return topic_for_category(self.type)
 
 
 @dataclass(frozen=True)

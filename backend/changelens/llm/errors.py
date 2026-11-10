@@ -7,10 +7,12 @@ from decimal import Decimal
 class LlmError(Exception):
     """Base class. Messages are content-free: a reason code only."""
 
-    def __init__(self, reason: str, cost: Decimal = Decimal("0")):
+    def __init__(self, reason: str, cost: Decimal | None = None):
         super().__init__(reason)
         self.reason = reason
-        self.cost = cost
+        # An absent usage report is not evidence that a failed request was free.
+        self.cost_known = cost is not None
+        self.cost = cost if cost is not None else Decimal("0")
 
 
 class LlmAuthError(LlmError):

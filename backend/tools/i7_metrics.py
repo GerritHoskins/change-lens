@@ -149,8 +149,9 @@ def bootstrap(rows: list[dict], num: str, den: str, n: int = 2000, seed: int = 7
     return [round(stats[int(0.025 * len(stats))], 3), round(stats[int(0.975 * len(stats)) - 1], 3)] if stats else [None, None]
 
 
-def _ratio(k: int, n: int, empty: float = 1.0) -> float:
-    return round(k / n, 3) if n else empty
+def _ratio(k: int, n: int) -> float | None:
+    # An unobserved denominator is not perfect accuracy (or a measured zero error rate).
+    return round(k / n, 3) if n else None
 
 
 def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
@@ -160,10 +161,11 @@ def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
             t[k] += int(v)
     pairs = {r["id"] for r in rows}
     scope_pairs = {r["id"] for r in rows if r["score"]["scope_pair"]}
+    no_change_pairs = {r["id"] for r in rows if NO_CHANGE_CASES & set(r.get("case_types", []))}
     typical = [r["cost_eur"] for r in rows if r["words"] <= TYPICAL_WORDS]
     heavy = [r["cost_eur"] for r in rows if r["words"] > TYPICAL_WORDS]
     m = {
-        "pairs": len(pairs), "comparisons": len(rows),
+        "pairs": len(pairs), "comparisons": len(rows), "no_change_pairs": len(no_change_pairs),
         "status": {s: sum(r["status"] == s for r in rows) for s in ("complete", "partial", "failed")},
         "precision": _ratio(t["tp"], t["pred"]), "precision_ci": bootstrap(rows, "tp", "pred"),
         "recall": _ratio(t["tp"], t["gold"]), "recall_ci": bootstrap(rows, "tp", "gold"),
@@ -176,7 +178,7 @@ def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
         "false_removal_rate_upper_95": round(3 / len(scope_pairs), 3) if scope_pairs and not t["false_removals"] else None,
         "evidence_location": _ratio(t["located"], t["locatable"]),
         "evidence_location_ci": wilson(t["located"], t["locatable"]), "located_locatable": [t["located"], t["locatable"]],
-        "unsupported_rate": _ratio(t["unsupported"], t["shown"], 0.0),
+        "unsupported_rate": _ratio(t["unsupported"], t["shown"]),
         "unsupported_ci": wilson(t["unsupported"], t["shown"]), "unsupported_shown": [t["unsupported"], t["shown"]],
         "fabricated_scope_changes": t["fabricated"], "withheld": sum(r["withheld"] for r in rows),
         "cost_p50_eur": round(sc.percentile([r["cost_eur"] for r in rows], 0.5), 4),
@@ -186,6 +188,8 @@ def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
         "latency_p50_s": round(sc.percentile([r["latency_s"] for r in rows], 0.5), 1),
         "latency_p90_s": round(sc.percentile([r["latency_s"] for r in rows], 0.9), 1),
         "cost_eur_total": round(sum(r["cost_eur"] for r in rows), 4),
+        "cost_actual_eur_total": round(sum(r.get("cost_actual_eur", r["cost_eur"]) for r in rows), 4),
+        "cost_reserved_eur_total": round(sum(r.get("cost_reserved_eur", 0) for r in rows), 4),
     }
     sigs = defaultdict(set)
     for r in rows:
@@ -193,6 +197,11 @@ def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
     if max((sum(x["id"] == i for x in rows) for i in pairs), default=0) > 1:
         m["identical_runs"] = f"{sum(len(s) == 1 for s in sigs.values())}/{len(sigs)}"
     m["gates"] = {k: check(k, m[k]) for k in GATES}
+    failures = sum(r["status"] not in ("complete", "partial") or r.get("error") is not None for r in rows)
+    m["gates"]["evaluated_comparisons"] = {"value": len(rows), "limit": "> 0", "pass": bool(rows)}
+    m["gates"]["no_failed_comparisons"] = {"value": failures, "limit": "== 0", "pass": failures == 0}
+    m["gates"]["scope_coverage"] = {"value": len(scope_pairs), "limit": "> 0", "pass": bool(scope_pairs)}
+    m["gates"]["no_change_coverage"] = {"value": len(no_change_pairs), "limit": "> 0", "pass": bool(no_change_pairs)}
     if baseline:
         b = defaultdict(int)
         for r in baseline:
@@ -202,14 +211,22 @@ def summarise(rows: list[dict], baseline: list[dict] | None = None) -> dict:
                          "material_recall": _ratio(b["material_tp"], b["material_gold"]),
                          "false_removals": b["false_removals"], "fabricated_scope_changes": b["fabricated"],
                          "missed_material": b["material_gold"] - b["material_tp"],
-                         "failed": sum(r["error"] is not None for r in baseline)}
+                         "failed": sum(r["error"] is not None for r in baseline),
+                         "cost_eur_total": round(sum(r.get("cost_eur", 0) for r in baseline), 4),
+                         "cost_actual_eur_total": round(sum(r.get("cost_actual_eur", r.get("cost_eur", 0)) for r in baseline), 4),
+                         "cost_reserved_eur_total": round(sum(r.get("cost_reserved_eur", 0) for r in baseline), 4)}
         missed = t["material_gold"] - t["material_tp"]
         better = (t["false_removals"] <= b["false_removals"] and missed <= m["baseline"]["missed_material"]
                   and (t["false_removals"] < b["false_removals"] or missed < m["baseline"]["missed_material"]))
+        m["gates"]["baseline_completed"] = {"value": m["baseline"]["failed"], "limit": "== 0",
+                                             "pass": m["baseline"]["failed"] == 0}
         m["gates"]["advantage_over_baseline"] = {"value": {"false_removals": [t["false_removals"], b["false_removals"]],
                                                            "missed_material": [missed, m["baseline"]["missed_material"]]},
                                                  "pass": better, "directional": True}
-    m["verdict"] = "PASS" if all(g["pass"] for g in m["gates"].values() if g["pass"] is not None) else "FAIL"
+    # Empty cost-size buckets stay explicitly unmeasured; quality denominators may not be waived.
+    cost_buckets = {"cost_p90_typical_eur", "cost_p90_heavy_eur"}
+    m["verdict"] = "PASS" if all(g["pass"] is True or (name in cost_buckets and g["pass"] is None)
+                                   for name, g in m["gates"].items()) else "FAIL"
     return m
 
 
