@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'calm_icons.dart';
+
 /// Radii and sizes from the Calm Bold design-system tokens (radius-*, button-main, target-min).
 abstract final class CalmRadius {
   static const sm = 6.0, md = 18.0, lg = 24.0, xl = 28.0, sheet = 36.0;
@@ -71,6 +73,44 @@ class CalmColors extends ThemeExtension<CalmColors> {
   }
 }
 
+/// The Calm Bold text field outline: a full rounded rectangle drawn inside the field. It extends the
+/// underline border so Material lays the label out inside the block (filled style) instead of
+/// notching it into an outline.
+class CalmFieldBorder extends UnderlineInputBorder {
+  const CalmFieldBorder({super.borderSide = const BorderSide(),
+    super.borderRadius = const BorderRadius.all(Radius.circular(CalmRadius.md))});
+
+  @override
+  CalmFieldBorder copyWith({BorderSide? borderSide, BorderRadius? borderRadius}) =>
+      CalmFieldBorder(borderSide: borderSide ?? this.borderSide, borderRadius: borderRadius ?? this.borderRadius);
+
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.all(borderSide.width);
+
+  @override
+  CalmFieldBorder scale(double t) => CalmFieldBorder(borderSide: borderSide.scale(t), borderRadius: borderRadius * t);
+
+  @override
+  ShapeBorder? lerpFrom(ShapeBorder? a, double t) => a is CalmFieldBorder
+      ? CalmFieldBorder(borderSide: BorderSide.lerp(a.borderSide, borderSide, t),
+          borderRadius: BorderRadius.lerp(a.borderRadius, borderRadius, t)!)
+      : super.lerpFrom(a, t);
+
+  @override
+  ShapeBorder? lerpTo(ShapeBorder? b, double t) => b is CalmFieldBorder
+      ? CalmFieldBorder(borderSide: BorderSide.lerp(borderSide, b.borderSide, t),
+          borderRadius: BorderRadius.lerp(borderRadius, b.borderRadius, t)!)
+      : super.lerpTo(b, t);
+
+  @override
+  void paint(Canvas canvas, Rect rect, {double? gapStart, double gapExtent = 0.0,
+      double gapPercentage = 0.0, TextDirection? textDirection}) {
+    if (borderSide.style == BorderStyle.none || borderSide.width == 0) return;
+    canvas.drawRRect(borderRadius.resolve(textDirection).toRRect(rect).deflate(borderSide.width / 2),
+      borderSide.toPaint());
+  }
+}
+
 ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   final dark = brightness == Brightness.dark;
   final colors = dark ? CalmColors.night : CalmColors.light;
@@ -119,8 +159,8 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   );
   const pill = StadiumBorder();
   final focusRing = BorderSide(color: colors.link, width: 2);
-  OutlineInputBorder field(BorderSide side) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(CalmRadius.md), borderSide: side);
+  CalmFieldBorder field(BorderSide side) => CalmFieldBorder(borderSide: side);
+  final isIOS = target == TargetPlatform.iOS || target == TargetPlatform.macOS;
   return ThemeData(
     useMaterial3: true, platform: target, brightness: brightness, colorScheme: scheme,
     fontFamily: 'Roboto', textTheme: text, scaffoldBackgroundColor: background,
@@ -139,23 +179,44 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
       minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       backgroundColor: surface, side: BorderSide.none, textStyle: text.labelLarge, shape: pill)),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: ink,
-      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin),
+    // Secondary actions are plain `ink` text buttons (cb-btn-text), never filled or outlined pills.
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: ink, iconColor: ink,
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin), iconSize: 20,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       textStyle: text.labelMedium)),
+    // Round icon buttons are 48px `surface` discs with a 20px stroke icon.
     iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(
-      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin))),
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin), iconSize: 20,
+      backgroundColor: surface, foregroundColor: ink, shape: const CircleBorder())),
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (_) => Icon(isIOS ? CalmIcons.backIOS : CalmIcons.back)),
+    iconTheme: IconThemeData(color: ink, size: 22),
+    // Menus are surfaces: no shadow, soft corners, a hairline edge so they read above the ground.
+    popupMenuTheme: PopupMenuThemeData(color: surface, surfaceTintColor: Colors.transparent,
+      elevation: 0, shadowColor: Colors.transparent, labelTextStyle: WidgetStatePropertyAll(text.labelLarge),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.md),
+        side: BorderSide(color: controlBorder))),
+    radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((states) =>
+      states.contains(WidgetState.disabled) ? disabledText
+        : states.contains(WidgetState.selected) ? ink : controlBorder)),
     chipTheme: ChipThemeData(backgroundColor: surface, selectedColor: primary,
       secondarySelectedColor: primary, labelStyle: text.labelMedium,
       secondaryLabelStyle: text.labelMedium?.copyWith(color: onPrimary),
       side: BorderSide.none, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
       shape: pill, showCheckmark: false),
+    // Text field (cb-field): `surface` fill, label inside the block (eyebrow once filled), 1px
+    // `control-border`, replaced by a 2px `link` ring on focus. Placeholders are `muted`.
     inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: surface,
-      labelStyle: text.bodySmall, hintStyle: text.bodySmall,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      labelStyle: text.bodyLarge?.copyWith(color: colors.muted),
+      floatingLabelStyle: text.labelSmall?.copyWith(color: colors.muted),
+      hintStyle: text.bodyLarge?.copyWith(color: colors.muted),
+      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       border: field(BorderSide(color: controlBorder)),
       enabledBorder: field(BorderSide(color: controlBorder)),
-      focusedBorder: field(focusRing)),
+      disabledBorder: field(BorderSide(color: colors.line)),
+      focusedBorder: field(focusRing),
+      errorBorder: field(BorderSide(color: scheme.error)),
+      focusedErrorBorder: field(BorderSide(color: scheme.error, width: 2))),
     dividerTheme: DividerThemeData(color: colors.line, thickness: 1, space: 32),
     listTileTheme: ListTileThemeData(contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
       titleTextStyle: text.titleMedium, subtitleTextStyle: text.bodySmall, minVerticalPadding: 12),
@@ -163,6 +224,9 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
       contentTextStyle: text.bodyMedium,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.xl))),
     bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface, showDragHandle: true,
+      surfaceTintColor: Colors.transparent, elevation: 0, modalElevation: 0,
+      dragHandleColor: colors.line, dragHandleSize: const Size(40, 5),
+      modalBarrierColor: CalmColors.ink.withValues(alpha: .4),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(
         top: Radius.circular(CalmRadius.sheet)))),
     snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, backgroundColor: ink,

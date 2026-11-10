@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../design/calm_theme.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 
@@ -121,7 +122,7 @@ class QuoteCard extends StatelessWidget {
                   Expanded(child: Text(l.showInDocument, style: type.labelLarge?.copyWith(
                     decoration: TextDecoration.underline))),
                   const SizedBox(width: 8),
-                  const Icon(Icons.open_in_new, size: 18),
+                  const Icon(CalmIcons.openExternal, size: 18),
                 ])),
             ]),
           ),
@@ -181,7 +182,7 @@ class FindingTile extends StatelessWidget {
                 Expanded(child: Text(reviewed ?? l.notReviewed,
                   style: type.labelLarge?.copyWith(color: foreground))),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: foreground),
+                Icon(CalmIcons.chevronRight, color: foreground),
               ])),
               if (f.clientApprovalRecorded) Padding(
                 padding: const EdgeInsets.only(top: 10),

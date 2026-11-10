@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'calm_icons.dart';
 import 'calm_theme.dart';
 
 class CalmCard extends StatelessWidget {
@@ -78,7 +79,7 @@ class SourcePairSummary extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           Text('${l.sideEarlier} · $earlier', style: Theme.of(context).textTheme.labelMedium),
-          const ExcludeSemantics(child: Icon(Icons.arrow_forward, size: 16)),
+          const ExcludeSemantics(child: Icon(CalmIcons.arrowForward, size: 16)),
           Text('${l.sideNewer} · $newer', style: Theme.of(context).textTheme.labelMedium),
         ]),
         if (scope != null) Padding(padding: const EdgeInsets.only(top: 6),
