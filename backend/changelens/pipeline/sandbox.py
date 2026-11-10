@@ -45,7 +45,9 @@ def _interpreter() -> str:
 def _child_env() -> dict:
     # One BLAS thread: OpenBLAS otherwise commits ~0.5 GB of per-thread buffers when numpy loads.
     env = {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONIOENCODING": "utf-8", "OPENBLAS_NUM_THREADS": "1"}
-    for key in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP"):  # Windows needs these for Python to start
+    # Windows needs SYSTEMROOT..TMP for Python to start; a shared-library Python on Linux (e.g. the
+    # setup-python build in CI) needs LD_LIBRARY_PATH to find libpython. None of them hold credentials.
+    for key in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LD_LIBRARY_PATH"):
         if key in os.environ:
             env[key] = os.environ[key]
     return env
