@@ -189,7 +189,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     return PopScope(
       canPop: !_deleting,
       child: Scaffold(
-      appBar: AppBar(title: Text(l.projectsTitle), actions: [
+      appBar: AppBar(actions: [
         if (!_deleteStarted) PopupMenuButton<String>(
           key: const Key('project-menu'),
           enabled: !importing,
@@ -213,7 +213,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
           CalmPageHeader(title: widget.project.name, subtitle: widget.project.clientLabel),
-          const SizedBox(height: 24),
           if (loading) const LinearProgressIndicator(),
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
             child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
@@ -252,13 +251,14 @@ class _ProjectScreenState extends State<ProjectScreen> {
               borderRadius: BorderRadius.circular(CalmRadius.md),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => ComparisonScreen(comparisonId: c.id, versions: versions))),
-              child: Padding(padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Container(padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  SourcePairSummary(
+                  SourcePairSummary(framed: false,
                     earlier: byId[c.earlierId] ?? l.sourceUnavailable,
                     newer: byId[c.laterId] ?? l.sourceUnavailable,
                     scope: c.scope),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Row(children: [
                     Expanded(child: Text(comparisonStatusLabel(l, c.status), style: text.labelLarge?.copyWith(
                       color: c.status == 'failed' ? Theme.of(context).colorScheme.error

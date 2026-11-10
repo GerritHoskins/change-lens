@@ -78,14 +78,6 @@ String? reviewLabel(AppLocalizations l, Review? r) => switch (r?.action) {
       _ => null,
     };
 
-IconData typeIcon(String t) => switch (t) {
-      'added' => Icons.add_circle_outline,
-      'changed' => Icons.change_circle_outlined,
-      'removed' || 'not_addressed' => Icons.remove_circle_outline,
-      'equivalent' => Icons.drag_handle,
-      _ => Icons.help_outline,
-    };
-
 /// One quoted passage, labelled with its side; tap to open it in the document.
 class QuoteCard extends StatelessWidget {
   const QuoteCard({super.key, required this.evidence, this.onTap,
@@ -165,9 +157,8 @@ class FindingTile extends StatelessWidget {
             padding: const EdgeInsets.all(18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                if (uncertain) const CalmReviewDisc()
-                else Icon(typeIcon(f.changeType), size: 20, color: foreground),
-                const SizedBox(width: 8),
+                // The type is named in words; only uncertainty gets a mark, the review disc.
+                if (uncertain) ...[const CalmReviewDisc(), const SizedBox(width: 8)],
                 Expanded(child: Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
                     style: type.titleMedium?.copyWith(color: foreground, fontWeight: FontWeight.w600))),
               ]),

@@ -536,12 +536,6 @@ abstract class AppLocalizations {
   /// **'Comparison'**
   String get comparisonTitle;
 
-  /// No description provided for @comparisonStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Status: {status}'**
-  String comparisonStatus(String status);
-
   /// No description provided for @comparisonQueued.
   ///
   /// In en, this message translates to:

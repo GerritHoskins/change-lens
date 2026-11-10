@@ -162,12 +162,11 @@ class _CompareScreenState extends State<CompareScreen> {
     final colors = CalmColors.of(context);
     final scopes = {Scope.complete: (l.scopeComplete, l.scopeCompleteHint),
       Scope.partial: (l.scopePartial, l.scopePartialHint), Scope.unknown: (l.scopeUnknown, l.scopeUnknownHint)};
-    return Scaffold(appBar: AppBar(title: Text(l.appTitle)),
+    return Scaffold(appBar: AppBar(),
       body: SafeArea(top: false, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         CalmPageHeader(title: l.compareBriefs,
           subtitle: widget.project != null || submission != null ? project!.name : null),
-        const SizedBox(height: 20),
         if (widget.project == null && submission == null) ...[
           DropdownButtonFormField<String>(key: const Key('comparison-project'),
             initialValue: project?.id, isExpanded: true, itemHeight: null,

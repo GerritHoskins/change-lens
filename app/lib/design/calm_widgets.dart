@@ -18,15 +18,19 @@ class CalmCard extends StatelessWidget {
 }
 
 class CalmPageHeader extends StatelessWidget {
-  const CalmPageHeader({super.key, required this.title, this.subtitle});
+  const CalmPageHeader({super.key, required this.title, this.subtitle, this.liveRegion = false});
   final String title;
   final String? subtitle;
+  /// Announce changes to the title (a polled status) instead of repeating it in a second line.
+  final bool liveRegion;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 8, bottom: 20),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Semantics(header: true, child: Text(title, style: Theme.of(context).textTheme.headlineLarge)),
+      // The headline names the route: screens show it once here instead of again in the app bar.
+      Semantics(header: true, namesRoute: true, liveRegion: liveRegion,
+        child: Text(title, style: Theme.of(context).textTheme.headlineLarge)),
       if (subtitle?.isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 10),
         child: Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)),
     ]),
@@ -56,18 +60,21 @@ class CalmWarning extends StatelessWidget {
 }
 
 class SourcePairSummary extends StatelessWidget {
-  const SourcePairSummary({super.key, required this.earlier, required this.newer, this.scope});
+  const SourcePairSummary({super.key, required this.earlier, required this.newer, this.scope,
+    this.framed = true});
   final String earlier, newer;
   final String? scope;
+  /// Hairlines above and below; off inside list rows that draw their own separator.
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = CalmColors.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: colors.line))),
+      padding: framed ? const EdgeInsets.symmetric(vertical: 12) : EdgeInsets.zero,
+      margin: framed ? const EdgeInsets.only(bottom: 16) : EdgeInsets.zero,
+      decoration: framed ? BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: colors.line))) : null,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           Text('${l.sideEarlier} · $earlier', style: Theme.of(context).textTheme.labelMedium),
