@@ -111,14 +111,21 @@ partial processing, personal review and client approval always have explicit tex
   original bytes can be viewed without a highlight; readable text remains an
   explicit alternative. These bytes and text stay in memory. Opening parsed text
   does not claim that a physical PDF page was viewed.
-- **Forms:** correction, note and approval dialogs scroll with the keyboard and
-  large text. Saving feedback is localized and announced. Client approval remains
+- **Forms:** new project, version import, correction, note and approval are Calm
+  sheets (title, content, one main pill, Cancel under it) that scroll with the
+  keyboard and large text. Choices open a sheet of radio rows instead of a
+  dropdown; only the destructive delete confirmation stays an adaptive dialog. Saving feedback is localized and announced. Client approval remains
   a separate, unverified record; confirming a finding never records approval.
 
-Shared components live in app/lib/design/calm_widgets.dart. Normal content uses
+Shared components live in app/lib/design/calm_widgets.dart and calm_controls.dart
+(`CalmSheet`, `CalmRadioRow`, `CalmSelectField`, `CalmSurfaceScope`). Text fields use
+`CalmFieldBorder`: label inside the block, 1px `control-border`, 2px `link` on focus;
+on a surface block (sheet, compare slot) fields and radio rows flip to `ground`.
+Secondary actions are ink text buttons; menus are shadowless surfaces. Icons are
+Lucide at weight 500 (2.5px stroke) through app/lib/design/calm_icons.dart. Normal content uses
 20-pixel horizontal padding and 18-pixel card padding; review cards, banners and
 quotes use the 16-pixel `space-inset`. Radii follow the tokens:
-18 for rows and fields, 24 for cards, 28 for dialogs, 36 for bottom-sheet tops,
+18 for rows, fields and menus, 24 for cards, 28 for dialogs, 36 for sheet tops,
 and pills for buttons and chips. Text/icon buttons have a 48-pixel minimum target;
 the main action is a 60-pixel pill.
 

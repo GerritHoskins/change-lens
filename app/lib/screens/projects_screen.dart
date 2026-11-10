@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_controls.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
@@ -71,24 +73,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Future<void> _create() async {
     final l = AppLocalizations.of(context);
     final name = TextEditingController(), client = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text(l.newProject),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(key: const Key('project-name'), controller: name, decoration: InputDecoration(labelText: l.projectName)),
-          TextField(controller: client, decoration: InputDecoration(labelText: l.clientLabel)),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
-          FilledButton(
-              key: const Key('create-project'),
-              onPressed: () => Navigator.pop(context, name.text.trim().isNotEmpty),
-              child: Text(l.create)),
-        ],
-      ),
-    );
+    final ok = await showCalmSheet<bool>(context, builder: (context) => CalmSheet(
+      title: l.newProject,
+      action: l.create, actionKey: const Key('create-project'),
+      onAction: () => Navigator.pop(context, name.text.trim().isNotEmpty),
+      children: [
+        TextField(key: const Key('project-name'), controller: name, autofocus: true,
+          textInputAction: TextInputAction.next, decoration: InputDecoration(labelText: l.projectName)),
+        TextField(controller: client, decoration: InputDecoration(labelText: l.clientLabel)),
+      ],
+    ));
     if (ok != true || !mounted) return;
     try {
       await ServicesScope.of(context).api.createProject(name.text.trim(),
@@ -110,7 +104,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         IconButton(
             key: const Key('settings'),
             tooltip: l.devSettings,
-            icon: const Icon(Icons.settings),
+            icon: const Icon(CalmIcons.settings),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevSettingsScreen()))),
       ]),
       body: !s.configured
@@ -128,7 +122,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (projects.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 24),
                   child: FilledButton.icon(key: const Key('compare-briefs'),
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
-                    icon: const Icon(Icons.compare_arrows), label: Text(l.compareBriefs))),
+                    icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))),
                 if (!loading && error == null && projects.isEmpty)
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 for (final p in projects)
@@ -158,14 +152,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
                         ])),
                         const SizedBox(width: 12),
-                        Icon(Icons.chevron_right, color: colors.muted),
+                        Icon(CalmIcons.chevronRight, color: colors.muted),
                       ]),
                     ),
                   )),
                 const SizedBox(height: 20),
                 Align(alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(key: const Key('new-project'), onPressed: _create,
-                    icon: const Icon(Icons.add), label: Text(l.newProject))),
+                    icon: const Icon(CalmIcons.add), label: Text(l.newProject))),
               ]),
             )),
     );
@@ -205,12 +199,14 @@ class _DevSettingsScreenState extends State<DevSettingsScreen> {
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Text(l.devSettingsHint),
         const SizedBox(height: 16),
+        const SizedBox(height: 12),
         TextField(
             key: const Key('base-url'),
             controller: base,
             keyboardType: TextInputType.url,
             autocorrect: false,
             decoration: InputDecoration(labelText: l.apiBaseUrl, hintText: 'http://192.168.178.51:8000')),
+        const SizedBox(height: 12),
         TextField(
             key: const Key('token'),
             controller: token,
