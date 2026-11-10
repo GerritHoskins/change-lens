@@ -67,20 +67,24 @@ def test_intervals_and_gates():
 
 
 def test_fingerprint_follows_prompts_and_model(monkeypatch):
+    from changelens.llm.ionos import PRICES_EUR
+
     fp = im.fingerprint("Qwen/Qwen3.5-397B-A17B")
+    # A model must be priced before use; equal prices isolate the model identity in this check.
+    monkeypatch.setitem(PRICES_EUR, "another/model", PRICES_EUR["Qwen/Qwen3.5-397B-A17B"])
     assert fp != im.fingerprint("another/model")
     monkeypatch.setattr(im.compare, "SYSTEM", im.compare.SYSTEM + " changed")
     assert im.fingerprint("Qwen/Qwen3.5-397B-A17B") != fp
 
 
 def test_held_out_receipt_matches_the_current_prompts_and_model():
-    """Fails when a prompt, schema, model or price changes after the last held-out run: rerun
-    `python -m tools.i7_run --split held_out` (backend README §12) and commit the new receipt."""
-    assert RECEIPT.is_file(), "no I-7 held-out receipt: run tools.i7_run --split held_out"
+    """Prompt/schema/model changes require new evaluation evidence. The original held-out
+    cohort has exhausted its looks; use a fresh reviewed split, never rerun the exposed one."""
+    assert RECEIPT.is_file(), "no I-7 receipt: prepare a fresh reviewed evaluation split"
     receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
     assert receipt["split"] == "held_out"
     assert receipt["fingerprint"] == im.fingerprint(receipt["model"]), \
-        "prompts or model changed since the last I-7 held-out run: rerun it"
+        "prompts or model changed: validate development, then obtain a fresh reviewed held-out receipt; do not reuse the exposed cohort"
 
 
 def test_may_is_a_month_only_next_to_a_number():

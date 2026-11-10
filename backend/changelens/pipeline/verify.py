@@ -11,10 +11,11 @@
    still surfaces (AC-18). Blocks that only moved or were reformatted (list marker, capitals) are
    presentation-only (AC-5, AC-6).
 4. A one-sided finding (an addition, or an omission of any scope) whose quoted sentence, ignoring
-   list marker, spacing and case, is in a visible block of the other version is dropped: the text
+   list marker, spacing and case, is in a contiguous visible span of the other version is dropped: the text
    is on both sides, so nothing was added or left out. This happens when extraction types or
    names the same sentence differently in the two versions, and must not fabricate a change on a
-   reordered or unchanged pair (AC-6). Any edit around it is still caught by the block diff (3).
+   reordered or unchanged pair (AC-6). Wrapped PDF lines may form that span, but pages, hidden
+   blocks and unparsed non-whitespace gaps are barriers. Any edit around it is still caught by (3).
 5. An exact duplicate (same change type, category, values and evidence locators as a kept finding)
    is merged into it: it says nothing new. The kept finding takes the lower confidence, so a copy
    that needs review still sends it to review (AC-10). Duplicates arise when one fact is extracted
@@ -59,15 +60,45 @@ def _loose(text: str) -> str:
     return _MARKER.sub("", _norm(text)).casefold()
 
 
+def _visible_spans(doc: ParsedDocument) -> list[str]:
+    """Exact source slices across adjacent visible blocks on one page, whitespace gaps only.
+    Never concatenate disconnected fragments: a hidden block, a page boundary or omitted page
+    text must not make an added/omitted sentence appear unchanged.
+    """
+    spans, current = [], None
+    for block in doc.blocks:
+        loc = block.locator
+        page = (loc.page or 1) - 1
+        valid = (0 <= page < len(doc.pages)
+                 and 0 <= loc.char_start < loc.char_end <= len(doc.pages[page]))
+        if block.hidden or not valid:
+            if current is not None:
+                spans.append(_loose(doc.slice(current)))
+                current = None
+            continue
+        contiguous = (current is not None and current.page == loc.page
+                      and current.char_end <= loc.char_start
+                      and not doc.pages[page][current.char_end:loc.char_start].strip())
+        if contiguous:
+            current = Locator(current.char_start, loc.char_end, loc.page)
+        else:
+            if current is not None:
+                spans.append(_loose(doc.slice(current)))
+            current = loc
+    if current is not None:
+        spans.append(_loose(doc.slice(current)))
+    return spans
+
+
 def _on_other_side(f: DraftFinding, docs: dict[str, ParsedDocument]) -> bool:
     sides = {ev.side for ev in f.evidence}
-    if len(sides) != 1:
+    if len(sides) != 1 or f.uncertainty == "contradiction":
         return False
     other = docs["later" if sides == {"earlier"} else "earlier"]
-    blocks = [_loose(b.text) for b in other.blocks if not b.hidden]
+    spans = _visible_spans(other)
     for ev in f.evidence:
         q = re.compile(rf"(?<!\w){re.escape(_loose(ev.quote))}(?!\w)")
-        if not any(q.search(b) for b in blocks):
+        if not any(q.search(span) for span in spans):
             return False
     return True
 

@@ -27,6 +27,7 @@ import httpx
 
 from changelens.llm.errors import LlmAuthError, LlmError, LlmOutputInvalid, LlmUnavailable  # noqa: F401
 from changelens.llm.schemas import SCHEMAS, SchemaError, validate
+from changelens.metering import Budget
 
 log = logging.getLogger("changelens.llm")
 DEFAULT_BASE_URL = "https://openai.inference.de-txl.ionos.com/v1"
@@ -58,9 +59,15 @@ class IonosConfig:
     price_out_eur: Optional[Decimal] = None
 
     def prices(self) -> tuple[Decimal, Decimal]:
-        default = PRICES_EUR.get(self.model, (Decimal("0"), Decimal("0")))
-        return (self.price_in_eur if self.price_in_eur is not None else default[0],
-                self.price_out_eur if self.price_out_eur is not None else default[1])
+        default = PRICES_EUR.get(self.model, (None, None))
+        prices = (self.price_in_eur if self.price_in_eur is not None else default[0],
+                  self.price_out_eur if self.price_out_eur is not None else default[1])
+        if any(p is None for p in prices):
+            raise ValueError("model_prices_required")
+        prices = tuple(Decimal(p) for p in prices)
+        if any(not p.is_finite() or p < 0 for p in prices):
+            raise ValueError("invalid_model_price")
+        return prices
 
 
 def read_token(env_file: Optional[Path] = None) -> str:
@@ -88,6 +95,7 @@ class CallStats:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cost_eur: Decimal = Decimal("0")
+    usage_known: bool = False
 
 
 def data_message(data: Sequence[str], nonce: str) -> str:
@@ -100,6 +108,9 @@ def data_message(data: Sequence[str], nonce: str) -> str:
 
 class IonosLlm:
     def __init__(self, config: IonosConfig, transport: Optional[httpx.BaseTransport] = None):
+        config.prices()  # Unknown models must not silently bypass the budget at zero cost.
+        if type(config.max_tokens) is not int or config.max_tokens <= 0:
+            raise ValueError("invalid_max_tokens")
         self.config = config
         self.calls: list[CallStats] = []
         self._client = httpx.Client(base_url=config.base_url, timeout=config.timeout_s,
@@ -117,8 +128,16 @@ class IonosLlm:
         self._client.close()
 
     def estimate_cost(self, schema: str, data: Sequence[str]) -> Decimal:
+        return self._request_estimate(self._body(schema, "", data))
+
+    def _request_estimate(self, body: dict) -> Decimal:
+        """Conservative input allowance: full UTF-8 request bytes plus framing, not chars/3.
+
+        Include the system prompt, schema and delimiters, and reserve the maximum output.
+        Provider usage remains authoritative if its accounting exceeds this estimate.
+        """
         p_in, p_out = self.config.prices()
-        tokens_in = 1500 + sum(len(d) for d in data) // 3  # prompt + schema overhead, ~3 chars/token
+        tokens_in = len(json.dumps(body, ensure_ascii=False).encode("utf-8")) + 256
         return (tokens_in * p_in + self.config.max_tokens * p_out) / Decimal(1_000_000)
 
     def _body(self, schema: str, system: str, data: Sequence[str]) -> dict:
@@ -142,12 +161,23 @@ class IonosLlm:
             body["reasoning_effort"] = cfg.reasoning_effort
         return body
 
-    def _call(self, schema: str, system: str, data: Sequence[str], attempt: int) -> tuple[Optional[dict], CallStats]:
-        stats = CallStats(self.config.model, schema, attempt, "ok", 0.0)
+    def _read_usage(self, payload, stats: CallStats) -> None:
+        usage = payload.get("usage") if isinstance(payload, dict) else None
+        if not isinstance(usage, dict):
+            return
+        counts = [usage.get("prompt_tokens"), usage.get("completion_tokens")]
+        if any(type(n) is not int or n < 0 for n in counts):
+            return  # missing/invalid usage keeps the reservation; it is never treated as free
+        stats.prompt_tokens, stats.completion_tokens = counts
+        p_in, p_out = self.config.prices()
+        stats.cost_eur = (counts[0] * p_in + counts[1] * p_out) / Decimal(1_000_000)
+        stats.usage_known = True
+
+    def _call(self, schema: str, body: dict, stats: CallStats) -> tuple[Optional[dict], CallStats]:
         self.calls.append(stats)
         t0 = time.perf_counter()
         try:
-            resp = self._client.post("/chat/completions", json=self._body(schema, system, data))
+            resp = self._client.post("/chat/completions", json=body)
         except httpx.TimeoutException:
             stats.outcome, stats.latency_s = "timeout", time.perf_counter() - t0
             raise LlmUnavailable("timeout") from None
@@ -155,30 +185,31 @@ class IonosLlm:
             stats.outcome, stats.latency_s = "transport", time.perf_counter() - t0
             raise LlmUnavailable("transport") from None
         stats.latency_s = time.perf_counter() - t0
+        try:
+            payload = resp.json()
+        except ValueError:
+            payload = None
+        self._read_usage(payload, stats)
         if resp.status_code != 200:
             stats.outcome = f"http_{resp.status_code}"
             log.warning("llm call failed model=%s status=%s", self.config.model, resp.status_code)
             if resp.status_code in (401, 403):
+                # Rejected authentication never reaches model inference.
+                if not stats.usage_known:
+                    stats.usage_known = True
                 raise LlmAuthError(stats.outcome)
             raise LlmUnavailable(stats.outcome)
         try:
-            payload = resp.json()
-            usage = payload.get("usage") or {}
-            stats.prompt_tokens = int(usage.get("prompt_tokens") or 0)
-            stats.completion_tokens = int(usage.get("completion_tokens") or 0)
             content = payload["choices"][0]["message"].get("content")
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):
             stats.outcome = "invalid_json"
             return None, stats
-        finally:
-            p_in, p_out = self.config.prices()
-            stats.cost_eur = (stats.prompt_tokens * p_in + stats.completion_tokens * p_out) / Decimal(1_000_000)
         if not content:
             stats.outcome = "empty"
             return None, stats
         try:
             out = json.loads(content)
-        except ValueError:
+        except (ValueError, TypeError):
             stats.outcome = "invalid_json"
             return None, stats
         try:
@@ -189,19 +220,40 @@ class IonosLlm:
         return out, stats
 
     def structured(self, schema: str, system: str, data: Sequence[str]) -> tuple[dict, Decimal]:
+        return self._structured(schema, system, data)
+
+    def structured_metered(self, schema: str, system: str, data: Sequence[str],
+                           meter: Budget) -> tuple[dict, Decimal]:
+        return self._structured(schema, system, data, meter)
+
+    def _structured(self, schema: str, system: str, data: Sequence[str],
+                    meter: Optional[Budget] = None) -> tuple[dict, Decimal]:
         if schema not in SCHEMAS:
             raise ValueError("unknown schema")
         cost = Decimal("0")
+        all_usage_known = True
         for attempt in (1, 2):
+            body = self._body(schema, system, data)
+            reservation = meter.reserve(self._request_estimate(body)) if meter is not None else None
+            stats = CallStats(self.config.model, schema, attempt, "ok", 0.0)
             try:
-                out, stats = self._call(schema, system, data, attempt)
+                out, stats = self._call(schema, body, stats)
             except LlmError as e:
-                e.cost = cost + self.calls[-1].cost_eur
+                e.cost = cost + stats.cost_eur
+                e.cost_known = all_usage_known and stats.usage_known
                 raise
+            finally:
+                # Usage may already be known when parsing or validation raises unexpectedly.
+                # Settle this attempt even then; an unknown outcome keeps its committed hold.
+                if reservation is not None and stats.usage_known:
+                    reservation.settle(stats.cost_eur)
+            all_usage_known = all_usage_known and stats.usage_known
             cost += stats.cost_eur
             log.info("llm call model=%s schema=%s attempt=%d outcome=%s in=%d out=%d ms=%d",
                      self.config.model, schema, attempt, stats.outcome, stats.prompt_tokens,
                      stats.completion_tokens, int(stats.latency_s * 1000))
             if out is not None:
                 return out, cost
-        raise LlmOutputInvalid("output_invalid_after_retry", cost)
+        error = LlmOutputInvalid("output_invalid_after_retry", cost)
+        error.cost_known = all_usage_known
+        raise error

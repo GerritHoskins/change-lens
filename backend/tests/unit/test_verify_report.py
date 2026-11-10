@@ -148,8 +148,9 @@ def test_groups_and_rank():
     other = DraftFinding("added", "other_material", [ev(L, "later", "Copywriting is included")])
     out, _ = report([style, unsure, other, budget()], Said("A change."))
     assert [(f.change_type, f.group, f.priority) for f in out] == [
-        ("changed", "prioritised", 0), ("uncertain", "needs_review", 1), ("equivalent", "other", 2), ("added", "other", 3)]
-    assert out[1].explanation.startswith("Needs your review: it is not clear which passage")
+        ("added", "prioritised", 0), ("changed", "prioritised", 1),
+        ("uncertain", "needs_review", 2), ("equivalent", "other", 3)]
+    assert unsure.explanation.startswith("Needs your review: it is not clear which passage")
 
 
 def test_ceiling_templates_the_rest_instead_of_dropping_them():

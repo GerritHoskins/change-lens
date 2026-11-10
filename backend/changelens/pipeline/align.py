@@ -3,7 +3,7 @@
 0. Contradictions inside one version (same type and subject, two sentences whose values have
    nothing in common) mark every fact of that group ambiguous; they are never resolved by picking
    one (AC-7). Two readings of one sentence are not a contradiction (I-7).
-1. Deterministic: a key of (type, subject) that occurs exactly once on each side is a match. Keys
+1. Deterministic: a key of (type, subject, explicit measurement dimension) that occurs once on each side is a match. Keys
    ignore position, so a reordered brief aligns the same way (AC-6).
 2. The rest goes to one `FactMatches` call. A proposal becomes a match only with high confidence and
    when it is one-to-one; anything else is an ambiguous pair, never a forced match (AC-7).
@@ -17,10 +17,12 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import replace
 from itertools import combinations
+import re
 from typing import Protocol, Sequence
 
 from changelens.pipeline.types import ExtractedFact, FactPair
 from changelens.pipeline.values import canonical
+from changelens.topics import canonical_category
 
 SYSTEM = """You align the facts of two versions of a client brief.
 
@@ -39,15 +41,36 @@ class Llm(Protocol):
     def structured(self, schema: str, system: str, data: Sequence[str]) -> dict: ...
 
 
-def key(f: ExtractedFact) -> tuple[str, str]:
-    return f.type, canonical(f.subject)
+_MEASURES = {
+    "duration": re.compile(r"\b\d+(?:\.\d+)?\s*(?:milliseconds?|seconds?|minutes?|hours?|days?|weeks?)\b"),
+    "resolution": re.compile(r"\b(?:480|576|720|1080|1440|2160|4320)\s*p\b"),
+    "frame_rate": re.compile(r"\b\d+(?:\.\d+)?\s*fps\b"),
+    "money": re.compile(r"\b(?:eur|usd|gbp)\s*\d+(?:[.,]\d+)*\b|\b\d+(?:[.,]\d+)*\s*(?:eur|usd|gbp)\b"),
+}
+
+
+def _measure(f: ExtractedFact) -> str:
+    """A video's resolution and duration are independent requirements, not contradictions.
+
+    Use only explicit units grounded in the source passage. Unknown/mixed units stay
+    unclassified, and this never clears ambiguity reported by extraction itself.
+    """
+    value, passage = canonical(f.normalised_value), canonical(f.context or f.raw_text)
+    dimensions = {dimension for dimension, pattern in _MEASURES.items()
+                  if any(re.search(rf"(?<!\w){re.escape(match.group())}(?!\w)", passage)
+                         for match in pattern.finditer(value))}
+    return next(iter(dimensions)) if len(dimensions) == 1 else ""
+
+
+def key(f: ExtractedFact) -> tuple[str, str, str]:
+    return canonical_category(f.type), canonical(f.subject), _measure(f)
 
 
 def mark_contradictions(facts: list[ExtractedFact]) -> list[ExtractedFact]:
     """A contradiction needs two passages that disagree: two sentences (as in compare's rule 0) whose
     values for the key have nothing in common. Two readings of one sentence ("6" and "record and edit
     6 launch episodes", dev pair P-708) are not one."""
-    groups: dict[tuple[str, str], dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    groups: dict[tuple[str, str, str], dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     for f in facts:
         if f.normalised_value:
             groups[key(f)][canonical(f.context or f.raw_text)].add(canonical(f.normalised_value))
@@ -64,13 +87,23 @@ def align(earlier: list[ExtractedFact], later: list[ExtractedFact], llm: Llm) ->
     earlier, later = mark_contradictions(earlier), mark_contradictions(later)
     pairs: list[FactPair] = []
     by_e, by_l = defaultdict(list), defaultdict(list)
+    subjects_e, subjects_l = defaultdict(list), defaultdict(list)
     for i, f in enumerate(earlier):
         by_e[key(f)].append(i)
+        subjects_e[key(f)[:2]].append(i)
     for j, f in enumerate(later):
         by_l[key(f)].append(j)
+        subjects_l[key(f)[:2]].append(j)
     used_e, used_l = set(), set()
     for k, es in by_e.items():
         ls = by_l.get(k, [])
+        # Preserve the original unique-subject match when one side has an unrecognised
+        # notation (e.g. 1080p -> 4K). Measurement separation resolves multiple properties;
+        # it must not add a model call to a previously unambiguous single-property edit.
+        candidates = subjects_l[k[:2]]
+        if (not ls and len(subjects_e[k[:2]]) == 1 and len(candidates) == 1
+                and (not k[2] or not key(later[candidates[0]])[2])):
+            ls = candidates
         if es and ls and any(f.ambiguity == "contradiction" for f in [earlier[i] for i in es] + [later[j] for j in ls]):
             pairs += [FactPair("ambiguous", earlier[i], later[j]) for i in es for j in ls]
             used_e.update(es)
