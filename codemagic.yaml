@@ -45,6 +45,7 @@ definitions:
         includes:
           - 'app/'
           - 'codemagic.yaml'
+          - 'scripts/release/'
   scripts:
     - &pub_get
       name: Get packages
@@ -55,6 +56,9 @@ definitions:
     - &unit_tests
       name: Unit tests
       script: flutter test
+    - &release_config
+      name: Check real-app release configuration
+      script: python3 "$CM_BUILD_DIR/scripts/release/check_config.py"
 
 workflows:
   # The real app (I-9): analyze, test and build on every push that touches app/.
@@ -65,6 +69,7 @@ workflows:
       <<: *flutter
     cache: *cache
     scripts:
+      - *release_config
       - *pub_get
       - *analyze
       - *unit_tests
@@ -80,6 +85,7 @@ workflows:
       <<: *flutter
     cache: *cache
     scripts:
+      - *release_config
       - *pub_get
       - *analyze
       - *unit_tests
@@ -117,11 +123,57 @@ workflows:
       - name: Build iOS without code signing
         script: flutter build ios --release --no-codesign
 
-  # Manual only. Needs an Apple Developer account, the bundle ID registered in the Apple
-  # Developer portal, and a Codemagic App Store Connect integration named below
-  # (Team settings > Integrations > Developer Portal). Not usable until those exist.
+  # Manual signed artifact preparation only. No publishing is configured: inspect the exact
+  # artifact on a device and run scripts/release/check_acceptance.py before external distribution.
+  app-android-release:
+    name: App Android signed release
+    <<: *real_app
+    environment:
+      <<: *flutter
+      android_signing:
+        - changelens_release
+    cache: *cache
+    scripts:
+      - *release_config
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Build signed Android artifacts
+        script: |
+          set -eu
+          flutter build apk --release --build-number=$BUILD_NUMBER
+          flutter build appbundle --release --build-number=$BUILD_NUMBER
+    artifacts:
+      - $CM_BUILD_DIR/app/build/app/outputs/flutter-apk/*-release.apk
+      - $CM_BUILD_DIR/app/build/app/outputs/bundle/release/*.aab
+
+  # Requires signing identities for dev.changelens.app and the named Apple integration.
   ios-testflight:
-    name: iOS TestFlight
+    name: App signed IPA for TestFlight (prepare only)
+    <<: *real_app
+    integrations:
+      app_store_connect: ChangeLens App Store Connect
+    environment:
+      <<: *flutter
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: dev.changelens.app
+    cache: *cache
+    scripts:
+      - *release_config
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Apply real-app signing profiles
+        script: xcode-project use-profiles --project ios/Runner.xcodeproj
+      - name: Build real-app IPA
+        script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
+
+  # The D-15 proof of concept remains separate and is never real-app acceptance evidence.
+  poc-ios-testflight:
+    name: PoC signed IPA for TestFlight (prepare only)
     <<: *app
     integrations:
       app_store_connect: ChangeLens App Store Connect
@@ -136,12 +188,8 @@ workflows:
       - *analyze
       - *unit_tests
       - name: Apply signing profiles
-        script: xcode-project use-profiles
+        script: xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Build IPA
         script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - $CM_BUILD_DIR/poc/d15/app/build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
