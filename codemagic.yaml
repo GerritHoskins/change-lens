@@ -171,6 +171,32 @@ workflows:
     artifacts:
       - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
 
+  # Owner device checks (M1): an ad hoc IPA signed for devices registered in the Apple Developer
+  # portal, installed from Codemagic's install link. Nothing is uploaded to App Store Connect.
+  # The app's API URL is set on the device (developer settings), e.g. the PC's Wi-Fi address.
+  ios-device-check:
+    name: App ad hoc IPA for owner device checks
+    <<: *real_app
+    integrations:
+      app_store_connect: ChangeLens App Store Connect
+    environment:
+      <<: *flutter
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: dev.changelens.app
+    cache: *cache
+    scripts:
+      - *release_config
+      - *pub_get
+      - *analyze
+      - *unit_tests
+      - name: Apply ad hoc signing profiles
+        script: xcode-project use-profiles --project ios/Runner.xcodeproj
+      - name: Build ad hoc IPA
+        script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
+
   # The D-15 proof of concept remains separate and is never real-app acceptance evidence.
   poc-ios-testflight:
     name: PoC signed IPA for TestFlight (prepare only)
