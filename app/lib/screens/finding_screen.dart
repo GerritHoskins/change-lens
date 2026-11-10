@@ -242,7 +242,11 @@ class _FindingScreenState extends State<FindingScreen> {
           if (f.explanation != null) Padding(padding: const EdgeInsets.only(top: 12),
             child: Text(f.explanation!, style: Theme.of(context).textTheme.titleLarge)),
           if (f.group == 'needs_review') Padding(padding: const EdgeInsets.only(top: 16),
-            child: CalmWarning(text: l.groupNeedsReview)),
+            child: Row(children: [
+              const CalmReviewDisc(),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.groupNeedsReview, style: Theme.of(context).textTheme.titleSmall)),
+            ])),
           SectionHeader(l.evidenceTitle),
           for (final e in f.evidence)
             CalmArrival(key: ValueKey('$id-${e.side}-${e.charStart}'), child: QuoteCard(

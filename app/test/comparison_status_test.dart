@@ -59,12 +59,12 @@ void main() {
   testWidgets('waiting becomes failed with the rejected version and readable reason; no POST', (tester) async {
     final backend = StatusBackend();
     await pumpStatus(tester, backend);
-    expect(find.text('Status: Reading versions'), findsOneWidget);
+    expect(find.text('Reading versions'), findsOneWidget);
     backend.status = 'failed';
     backend.warnings = [{'code': 'version_rejected', 'version_id': 'v2', 'reason': 'no_text_layer'}];
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text('Status: Failed'), findsOneWidget);
+    expect(find.text('Failed'), findsOneWidget);
     expect(find.textContaining('“Updated brief” could not be read'), findsOneWidget);
     expect(find.textContaining('no selectable text'), findsOneWidget);
     expect(find.text('Open report'), findsNothing);
@@ -106,7 +106,7 @@ void main() {
     ];
     await pumpStatus(tester, backend);
     await tester.pumpAndSettle();
-    expect(find.text('Status: Failed'), findsOneWidget);
+    expect(find.text('Failed'), findsOneWidget);
     expect(find.textContaining('This comparison could not be completed'), findsOneWidget);
     expect(find.textContaining('Check your connection and retry'), findsOneWidget);
     expect(find.textContaining('PRIVATE_'), findsNothing);

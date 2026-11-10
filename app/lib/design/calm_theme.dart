@@ -80,6 +80,8 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   final primary = ink; // `action`: the one main button, selected chip, progress fill.
   final onPrimary = dark ? CalmColors.ink : Colors.white;
   final disabledText = dark ? const Color(0xff6e6e76) : const Color(0xff8a8a92);
+  // `control-border`: field outlines at 3:1+ on surface and ground (WCAG 1.4.11); `line` stays decorative.
+  final controlBorder = dark ? const Color(0xff76767e) : const Color(0xff86868e);
   final target = platform ?? defaultTargetPlatform;
   final bodySize = target == TargetPlatform.iOS ? 17.0 : 16.0;
   final scheme = ColorScheme.fromSeed(seedColor: primary, brightness: brightness).copyWith(
@@ -151,8 +153,8 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
     inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: surface,
       labelStyle: text.bodySmall, hintStyle: text.bodySmall,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      border: field(BorderSide(color: colors.line)),
-      enabledBorder: field(BorderSide(color: colors.line)),
+      border: field(BorderSide(color: controlBorder)),
+      enabledBorder: field(BorderSide(color: controlBorder)),
       focusedBorder: field(focusRing)),
     dividerTheme: DividerThemeData(color: colors.line, thickness: 1, space: 32),
     listTileTheme: ListTileThemeData(contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),

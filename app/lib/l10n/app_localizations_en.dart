@@ -259,11 +259,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonTitle => 'Comparison';
 
   @override
-  String comparisonStatus(String status) {
-    return 'Status: $status';
-  }
-
-  @override
   String get comparisonQueued => 'Queued';
 
   @override

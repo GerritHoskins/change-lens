@@ -122,7 +122,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
                 CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro),
-                const SizedBox(height: 24),
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
