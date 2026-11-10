@@ -4,7 +4,7 @@ from __future__ import annotations
 from changelens.api.errors import ApiError
 from changelens.config import Limits
 
-# Recognised binary formats that are not accepted in I-22 (images arrive with I-16).
+# Recognised binary formats that are not accepted in I-22 (image parsing is I-1b, image import I-16).
 _BINARY_MAGIC = (b"\x89PNG", b"\xff\xd8\xff", b"GIF8", b"PK\x03\x04", b"\xd0\xcf\x11\xe0", b"RIFF", b"BM")
 
 

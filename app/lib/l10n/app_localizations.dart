@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 
 // ignore_for_file: type=lint
@@ -92,13 +93,154 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('de'),
+    Locale('en'),
+  ];
 
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
   /// **'ChangeLens'**
   String get appTitle;
+
+  /// No description provided for @compareBriefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare two briefs'**
+  String get compareBriefs;
+
+  /// No description provided for @compareLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your versions. Check your connection and try again.'**
+  String get compareLoadFailed;
+
+  /// No description provided for @compareRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The comparison could not be accepted. Check both inputs, then try again.'**
+  String get compareRejected;
+
+  /// No description provided for @compareRetrySame.
+  ///
+  /// In en, this message translates to:
+  /// **'The submission has not been confirmed. Retry to check the same comparison without creating a duplicate.'**
+  String get compareRetrySame;
+
+  /// No description provided for @readyToSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to send'**
+  String get readyToSubmit;
+
+  /// No description provided for @submittingComparison.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending comparison…'**
+  String get submittingComparison;
+
+  /// No description provided for @compareSubmitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start sends both inputs together. You can leave this screen once the comparison is reading.'**
+  String get compareSubmitHint;
+
+  /// No description provided for @comparePickFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The PDF could not be prepared. Try picking it again.'**
+  String get comparePickFailed;
+
+  /// No description provided for @useText.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this text'**
+  String get useText;
+
+  /// No description provided for @comparisonReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading versions'**
+  String get comparisonReading;
+
+  /// No description provided for @loadingComparison.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading comparison…'**
+  String get loadingComparison;
+
+  /// No description provided for @settingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings could not be saved. Please try again.'**
+  String get settingsSaveFailed;
+
+  /// No description provided for @evidenceChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the source passages…'**
+  String get evidenceChecking;
+
+  /// No description provided for @evidenceCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The source passages could not be checked. Retry before reviewing this finding.'**
+  String get evidenceCheckFailed;
+
+  /// No description provided for @evidenceFallbackReview.
+  ///
+  /// In en, this message translates to:
+  /// **'A PDF highlight could not be placed. Review the quoted text before confirming.'**
+  String get evidenceFallbackReview;
+
+  /// No description provided for @findingChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This finding changed. Review the current revision before trying again.'**
+  String get findingChanged;
+
+  /// No description provided for @topicDeadlines.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadlines'**
+  String get topicDeadlines;
+
+  /// No description provided for @topicDeliverables.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliverables'**
+  String get topicDeliverables;
+
+  /// No description provided for @topicResponsibilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Responsibilities'**
+  String get topicResponsibilities;
+
+  /// No description provided for @topicApprovalWording.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval wording'**
+  String get topicApprovalWording;
+
+  /// No description provided for @topicBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget'**
+  String get topicBudget;
+
+  /// No description provided for @topicOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get topicOther;
+
+  /// No description provided for @topicAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All topics'**
+  String get topicAll;
 
   /// No description provided for @projectsTitle.
   ///
@@ -361,7 +503,7 @@ abstract class AppLocalizations {
   /// No description provided for @scopePartialHint.
   ///
   /// In en, this message translates to:
-  /// **'Changes some items; everything else still stands.'**
+  /// **'Unmentioned items are not addressed. This does not confirm whether they still apply.'**
   String get scopePartialHint;
 
   /// No description provided for @scopeUnknown.
@@ -429,6 +571,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get comparisonFailed;
+
+  /// No description provided for @comparisonFailedDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'This comparison could not be completed. Start a new comparison to try again.'**
+  String get comparisonFailedDetails;
+
+  /// No description provided for @comparisonCostStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The cost limit was reached, so processing has stopped.'**
+  String get comparisonCostStopped;
+
+  /// No description provided for @comparisonLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison details could not be loaded. Check your connection and retry.'**
+  String get comparisonLoadFailed;
+
+  /// No description provided for @comparisonInputRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'“{label}” could not be read: {reason}'**
+  String comparisonInputRejected(String label, String reason);
+
+  /// No description provided for @parseNoTextLayer.
+  ///
+  /// In en, this message translates to:
+  /// **'the PDF has no selectable text. Use a text-based PDF or paste the text.'**
+  String get parseNoTextLayer;
+
+  /// No description provided for @parseMalformedPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'the PDF could not be opened. Export it again or paste the text.'**
+  String get parseMalformedPdf;
+
+  /// No description provided for @parseTooManyPages.
+  ///
+  /// In en, this message translates to:
+  /// **'the PDF exceeds the page limit. Choose a shorter document.'**
+  String get parseTooManyPages;
+
+  /// No description provided for @parseTooManyWords.
+  ///
+  /// In en, this message translates to:
+  /// **'the document exceeds the word limit. Choose a shorter document.'**
+  String get parseTooManyWords;
+
+  /// No description provided for @parseTooManyBytes.
+  ///
+  /// In en, this message translates to:
+  /// **'the file exceeds the size limit. Choose a smaller file.'**
+  String get parseTooManyBytes;
+
+  /// No description provided for @parseTooMuchText.
+  ///
+  /// In en, this message translates to:
+  /// **'the PDF contains too much text. Choose a shorter document.'**
+  String get parseTooMuchText;
+
+  /// No description provided for @parseNotUtf8.
+  ///
+  /// In en, this message translates to:
+  /// **'the text encoding is unsupported. Paste the text or save it as UTF-8.'**
+  String get parseNotUtf8;
+
+  /// No description provided for @parseUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'this file type is unsupported. Use pasted text or a PDF with selectable text.'**
+  String get parseUnsupported;
+
+  /// No description provided for @parseTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'reading the document took too long. Try a simpler or shorter document.'**
+  String get parseTimeout;
+
+  /// No description provided for @parseMemoryLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'the document is too complex to read. Try a simpler or shorter document.'**
+  String get parseMemoryLimit;
+
+  /// No description provided for @parseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'the document could not be processed. Export it again or paste the text.'**
+  String get parseFailed;
 
   /// No description provided for @earlierToNewer.
   ///
@@ -814,11 +1046,173 @@ abstract class AppLocalizations {
   /// **'Could not load: {reason}'**
   String loadFailed(String reason);
 
+  /// No description provided for @contentLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This content could not be opened. Check your connection and retry.'**
+  String get contentLoadFailed;
+
+  /// No description provided for @deleteProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete project'**
+  String get deleteProject;
+
+  /// No description provided for @deleteProjectConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone. Delete “{name}” and its documents, comparisons and reviews?'**
+  String deleteProjectConfirmation(String name);
+
+  /// No description provided for @deletingProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting project…'**
+  String get deletingProject;
+
+  /// No description provided for @deleteProjectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion could not be confirmed. Retry to check and finish deleting the project.'**
+  String get deleteProjectFailed;
+
+  /// No description provided for @retryDeleteProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry deletion'**
+  String get retryDeleteProject;
+
+  /// No description provided for @projectDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Project deleted.'**
+  String get projectDeleted;
+
+  /// No description provided for @projectDeletionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Project hidden. Its data is being deleted.'**
+  String get projectDeletionPending;
+
   /// No description provided for @saveFailed.
   ///
   /// In en, this message translates to:
   /// **'Could not save: {reason}'**
   String saveFailed(String reason);
+
+  /// No description provided for @projectsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare briefs. Check the source.'**
+  String get projectsIntro;
+
+  /// No description provided for @swapVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap earlier and newer'**
+  String get swapVersions;
+
+  /// No description provided for @comparisonReturnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can leave this screen and return to the comparison from its project.'**
+  String get comparisonReturnHint;
+
+  /// No description provided for @returnToProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to projects'**
+  String get returnToProjects;
+
+  /// No description provided for @reportHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed'**
+  String get reportHeading;
+
+  /// No description provided for @reviewProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Your review · {reviewed} of {total}'**
+  String reviewProgress(int reviewed, int total);
+
+  /// No description provided for @reviewAcrossTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Across all topics'**
+  String get reviewAcrossTopics;
+
+  /// No description provided for @noTopicChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No material changes in this topic.'**
+  String get noTopicChanges;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Source label unavailable'**
+  String get sourceUnavailable;
+
+  /// No description provided for @evidencePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page}'**
+  String evidencePage(int page);
+
+  /// No description provided for @yourReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Your review'**
+  String get yourReview;
+
+  /// No description provided for @confirmAndNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm and next'**
+  String get confirmAndNext;
+
+  /// No description provided for @findingPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding {position} of {total}'**
+  String findingPosition(int position, int total);
+
+  /// No description provided for @evidenceModePdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight located'**
+  String get evidenceModePdf;
+
+  /// No description provided for @evidenceModeFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Text fallback'**
+  String get evidenceModeFallback;
+
+  /// No description provided for @evidenceModeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text-only source'**
+  String get evidenceModeText;
+
+  /// No description provided for @readableText.
+  ///
+  /// In en, this message translates to:
+  /// **'Readable text'**
+  String get readableText;
+
+  /// No description provided for @pdfPage.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF page'**
+  String get pdfPage;
+
+  /// No description provided for @saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get saving;
 }
 
 class _AppLocalizationsDelegate
@@ -832,7 +1226,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['de', 'en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -841,6 +1235,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
   }

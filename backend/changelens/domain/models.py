@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
-    DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func,
+    BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -57,10 +57,25 @@ class SourceVersion(Base):
     blocks: Mapped[Optional[list]] = mapped_column(JSONB)
     parse_warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = _now()
+    last_used_at: Mapped[datetime] = _now()
+
+
+class ObjectWriteIntent(Base):
+    """Committed before PUT; no FK cascade can erase an outstanding cleanup obligation."""
+    __tablename__ = "object_write_intents"
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    object_key: Mapped[str] = mapped_column(String(300), nullable=False, unique=True)
+    request_lock_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    write_acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = _now()
 
 
 class Comparison(Base):
     __tablename__ = "comparisons"
+    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key", name="uq_comparisons_request"),)
     id: Mapped[uuid.UUID] = _id()
     tenant_id: Mapped[uuid.UUID] = _tenant()
     project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("projects.id"), nullable=False)
@@ -69,19 +84,57 @@ class Comparison(Base):
     scope_snapshot: Mapped[str] = mapped_column(String(10), nullable=False)
     pipeline_version: Mapped[str] = mapped_column(String(40), nullable=False)
     model_config_id: Mapped[str] = mapped_column(String(40), nullable=False)
-    # queued | running | complete | partial | failed
-    status: Mapped[str] = mapped_column(String(10), nullable=False, default="queued")
+    # waiting_for_versions | queued | running | complete | partial | failed
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued")
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128))  # null only on legacy rows
+    request_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
     cost_ceiling: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
     cost_estimate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4))
-    cost_actual: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4))
+    cost_actual: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 10))
+    # Attempt UUID -> reserved EUR as a decimal string. Uncertain/crashed calls retain a hold.
+    cost_reservations: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     withheld_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     # I-5 verify: changed blocks no finding explains (AC-18) and blocks that only moved (AC-5, AC-6).
     unexplained: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     presentation_only: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = _now()
+    last_used_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now(), nullable=False)
+
+
+class ComparisonCostTombstone(Base):
+    """Content-free accounting survives graph expiry so late usage can still settle."""
+    __tablename__ = "comparison_cost_tombstones"
+    id: Mapped[uuid.UUID] = _id()  # original comparison ID; deliberately no cascade FK
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    cost_actual: Mapped[Decimal] = mapped_column(Numeric(20, 10), nullable=False)
+    cost_reservations: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = _now()
+
+
+class ObjectPurgeIntent(Base):
+    """Committed with source-row deletion; independent of upload-outcome tombstones."""
+    __tablename__ = "object_purge_intents"
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    object_key: Mapped[str] = mapped_column(String(300), nullable=False, unique=True)
+    next_attempt_at: Mapped[datetime] = _now()
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class ProjectDeletion(Base):
+    """Tenant-scoped deletion receipt; contains identifiers and state, never project content."""
+    __tablename__ = "project_deletions"
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="pending")
+    requested_at: Mapped[datetime] = _now()
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    next_attempt_at: Mapped[datetime] = _now()
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class Finding(Base):
@@ -139,12 +192,22 @@ class ReviewEvent(Base):
     """User review of a finding (02 §5, 03a P6). Append-only; never creates or implies client
     approval (AC-12). `actor` is the dev-token user until I-8 brings real users."""
     __tablename__ = "review_events"
+    __table_args__ = (
+        CheckConstraint("evidence_mode_before IS NULL OR evidence_mode_before IN "
+                        "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_before"),
+        CheckConstraint("evidence_mode_after IS NULL OR evidence_mode_after IN "
+                        "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_after"),
+    )
     id: Mapped[uuid.UUID] = _id()
     tenant_id: Mapped[uuid.UUID] = _tenant()
     finding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("findings.id"), nullable=False, index=True)
     actor: Mapped[str] = mapped_column(String(80), nullable=False)
     action: Mapped[str] = mapped_column(String(12), nullable=False)  # confirmed | corrected | dismissed | note
     note: Mapped[Optional[str]] = mapped_column(Text)
+    # Null on historical rows: the device never reported these observations (I-26 / O-17).
+    evidence_mode_before: Mapped[Optional[str]] = mapped_column(String(20))
+    evidence_mode_after: Mapped[Optional[str]] = mapped_column(String(20))
+    page_opened: Mapped[Optional[bool]] = mapped_column(Boolean)
     created_at: Mapped[datetime] = _now()
 
 

@@ -1,5 +1,7 @@
 """API behaviour that needs no database: auth, problem+json, upload checks before storage."""
 import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +11,7 @@ from changelens.api.app import create_app
 from changelens.api.errors import ApiError
 from changelens.config import Limits, Settings
 from changelens.domain import Database
+from changelens.domain.models import Comparison
 from changelens.storage import MemoryObjectStore
 from helpers import TOKEN_A, auth, make_pdf
 
@@ -112,3 +115,24 @@ def test_dev_api_binds_to_localhost_unless_lan_is_asked_for():
     from changelens.api.__main__ import bind_host
     assert bind_host(False) == "127.0.0.1"
     assert bind_host(True) == "0.0.0.0"
+
+
+@pytest.mark.parametrize("actual,holds,status,expected_reserved,pending", [
+    ("0", {"private-ticket": "0.015"}, "complete", "0.015", True),
+    ("0.3", {"private-ticket": "0.4"}, "failed", "0.4", True),
+    ("0.00000006", {}, "complete", "0", False),
+])
+def test_comparison_separates_known_cost_from_unknown_reservations(actual, holds, status,
+                                                                  expected_reserved, pending):
+    from changelens.api.routes import _comparison_out
+
+    comparison = Comparison(id=uuid.uuid4(), project_id=uuid.uuid4(), earlier_id=uuid.uuid4(),
+                            later_id=uuid.uuid4(), scope_snapshot="complete", status=status,
+                            pipeline_version="facts-2", model_config_id="fake", cost_ceiling=Decimal("1"),
+                            cost_actual=Decimal(actual), cost_reservations=holds, warnings=[],
+                            created_at=datetime.now(timezone.utc))
+    result = _comparison_out(comparison)
+    assert Decimal(result["cost_actual"]) == Decimal(actual)
+    assert Decimal(result["cost_reserved"]) == Decimal(expected_reserved)
+    assert result["cost_pending"] is pending
+    assert "private-ticket" not in str(result) and "cost_reservations" not in result

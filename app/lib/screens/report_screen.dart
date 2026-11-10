@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_theme.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'evidence_screen.dart';
@@ -11,9 +13,10 @@ import 'finding_screen.dart';
 import 'report_widgets.dart';
 
 class ReportScreen extends StatefulWidget {
-  const ReportScreen({super.key, required this.comparisonId, this.versions = const []});
+  const ReportScreen({super.key, required this.comparisonId, this.versions = const [], this.scope});
 
   final String comparisonId;
+  final String? scope;
   final List<Version> versions;
 
   @override
@@ -23,16 +26,26 @@ class ReportScreen extends StatefulWidget {
 class _ReportScreenState extends State<ReportScreen> {
   Report? report;
   String? error;
+  String? topic;
+  bool loading = false, opened = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (report == null && error == null) _load();
+    if (!loading && report == null && error == null) _load();
   }
 
   Future<void> _load() async {
+    if (loading) return;
+    setState(() { loading = true; error = null; });
     try {
-      final r = await ServicesScope.of(context).api.report(widget.comparisonId);
+      final api = ServicesScope.of(context).api;
+      if (!opened) {
+        await api.comparisonOpened(widget.comparisonId);
+        opened = true;
+      }
+      if (!mounted) return;
+      final r = await api.report(widget.comparisonId);
       if (!mounted) return;
       setState(() {
         report = r;
@@ -40,42 +53,81 @@ class _ReportScreenState extends State<ReportScreen> {
       });
     } on Exception catch (e) {
       if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> _open(Finding f) async {
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => FindingScreen(findingId: f.id, report: report!, versions: widget.versions)));
-    await _load(); // a review or correction changes the list
+        builder: (_) => FindingScreen(comparisonId: widget.comparisonId,
+            findingId: f.id, report: report!, versions: widget.versions)));
+    if (mounted) await _load(); // a review or correction changes the list, but is not another opening
   }
+
+  String _label(String id, AppLocalizations l) =>
+      widget.versions.where((v) => v.id == id).firstOrNull?.label ?? l.sourceUnavailable;
+
+  Future<void> _allDifferences() => Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => AllDifferencesScreen(report: report!, versions: widget.versions,
+        initialTopic: topic, scope: report!.scope ?? widget.scope, onOpen: _open, latestReport: () => report!)));
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final r = report;
+    final colors = CalmColors.of(context);
+    final needsReview = r?.inGroup('needs_review') ?? <Finding>[];
+    final reviewed = r?.findings.where((f) =>
+      const {'confirmed', 'corrected', 'dismissed'}.contains(f.review?.action)).length ?? 0;
     return Scaffold(
       appBar: AppBar(title: Text(l.reportTitle)),
       body: r == null
-          ? Center(child: error == null ? const CircularProgressIndicator() : Text(l.loadFailed(error!)))
+          ? error == null ? const Center(child: CircularProgressIndicator()) :
+              CalmLoadError(onRetry: loading ? null : _load)
           : RefreshIndicator(
               onRefresh: _load,
-              child: ListView(padding: const EdgeInsets.all(16), children: [
+              child: ListView(
+                key: PageStorageKey('report-${widget.comparisonId}'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+                CalmPageHeader(title: l.reportHeading),
+                SourcePairSummary(earlier: _label(r.earlierId, l), newer: _label(r.laterId, l), scope: r.scope ?? widget.scope),
+                Padding(padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12, runSpacing: 4, children: [
+                      Text(l.reviewProgress(reviewed, r.findings.length),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.muted)),
+                      TextButton(onPressed: _allDifferences, child: Text(l.allDifferencesTitle)),
+                    ])),
+                if (loading) const LinearProgressIndicator(),
+                if (error != null) CalmWarning(text: l.contentLoadFailed,
+                  child: TextButton(onPressed: loading ? null : _load, child: Text(l.retry))),
                 ...warnings(l, r),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.filter_list),
-                    title: Text(l.selectedSummary(r.otherDifferences)),
-                    subtitle: Text(l.showAllDifferences),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => AllDifferencesScreen(report: r, versions: widget.versions, onOpen: _open))),
-                  ),
-                ),
+                TopicFilters(counts: r.topicCounts, selected: topic, onSelected: (value) => setState(() => topic = value)),
+                if (needsReview.isNotEmpty) Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const CalmReviewDisc(),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${l.groupNeedsReview} · ${needsReview.length}',
+                        style: Theme.of(context).textTheme.titleSmall),
+                      Text(l.reviewAcrossTopics, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.muted)),
+                    ])),
+                  ])),
+                TextButton(onPressed: _allDifferences,
+                  style: TextButton.styleFrom(alignment: AlignmentDirectional.centerStart,
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: Text(l.selectedSummary(r.otherDifferences))),
                 SectionHeader(l.groupPrioritised),
-                if (r.inGroup('prioritised').isEmpty) Text(l.noPrioritised),
-                for (final f in r.inGroup('prioritised')) FindingTile(finding: f, onTap: () => _open(f)),
-                if (r.inGroup('needs_review').isNotEmpty) ...[
-                  SectionHeader(l.groupNeedsReview),
-                  for (final f in r.inGroup('needs_review')) FindingTile(finding: f, onTap: () => _open(f)),
+                if (!r.inGroup('prioritised').any((f) => topic == null || f.topic == topic))
+                  Text(topic == null ? l.noPrioritised : l.noTopicChanges),
+                ...topicFindings(l, r.inGroup('prioritised'), topic, _open),
+                if (needsReview.isNotEmpty) ...[
+                  SectionHeader(l.groupNeedsReview, hint: l.reviewAcrossTopics),
+                  // Topic selection never hides uncertainty from the main report.
+                  ...topicFindings(l, needsReview, null, _open),
                 ],
               ]),
             ),
@@ -83,36 +135,45 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 }
 
-List<Widget> warnings(AppLocalizations l, Report r) => [
-      if (r.status == 'partial' || r.warnings.contains('unextracted')) _Banner(l.warningPartial),
-      if (r.warnings.contains('hidden_text')) _Banner(l.warningHidden),
-      if (r.warnings.contains('cost_ceiling')) _Banner(l.warningCeiling),
-      if (r.withheld > 0) _Banner(l.withheld(r.withheld)),
-    ];
-
-class _Banner extends StatelessWidget {
-  const _Banner(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        color: Theme.of(context).colorScheme.tertiaryContainer,
-        child: ListTile(leading: const Icon(Icons.info_outline), title: Text(text)),
-      );
+List<Widget> warnings(AppLocalizations l, Report r) {
+  final messages = [
+    if (r.status == 'partial' || r.warnings.contains('unextracted')) l.warningPartial,
+    if (r.warnings.contains('hidden_text')) l.warningHidden,
+    if (r.warnings.contains('cost_ceiling')) l.warningCeiling,
+    if (r.withheld > 0) l.withheld(r.withheld),
+  ];
+  return [if (messages.isNotEmpty) CalmWarning(text: messages.join('\n\n'))];
 }
 
 /// Every finding, then text no finding explains, then moved or reformatted text (AC-5, AC-13, AC-18).
-class AllDifferencesScreen extends StatelessWidget {
-  const AllDifferencesScreen({super.key, required this.report, required this.versions, required this.onOpen});
+class AllDifferencesScreen extends StatefulWidget {
+  const AllDifferencesScreen({super.key, required this.report, required this.versions, required this.onOpen,
+    this.initialTopic, this.latestReport, this.scope});
 
   final Report report;
   final List<Version> versions;
   final Future<void> Function(Finding) onOpen;
+  final String? initialTopic;
+  final String? scope;
+  /// Read the refreshed report after returning from a finding without discarding this route.
+  final Report Function()? latestReport;
+
+  @override
+  State<AllDifferencesScreen> createState() => _AllDifferencesScreenState();
+}
+
+class _AllDifferencesScreenState extends State<AllDifferencesScreen> {
+  late String? topic = widget.initialTopic;
+  late Report report = widget.report;
+
+  Future<void> _open(Finding finding) async {
+    await widget.onOpen(finding);
+    if (mounted) setState(() => report = widget.latestReport?.call() ?? report);
+  }
 
   Version? _version(Evidence e) {
     final id = e.earlier ? report.earlierId : report.laterId;
-    return versions.where((v) => v.id == id).firstOrNull;
+    return widget.versions.where((v) => v.id == id).firstOrNull;
   }
 
   @override
@@ -120,6 +181,7 @@ class AllDifferencesScreen extends StatelessWidget {
     final l = AppLocalizations.of(context);
     Widget quote(Evidence e) => QuoteCard(
           evidence: e,
+          versionLabel: _version(e)?.label,
           onTap: _version(e) == null
               ? null
               : () => Navigator.of(context).push(MaterialPageRoute(
@@ -127,19 +189,25 @@ class AllDifferencesScreen extends StatelessWidget {
         );
     return Scaffold(
       appBar: AppBar(title: Text(l.allDifferencesTitle)),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+      body: ListView(
+        key: PageStorageKey('all-differences-${report.earlierId}-${report.laterId}'),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+        CalmPageHeader(title: l.allDifferencesTitle),
+        SourcePairSummary(
+          earlier: widget.versions.where((v) => v.id == report.earlierId).firstOrNull?.label ?? l.sourceUnavailable,
+          newer: widget.versions.where((v) => v.id == report.laterId).firstOrNull?.label ?? l.sourceUnavailable,
+          scope: report.scope ?? widget.scope),
+        ...warnings(l, report),
+        TopicFilters(counts: report.topicCounts, selected: topic, onSelected: (value) => setState(() => topic = value)),
         for (final (group, title) in [('prioritised', l.groupPrioritised), ('needs_review', l.groupNeedsReview),
                                       ('other', l.groupOther)])
-          if (report.inGroup(group).isNotEmpty) ...[
+          if (report.inGroup(group).any((f) => topic == null || f.topic == topic)) ...[
             SectionHeader(title),
-            for (final f in report.inGroup(group))
-              FindingTile(finding: f, onTap: () async {
-                Navigator.of(context).pop();
-                await onOpen(f);
-              }),
+            ...topicFindings(l, report.inGroup(group), topic, _open),
           ],
         if (report.unexplained.isNotEmpty)
           ExpansionTile(
+            key: const PageStorageKey('unexplained-differences'),
             tilePadding: EdgeInsets.zero,
             title: Text('${l.unexplainedTitle} (${report.unexplained.length})'),
             subtitle: Text(l.unexplainedHint),
@@ -147,6 +215,7 @@ class AllDifferencesScreen extends StatelessWidget {
           ),
         if (report.presentationOnly.isNotEmpty)
           ExpansionTile(
+            key: const PageStorageKey('presentation-differences'),
             tilePadding: EdgeInsets.zero,
             title: Text('${l.presentationTitle} (${report.presentationOnly.length})'),
             children: [for (final e in report.presentationOnly) quote(e)],

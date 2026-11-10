@@ -1,16 +1,21 @@
 // ChangeLens app shell (05 I-9): projects, versions, import by paste or PDF, and the order and
 // scope confirmation. Portrait only on phones in v1 (06). UI strings come from lib/l10n.
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show LicenseRegistry, LicenseEntryWithLineBreaks;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'l10n/app_localizations.dart';
+import 'design/calm_theme.dart';
 import 'screens/projects_screen.dart';
 import 'services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(['Roboto'], await rootBundle.loadString('assets/fonts/OFL.txt'));
+  });
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await pdfrxFlutterInitialize(); // evidence view (I-10)
   final services = Services(SecureSettingsStore(), PlatformDocumentPicker());
@@ -20,17 +25,23 @@ Future<void> main() async {
 }
 
 class ChangeLensApp extends StatelessWidget {
-  const ChangeLensApp({super.key, required this.services, this.home = const ProjectsScreen()});
+  const ChangeLensApp({super.key, required this.services, this.home = const ProjectsScreen(),
+    this.themeMode = ThemeMode.system, this.locale});
 
   final Services services;
   final Widget home;
+  final ThemeMode themeMode;
+  final Locale? locale;
 
   @override
   Widget build(BuildContext context) => ServicesScope(
         services: services,
         child: MaterialApp(
           onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-          theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+          theme: calmTheme(Brightness.light),
+          darkTheme: calmTheme(Brightness.dark),
+          themeMode: themeMode,
+          locale: locale,
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -75,7 +86,7 @@ class _PrivacyCoverState extends State<PrivacyCover> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) => Stack(children: [
-        widget.child,
+        ExcludeSemantics(excluding: covered, child: widget.child),
         if (covered)
           Positioned.fill(
             child: ColoredBox(

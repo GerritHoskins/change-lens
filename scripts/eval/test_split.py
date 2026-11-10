@@ -77,6 +77,23 @@ class Split(unittest.TestCase):
         self.assertNotIn("SECRET-CONTENT", text)
         self.assertEqual(json.loads(text)["seed"], 5)
 
+    def test_dev_only_set_leaves_the_seeded_split_unchanged(self):
+        base = split.split(dataset(), 17)
+        extra = [rec(700 + k, "value_change") for k in range(5)]
+        out = split.add_dev_only(base, extra)
+        self.assertEqual(out["held_out"], base["held_out"])
+        self.assertEqual(set(out["development"]), set(base["development"]) | {r["id"] for r in extra})
+        self.assertEqual(out["strata"], base["strata"])
+        self.assertEqual(out["development_only"], {"pairs": 5, "strata": {"constructed/value_change": 5}})
+
+    def test_dev_only_set_refuses_clashes_and_held_out_parents(self):
+        base = split.split(dataset(), 17)
+        with self.assertRaises(split.SplitError):
+            split.add_dev_only(base, [rec(100, "value_change")])
+        held = base["held_out"][0]
+        with self.assertRaises(split.SplitError):
+            split.add_dev_only(base, [rec(700, "value_change", held)])
+
 
 if __name__ == "__main__":
     unittest.main()

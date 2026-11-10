@@ -34,7 +34,11 @@ def problem(status: int, code: str, detail: str = "", headers=None) -> JSONRespo
             "status": status, "code": code}
     if detail:
         body["detail"] = detail
-    return JSONResponse(body, status_code=status, media_type="application/problem+json", headers=headers)
+    response = JSONResponse(body, status_code=status, media_type="application/problem+json", headers=headers)
+    # Unhandled errors are rendered by Starlette's outer error middleware, outside the
+    # ordinary response middleware. Apply the same cache policy at that boundary too.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def not_found() -> ApiError:

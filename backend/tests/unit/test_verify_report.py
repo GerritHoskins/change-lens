@@ -54,6 +54,21 @@ class Said:
 
 # verify -------------------------------------------------------------------------------------------
 
+def test_an_exact_duplicate_is_dropped_but_a_different_reading_is_kept():
+    # dev pair P-715: one fact extracted twice gave the same finding twice
+    other_category = DraftFinding("changed", "other_material", budget().evidence)
+    other_values = budget(old_value="12000", new_value="15000")
+    res = verify([budget(), budget(), other_category, other_values], E, L)
+    assert [(f.category, f.old_value) for f in res.findings] == [
+        ("quantity", None), ("other_material", None), ("quantity", "12000")]
+    assert res.withheld_count == 0
+
+
+def test_a_duplicate_that_needs_review_sends_the_kept_finding_to_review():
+    [kept] = verify([budget(confidence=0.6), budget(confidence=0.3)], E, L).findings
+    assert (kept.group, kept.confidence) == ("needs_review", 0.3)
+
+
 def test_exact_quotes_are_kept_and_anything_else_is_withheld():
     tampered = budget()
     tampered.evidence[1] = replace(tampered.evidence[1], quote="EUR 16,000")
@@ -67,7 +82,7 @@ def test_exact_quotes_are_kept_and_anything_else_is_withheld():
 
 def test_uncertain_and_low_confidence_need_review():
     unsure = DraftFinding("uncertain", "deliverable", [ev(E, "earlier", "Hosting")], note="scope_unknown")
-    out = verify([unsure, budget(confidence=0.3), budget(confidence=0.6)], E, L)
+    out = verify([unsure, budget(confidence=0.3), budget(confidence=0.6, old_value="12000")], E, L)
     assert [f.group for f in out.findings] == ["needs_review", "needs_review", "other"]
 
 
@@ -133,8 +148,9 @@ def test_groups_and_rank():
     other = DraftFinding("added", "other_material", [ev(L, "later", "Copywriting is included")])
     out, _ = report([style, unsure, other, budget()], Said("A change."))
     assert [(f.change_type, f.group, f.priority) for f in out] == [
-        ("changed", "prioritised", 0), ("uncertain", "needs_review", 1), ("equivalent", "other", 2), ("added", "other", 3)]
-    assert out[1].explanation.startswith("Needs your review: it is not clear which passage")
+        ("added", "prioritised", 0), ("changed", "prioritised", 1),
+        ("uncertain", "needs_review", 2), ("equivalent", "other", 3)]
+    assert unsure.explanation.startswith("Needs your review: it is not clear which passage")
 
 
 def test_ceiling_templates_the_rest_instead_of_dropping_them():
@@ -157,3 +173,22 @@ def test_fake_pipeline_end_to_end():
         ("removed", ["Hosting is provided by the client"]),
         ("added", ["Copywriting is included"])]
     assert checked.withheld_count == 0 and checked.unexplained == [] and skipped == 0
+
+
+def test_a_one_sided_finding_whose_sentence_is_on_the_other_side_is_dropped():
+    """Extraction typed the same sentence differently in each version: no addition or omission (AC-6)."""
+    e = doc(["- Produce 3 short videos for social media.", "Budget: EUR 12,000"])
+    l = doc(["Budget: EUR 12,000", "* produce 3 short videos for social media.", "Write 2 blog posts."])
+    moved = DraftFinding("added", "quantity", [ev(l, "later", "produce 3 short videos for social media.")])
+    gone = DraftFinding("removed", "deliverable", [ev(e, "earlier", "Produce 3 short videos for social media.")])
+    new = DraftFinding("added", "deliverable", [ev(l, "later", "Write 2 blog posts.")])
+    out = verify([moved, gone, new], e, l)
+    assert out.findings == [new] and out.withheld_count == 0
+    assert [x.quote for x in out.unexplained] == []  # the blog line is explained by the kept addition
+
+
+def test_part_of_a_longer_sentence_is_not_on_the_other_side():
+    e = doc(["Deliver the logo."])
+    l = doc(["Deliver the logo files."])
+    gone = DraftFinding("removed", "deliverable", [ev(e, "earlier", "Deliver the logo.")])
+    assert verify([gone], e, l).findings == [gone]

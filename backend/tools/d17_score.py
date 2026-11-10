@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from changelens.topics import canonical_category
+
 REPORTABLE = frozenset({"added", "changed", "removed", "uncertain"})
 SCOPE_CASES = frozenset({"partial_update", "unknown_scope"})
 _NUM = re.compile(r"\d+(?:[.,]\d+)*")
@@ -67,7 +69,7 @@ def evidence_overlap(side: Side, gold_span: Optional[dict], quote: Optional[str]
 
 
 def match_score(g: dict, m: dict, old: Side, new: Side, use_category: bool = True) -> int:
-    if use_category and g["category"] != m["category"]:
+    if use_category and canonical_category(g["category"]) != canonical_category(m["category"]):
         return 0
     compared, values_ok = 0, True
     for k in ("old_value", "new_value"):

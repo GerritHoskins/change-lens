@@ -12,10 +12,11 @@ from decimal import Decimal
 from typing import Protocol, Sequence
 
 from changelens.llm.errors import LlmError
-from changelens.metering import CostMeter
+from changelens.metering import Budget
 
 
 class LlmPort(Protocol):
+    """Single-attempt port; adapters with retries also implement structured_metered."""
     def estimate_cost(self, schema: str, data: Sequence[str]) -> Decimal: ...
 
     def structured(self, schema: str, system: str, data: Sequence[str]) -> tuple[dict, Decimal]:
@@ -64,16 +65,21 @@ class FakeLlm:
 class MeteredLlm:
     """Wraps a port so every call is checked against the meter first (03 §9.1 `worker` must-not)."""
 
-    def __init__(self, port: LlmPort, meter: CostMeter):
+    def __init__(self, port: LlmPort, meter: Budget):
         self.port = port
         self.meter = meter
 
     def structured(self, schema: str, system: str, data: Sequence[str]) -> dict:
-        self.meter.check(self.port.estimate_cost(schema, data))
+        metered = getattr(self.port, "structured_metered", None)
+        if metered is not None:
+            # The adapter owns its retry loop and reserves each HTTP attempt separately.
+            return metered(schema, system, data, self.meter)[0]
+        reservation = self.meter.reserve(self.port.estimate_cost(schema, data))
         try:
             out, cost = self.port.structured(schema, system, data)
         except LlmError as e:  # failed calls still cost money and count (SA-4)
-            self.meter.record(e.cost)
+            if e.cost_known:
+                reservation.settle(e.cost)
             raise
-        self.meter.record(cost)
+        reservation.settle(cost)
         return out

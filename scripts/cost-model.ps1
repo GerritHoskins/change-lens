@@ -4,6 +4,8 @@
 # same rates as the current design, so a price change alone tests only the gates (CR-8).
 # Default prices: Claude Sonnet 5.5 on AWS Bedrock, EU geo profile from eu-central-1 (D-7, 2026-10-30):
 # USD 2.20 / 11.00 at ECB EUR 1 = USD 1.1172. The old placeholders were -PIn 3 -POut 15. See docs/SOP.md.
+# These stay the defaults after D-17 led to IONOS (ADR-0021): at about 3x the IONOS list prices they are the
+# conservative case, not a forecast and not measured spend. Measured IONOS costs are in docs/03-technical-design.md §8.
 param([double]$PIn = 1.97, [double]$POut = 9.85, [double]$TokenFactor = 1.3)   # EUR per million tokens; sensitivity token multiplier
 $ErrorActionPreference = 'Stop'
 

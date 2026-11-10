@@ -10,6 +10,16 @@
    the model, so it does not count as an explanation: a false equivalence forced by injected text
    still surfaces (AC-18). Blocks that only moved or were reformatted (list marker, capitals) are
    presentation-only (AC-5, AC-6).
+4. A one-sided finding (an addition, or an omission of any scope) whose quoted sentence, ignoring
+   list marker, spacing and case, is in a contiguous visible span of the other version is dropped: the text
+   is on both sides, so nothing was added or left out. This happens when extraction types or
+   names the same sentence differently in the two versions, and must not fabricate a change on a
+   reordered or unchanged pair (AC-6). Wrapped PDF lines may form that span, but pages, hidden
+   blocks and unparsed non-whitespace gaps are barriers. Any edit around it is still caught by (3).
+5. An exact duplicate (same change type, category, values and evidence locators as a kept finding)
+   is merged into it: it says nothing new. The kept finding takes the lower confidence, so a copy
+   that needs review still sends it to review (AC-10). Duplicates arise when one fact is extracted
+   twice (I-7).
 """
 from __future__ import annotations
 
@@ -50,6 +60,55 @@ def _loose(text: str) -> str:
     return _MARKER.sub("", _norm(text)).casefold()
 
 
+def _visible_spans(doc: ParsedDocument) -> list[str]:
+    """Exact source slices across adjacent visible blocks on one page, whitespace gaps only.
+    Never concatenate disconnected fragments: a hidden block, a page boundary or omitted page
+    text must not make an added/omitted sentence appear unchanged.
+    """
+    spans, current = [], None
+    for block in doc.blocks:
+        loc = block.locator
+        page = (loc.page or 1) - 1
+        valid = (0 <= page < len(doc.pages)
+                 and 0 <= loc.char_start < loc.char_end <= len(doc.pages[page]))
+        if block.hidden or not valid:
+            if current is not None:
+                spans.append(_loose(doc.slice(current)))
+                current = None
+            continue
+        contiguous = (current is not None and current.page == loc.page
+                      and current.char_end <= loc.char_start
+                      and not doc.pages[page][current.char_end:loc.char_start].strip())
+        if contiguous:
+            current = Locator(current.char_start, loc.char_end, loc.page)
+        else:
+            if current is not None:
+                spans.append(_loose(doc.slice(current)))
+            current = loc
+    if current is not None:
+        spans.append(_loose(doc.slice(current)))
+    return spans
+
+
+def _on_other_side(f: DraftFinding, docs: dict[str, ParsedDocument]) -> bool:
+    sides = {ev.side for ev in f.evidence}
+    if len(sides) != 1 or f.uncertainty == "contradiction":
+        return False
+    other = docs["later" if sides == {"earlier"} else "earlier"]
+    spans = _visible_spans(other)
+    for ev in f.evidence:
+        q = re.compile(rf"(?<!\w){re.escape(_loose(ev.quote))}(?!\w)")
+        if not any(q.search(span) for span in spans):
+            return False
+    return True
+
+
+def _identity(f: DraftFinding) -> tuple:
+    return (f.change_type, f.category, f.old_value, f.new_value,
+            tuple(sorted((ev.side, ev.locator.page or 0, ev.locator.char_start, ev.locator.char_end)
+                         for ev in f.evidence)))
+
+
 def _overlaps(a: Locator, b: Locator) -> bool:
     return a.page == b.page and a.char_start < b.char_end and b.char_start < a.char_end
 
@@ -77,14 +136,20 @@ def _covered(ev: Evidence, explaining: list[DraftFinding]) -> bool:
 
 def verify(drafts: list[DraftFinding], earlier: ParsedDocument, later: ParsedDocument) -> VerifyResult:
     docs = {"earlier": earlier, "later": later}
-    kept, withheld = [], 0
+    kept, withheld, seen = [], 0, {}
     for f in drafts:
         if not (_quotes_match(f, docs) and _sides_fit(f)):
             withheld += 1
             continue
+        if _on_other_side(f, docs):
+            continue
+        if (first := seen.get(_identity(f))) is not None:
+            f, first.confidence = first, min(first.confidence, f.confidence)
+        else:
+            seen[_identity(f)] = f
+            kept.append(f)
         if f.change_type == "uncertain" or f.confidence < REVIEW_BELOW:
             f.group = "needs_review"
-        kept.append(f)
     changed, moved = block_diff(earlier, later)
     explaining = [f for f in kept if f.change_type != "equivalent"]
     unexplained = [ev for ev in changed if not _covered(ev, explaining)]

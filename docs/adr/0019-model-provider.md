@@ -1,6 +1,6 @@
 # ADR 0019: Model provider selection
 
-**Status:** Proposed: the D-17 spike decides between IONOS AI Model Hub and Bedrock (2026-10-30)
+**Status:** Superseded by ADR-0021 (2026-11-06). Proposed on 2026-10-30, pending the D-17 spike; the text below is kept as that proposal.
 
 ## Context
 
