@@ -1,5 +1,6 @@
 // Client for the dev comparison API (backend/README.md, I-22). Bodies are never logged (03a P10).
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
@@ -19,10 +20,12 @@ class Project {
   Project(Map<String, dynamic> j)
       : id = j['id'] as String,
         name = j['name'] as String,
-        clientLabel = j['client_label'] as String?;
+        clientLabel = j['client_label'] as String?,
+        comparisonCounts = Map<String, int>.from(j['comparison_counts'] as Map? ?? const {});
 
   final String id, name;
   final String? clientLabel;
+  final Map<String, int> comparisonCounts;
 }
 
 class Version {
@@ -41,21 +44,58 @@ class Version {
   bool get ready => status == 'parsed';
 }
 
+/// Only allowlisted status fields; provider details and document content are not status copy.
+class ComparisonWarning {
+  ComparisonWarning(Map<String, dynamic> json)
+      : code = json['code'] as String? ?? '',
+        versionId = json['version_id'] as String?,
+        reason = json['reason'] as String?;
+
+  final String code;
+  final String? versionId, reason;
+}
+
 class Comparison {
   Comparison(Map<String, dynamic> j)
       : id = j['id'] as String,
         earlierId = j['earlier_id'] as String? ?? '',
         laterId = j['later_id'] as String? ?? '',
         scope = j['scope'] as String? ?? '',
-        status = j['status'] as String;
+        status = j['status'] as String,
+        warnings = [for (final warning in j['warnings'] as List? ?? [])
+          if (warning is Map<String, dynamic>) ComparisonWarning(warning)];
 
   final String id, earlierId, laterId, scope, status;
+  final List<ComparisonWarning> warnings;
 
   bool get finished => const {'complete', 'partial', 'failed'}.contains(status);
 }
 
 /// Scope of the newer version, as confirmed by the user (AC-14). No default exists.
 enum Scope { complete, partial, unknown }
+
+/// Create once per user-confirmed submission and retain for any transport retry.
+String comparisonRequestKey() {
+  final random = Random.secure();
+  return List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+}
+
+/// One explicitly selected input. New content is retained only in memory until submission.
+class ComparisonInput {
+  const ComparisonInput.existing(this.versionId)
+      : label = null, text = null, bytes = null, filename = null;
+  const ComparisonInput.paste(this.label, this.text)
+      : versionId = null, bytes = null, filename = null;
+  ComparisonInput.pdf(this.label, Uint8List data, {this.filename})
+      : bytes = Uint8List.fromList(data), versionId = null, text = null;
+
+  final String? versionId, label, text, filename;
+  final Uint8List? bytes;
+
+  Map<String, dynamic> get descriptor => versionId != null
+      ? {'version_id': versionId}
+      : {'label': label, if (bytes != null) 'file': true else 'text': text};
+}
 
 class Api {
   Api(this.baseUrl, this.token, {http.Client? client}) : _client = client ?? http.Client();
@@ -93,10 +133,30 @@ class Api {
       headers: {..._auth, 'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'client_label': clientLabel}))));
 
+  /// Idempotent deletion: true means primary storage is purged; false means durable cleanup is pending.
+  Future<bool> deleteProject(String id) async {
+    final response = await _client.delete(_u('/projects/$id'), headers: _auth);
+    await _json(Future.value(response));
+    if (response.statusCode == 204) return true;
+    if (response.statusCode == 202) return false;
+    throw ApiException(response.statusCode, 'unexpected_response');
+  }
+
   Future<List<Version>> versions(String projectId) async {
     final j = await _json(_client.get(_u('/projects/$projectId/versions'), headers: _auth));
     return [for (final v in j['versions'] as List) Version(v as Map<String, dynamic>)];
   }
+
+  Future<Version> version(String id) async =>
+      Version(await _json(_client.get(_u('/versions/$id'), headers: _auth)));
+
+  /// Explicit foreground use only. Metadata polls and evidence prefetch never call this.
+  Future<void> versionOpened(String id) =>
+      _json(_client.post(_u('/versions/$id/opened'), headers: _auth));
+
+  /// Called once when a report or finding screen opens, not by automatic refreshes.
+  Future<void> comparisonOpened(String id) =>
+      _json(_client.post(_u('/comparisons/$id/opened'), headers: _auth));
 
   Future<List<Comparison>> comparisons(String projectId) async {
     final j = await _json(_client.get(_u('/projects/$projectId/comparisons'), headers: _auth));
@@ -118,11 +178,35 @@ class Api {
   }
 
   /// The only call that starts processing: it carries the user's order and scope (AC-14).
-  Future<String> startComparison(String projectId, String earlierId, String laterId, Scope scope) async {
+  Future<String> startComparison(String projectId, String earlierId, String laterId, Scope scope,
+      {String? idempotencyKey}) async {
     final j = await _json(_client.post(_u('/projects/$projectId/comparisons'),
-        headers: {..._auth, 'Content-Type': 'application/json'},
+        headers: {..._auth, 'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey ?? comparisonRequestKey()},
         body: jsonEncode({'earlier_id': earlierId, 'later_id': laterId, 'scope': scope.name})));
     return j['id'] as String;
+  }
+
+  /// Atomically imports both slots and creates the waiting/queued comparison. Keep the
+  /// supplied key and exact inputs unchanged for a transport retry of this submission.
+  Future<Comparison> createComparison(String projectId, ComparisonInput earlier, ComparisonInput later,
+      Scope scope, {required String idempotencyKey}) async {
+    final payload = {'earlier': earlier.descriptor, 'later': later.descriptor, 'scope': scope.name};
+    final headers = {..._auth, 'Idempotency-Key': idempotencyKey};
+    if (earlier.bytes == null && later.bytes == null) {
+      return Comparison(await _json(_client.post(_u('/projects/$projectId/comparisons'),
+          headers: {...headers, 'Content-Type': 'application/json'}, body: jsonEncode(payload))));
+    }
+    final request = http.MultipartRequest('POST', _u('/projects/$projectId/comparisons'))
+      ..headers.addAll(headers)
+      ..fields['comparison'] = jsonEncode(payload);
+    for (final entry in {'earlier': earlier, 'later': later}.entries) {
+      if (entry.value.bytes != null) {
+        request.files.add(http.MultipartFile.fromBytes('${entry.key}_file', entry.value.bytes!,
+            filename: entry.value.filename ?? 'document.pdf'));
+      }
+    }
+    return Comparison(await _json(http.Response.fromStream(await _client.send(request))));
   }
 
   Future<Comparison> comparison(String id) async =>
@@ -149,18 +233,36 @@ class Review {
   Review(Map<String, dynamic> j)
       : action = j['action'] as String,
         note = j['note'] as String?,
+        evidenceModeBefore = (j['evidence_mode'] as Map?)?['before'] as String?,
+        evidenceModeAfter = (j['evidence_mode'] as Map?)?['after'] as String?,
+        pageOpened = j['page_opened'] as bool?,
         at = DateTime.parse(j['at'] as String);
 
   final String action;
   final String? note;
+  // Historical reviews have unknown observations; never infer them from the action.
+  final String? evidenceModeBefore, evidenceModeAfter;
+  final bool? pageOpened;
   final DateTime at;
 }
+
+const findingTopics = ['deadlines', 'deliverables', 'responsibilities', 'approval_wording', 'budget', 'other'];
+
+String topicForCategory(String category) => switch (category) {
+  'date_deadline' => 'deadlines',
+  'deliverable' || 'quantity' => 'deliverables',
+  'responsibility_owner' => 'responsibilities',
+  'approval' || 'approval_wording' => 'approval_wording',
+  'budget' => 'budget',
+  _ => 'other',
+};
 
 class Finding {
   Finding(Map<String, dynamic> j)
       : id = j['id'] as String,
         changeType = j['change_type'] as String,
         category = j['category'] as String,
+        topic = j['topic'] as String? ?? topicForCategory(j['category'] as String),
         evidence = [for (final e in j['evidence'] as List) Evidence(e as Map<String, dynamic>)],
         explanation = j['explanation'] as String?,
         uncertainty = j['uncertainty'] as String?,
@@ -170,7 +272,7 @@ class Finding {
         review = j['review'] == null ? null : Review(j['review'] as Map<String, dynamic>),
         clientApprovalRecorded = j['client_approval_recorded'] as bool? ?? false;
 
-  final String id, changeType, category, group;
+  final String id, changeType, category, topic, group;
   final List<Evidence> evidence;
   final String? explanation, uncertainty, note;
   final int revision;
@@ -183,9 +285,13 @@ class Finding {
 class Report {
   Report(Map<String, dynamic> j)
       : status = j['status'] as String,
+        scope = j['scope'] as String?,
         earlierId = j['earlier_id'] as String? ?? '',
         laterId = j['later_id'] as String? ?? '',
         findings = [for (final f in j['findings'] as List) Finding(f as Map<String, dynamic>)],
+        topicCounts = {for (final topic in findingTopics) topic:
+          (j['topic_counts'] as Map?)?[topic] as int? ?? (j['findings'] as List).where((f) =>
+            (f['topic'] ?? topicForCategory(f['category'] as String)) == topic).length},
         otherDifferences = (j['summary'] as Map?)?['other_differences'] as int? ?? 0,
         withheld = j['withheld_count'] as int? ?? 0,
         unexplained = [for (final e in j['unexplained_differences'] as List? ?? []) Evidence(e as Map<String, dynamic>)],
@@ -193,7 +299,9 @@ class Report {
         warnings = [for (final w in j['warnings'] as List? ?? []) (w as Map)['code'] as String];
 
   final String status, earlierId, laterId;
+  final String? scope;
   final List<Finding> findings;
+  final Map<String, int> topicCounts;
   final int otherDifferences, withheld;
   final List<Evidence> unexplained, presentationOnly;
   final List<String> warnings;
@@ -233,10 +341,12 @@ extension ReportApi on Api {
       FindingDetail(await _json(_client.get(_u('/findings/$id'), headers: _auth)));
 
   /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15).
-  Future<Finding> review(String findingId, String action, {String? note, Map<String, String>? correction}) async {
+  Future<Finding> review(String findingId, String action, {required Map<String, String?> evidenceMode,
+      required bool pageOpened, String? note, Map<String, String>? correction}) async {
     final j = await _json(_client.post(_u('/findings/$findingId/reviews'),
         headers: {..._auth, 'Content-Type': 'application/json'},
-        body: jsonEncode({'action': action, 'note': note, 'correction': correction})));
+        body: jsonEncode({'action': action, 'note': note, 'correction': correction,
+          'evidence_mode': evidenceMode, 'page_opened': pageOpened})));
     return Finding(j['finding'] as Map<String, dynamic>);
   }
 

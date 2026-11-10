@@ -4,6 +4,31 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Supplied by Codemagic's signing identities or the local process environment. Never write
+// passwords to key.properties or fall back to the development certificate for a release.
+val releaseSigningEnvironment = listOf(
+    "CM_KEYSTORE_PATH", "CM_KEYSTORE_PASSWORD", "CM_KEY_ALIAS", "CM_KEY_PASSWORD",
+).associateWith { providers.environmentVariable(it).orNull }
+
+val validateReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Require externally supplied signing material for every release build."
+    doLast {
+        val missing = releaseSigningEnvironment.filterValues { it.isNullOrBlank() }.keys
+        if (missing.isNotEmpty()) {
+            throw GradleException("Release signing is required. Set: ${missing.joinToString()}. " +
+                "Use external signing material; debug signing is not a release fallback.")
+        }
+        if (!file(releaseSigningEnvironment.getValue("CM_KEYSTORE_PATH")!!).isFile) {
+            throw GradleException("Release signing keystore is unavailable at CM_KEYSTORE_PATH.")
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(validateReleaseSigning)
+}
+
 android {
     namespace = "dev.changelens.app"
     compileSdk = flutter.compileSdkVersion
@@ -15,7 +40,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.changelens.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -29,11 +53,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = releaseSigningEnvironment["CM_KEYSTORE_PATH"]?.let { file(it) }
+            storePassword = releaseSigningEnvironment["CM_KEYSTORE_PASSWORD"]
+            keyAlias = releaseSigningEnvironment["CM_KEY_ALIAS"]
+            keyPassword = releaseSigningEnvironment["CM_KEY_PASSWORD"]
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -1,0 +1,315 @@
+{
+  "@@locale": "de",
+  "appTitle": "ChangeLens",
+  "compareBriefs": "Zwei Briefings vergleichen",
+  "compareLoadFailed": "Deine Versionen konnten nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
+  "compareRejected": "Der Vergleich konnte nicht angenommen werden. Prüfe beide Eingaben und versuche es erneut.",
+  "compareRetrySame": "Der Eingang wurde noch nicht bestätigt. Versuche es erneut, um denselben Vergleich zu prüfen, ohne ein Duplikat anzulegen.",
+  "readyToSubmit": "Bereit zum Senden",
+  "submittingComparison": "Vergleich wird gesendet…",
+  "compareSubmitHint": "Beim Start werden beide Eingaben zusammen gesendet. Sobald die Versionen gelesen werden, kannst du diese Ansicht verlassen.",
+  "comparePickFailed": "Die PDF konnte nicht vorbereitet werden. Wähle sie erneut aus.",
+  "useText": "Diesen Text verwenden",
+  "comparisonReading": "Versionen werden gelesen",
+  "loadingComparison": "Vergleich wird geladen…",
+  "settingsSaveFailed": "Die Einstellungen konnten nicht gespeichert werden. Versuche es erneut.",
+  "evidenceChecking": "Belegstellen werden geprüft…",
+  "evidenceCheckFailed": "Die Belegstellen konnten nicht geprüft werden. Versuche es erneut, bevor du diesen Befund prüfst.",
+  "evidenceFallbackReview": "Die Textstelle konnte in der PDF nicht markiert werden. Prüfe vor dem Bestätigen den zitierten Text.",
+  "findingChanged": "Dieser Befund wurde geändert. Prüfe die aktuelle Fassung, bevor du es erneut versuchst.",
+  "topicDeadlines": "Fristen",
+  "topicDeliverables": "Leistungen",
+  "topicResponsibilities": "Zuständigkeiten",
+  "topicApprovalWording": "Freigabeformulierungen",
+  "topicBudget": "Budget",
+  "topicOther": "Sonstiges",
+  "topicAll": "Alle Themen",
+  "projectsTitle": "Projekte",
+  "projectsEmpty": "Noch keine Projekte. Lege für jeden Kundenauftrag ein Projekt an.",
+  "newProject": "Neues Projekt",
+  "projectName": "Projektname",
+  "clientLabel": "Kunde (optional)",
+  "create": "Erstellen",
+  "cancel": "Abbrechen",
+  "save": "Speichern",
+  "retry": "Erneut versuchen",
+  "devSettings": "Entwicklereinstellungen",
+  "apiBaseUrl": "API-Adresse",
+  "devToken": "Entwicklungstoken",
+  "devSettingsHint": "Entwicklungsversionen verbinden sich mit der lokalen ChangeLens-API. Das Token wird nur im geschützten Schlüsselspeicher des Geräts aufbewahrt.",
+  "notConfigured": "Trage zuerst die API-Adresse und das Entwicklungstoken in den Entwicklereinstellungen ein.",
+  "versionsTitle": "Versionen",
+  "versionsEmpty": "Noch keine Versionen. Importiere zuerst das frühere Briefing und dann die neuere Version.",
+  "comparisonsTitle": "Vergleiche",
+  "comparisonsEmpty": "Noch keine Vergleiche.",
+  "importPaste": "Text einfügen",
+  "importPdf": "PDF auswählen",
+  "versionLabel": "Bezeichnung",
+  "versionLabelHint": "Zum Beispiel „Briefing v1, 3. Okt.“",
+  "pasteHint": "Füge hier das Briefing oder die Aktualisierung ein",
+  "upload": "Importieren",
+  "uploading": "Wird importiert…",
+  "importFailed": "Import fehlgeschlagen: {reason}",
+  "@importFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "originalsNote": "Importierte Versionen bleiben unverändert und können nicht bearbeitet werden. Importiere stattdessen eine neue Version.",
+  "statusUploaded": "Wartet auf das Einlesen",
+  "statusParsed": "Bereit",
+  "statusRejected": "Abgelehnt: {reason}",
+  "@statusRejected": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "warningsCount": "{count, plural, =1{1 Warnung} other{{count} Warnungen}}",
+  "@warningsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compare": "Zwei Versionen vergleichen",
+  "compareNeedsTwo": "Importiere mindestens zwei Versionen, die für den Vergleich bereit sind.",
+  "confirmTitle": "Vergleich bestätigen",
+  "confirmIntro": "ChangeLens leitet die Reihenfolge nie aus dem Upload-Zeitpunkt oder den Dateinamen ab. Lege sie selbst fest.",
+  "earlierVersion": "Frühere Version",
+  "newerVersion": "Neuere Version",
+  "chooseVersion": "Version auswählen",
+  "sameVersion": "Wähle zwei unterschiedliche Versionen.",
+  "scopeQuestion": "Was ist die neuere Version?",
+  "scopeComplete": "Vollständiger Ersatz",
+  "scopeCompleteHint": "Ein vollständiges Briefing, das die frühere Version ersetzt.",
+  "scopePartial": "Teilweise Aktualisierung",
+  "scopePartialHint": "Nicht erwähnte Punkte werden nicht behandelt. Das bestätigt nicht, ob sie weiterhin gelten.",
+  "scopeUnknown": "Nicht sicher",
+  "scopeUnknownHint": "Es ist unklar, ob die übrigen Punkte weiterhin gelten.",
+  "startComparison": "Vergleich starten",
+  "confirmMissing": "Wähle beide Versionen und den Umfang aus, um fortzufahren.",
+  "comparisonTitle": "Vergleich",
+  "comparisonStatus": "Status: {status}",
+  "@comparisonStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "comparisonQueued": "In der Warteschlange",
+  "comparisonRunning": "Wird verarbeitet",
+  "comparisonComplete": "Abgeschlossen",
+  "comparisonPartial": "Teilweise: Einige Inhalte konnten nicht verarbeitet werden",
+  "comparisonFailed": "Fehlgeschlagen",
+  "comparisonFailedDetails": "Dieser Vergleich konnte nicht abgeschlossen werden. Starte einen neuen Vergleich, um es erneut zu versuchen.",
+  "comparisonCostStopped": "Das Kostenlimit wurde erreicht. Die Verarbeitung wurde deshalb gestoppt.",
+  "comparisonLoadFailed": "Die Vergleichsdetails konnten nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
+  "comparisonInputRejected": "„{label}“ konnte nicht gelesen werden: {reason}",
+  "@comparisonInputRejected": {"placeholders": {"label": {"type": "String"}, "reason": {"type": "String"}}},
+  "parseNoTextLayer": "Die PDF enthält keinen auswählbaren Text. Verwende eine textbasierte PDF oder füge den Text ein.",
+  "parseMalformedPdf": "Die PDF konnte nicht geöffnet werden. Exportiere sie erneut oder füge den Text ein.",
+  "parseTooManyPages": "Die PDF überschreitet das Seitenlimit. Wähle ein kürzeres Dokument.",
+  "parseTooManyWords": "Das Dokument überschreitet das Wortlimit. Wähle ein kürzeres Dokument.",
+  "parseTooManyBytes": "Die Datei überschreitet das Größenlimit. Wähle eine kleinere Datei.",
+  "parseTooMuchText": "Die PDF enthält zu viel Text. Wähle ein kürzeres Dokument.",
+  "parseNotUtf8": "Die Textkodierung wird nicht unterstützt. Füge den Text ein oder speichere ihn als UTF-8.",
+  "parseUnsupported": "Dieser Dateityp wird nicht unterstützt. Füge Text ein oder verwende eine PDF mit auswählbarem Text.",
+  "parseTimeout": "Das Lesen des Dokuments hat zu lange gedauert. Versuche es mit einem einfacheren oder kürzeren Dokument.",
+  "parseMemoryLimit": "Das Dokument ist zu komplex. Versuche es mit einem einfacheren oder kürzeren Dokument.",
+  "parseFailed": "Das Dokument konnte nicht verarbeitet werden. Exportiere es erneut oder füge den Text ein.",
+  "earlierToNewer": "{earlier} → {newer}",
+  "@earlierToNewer": {
+    "placeholders": {
+      "earlier": {
+        "type": "String"
+      },
+      "newer": {
+        "type": "String"
+      }
+    }
+  },
+  "privacyCover": "ChangeLens",
+  "openReport": "Bericht öffnen",
+  "reportTitle": "Bericht",
+  "allDifferencesTitle": "Alle Unterschiede",
+  "selectedSummary": "Ausgewählte Zusammenfassung – {count, plural, =0{keine weiteren Unterschiede} =1{1 weiterer Unterschied} other{{count} weitere Unterschiede}}, einschließlich reiner Darstellungsänderungen",
+  "@selectedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "showAllDifferences": "Alle Unterschiede anzeigen",
+  "groupPrioritised": "Änderungen",
+  "groupNeedsReview": "Von dir zu prüfen",
+  "groupOther": "Weitere Befunde",
+  "noPrioritised": "Keine wesentlichen Änderungen gefunden.",
+  "withheld": "{count, plural, =1{1 Befund zurückgehalten: Seine Belegstellen konnten nicht geprüft werden.} other{{count} Befunde zurückgehalten: Ihre Belegstellen konnten nicht geprüft werden.}}",
+  "@withheld": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "warningPartial": "Einige Inhalte konnten nicht verarbeitet werden. Dieser Bericht kann daher unvollständig sein.",
+  "warningHidden": "Ein Dokument enthält verborgenen Text. Er wurde beim Vergleich ausgelassen.",
+  "warningCeiling": "Das Kostenlimit wurde erreicht. Einige Erläuterungen verwenden Standardformulierungen.",
+  "unexplainedTitle": "Weitere Textunterschiede",
+  "unexplainedHint": "Textunterschiede, die keinem Befund zugeordnet sind, etwa Überschriften oder Anreden. Prüfe sie im Zweifel.",
+  "presentationTitle": "Verschoben oder neu formatiert",
+  "typeAdded": "Hinzugefügt",
+  "typeChanged": "Geändert",
+  "typeRemoved": "In der Ersatzversion nicht enthalten",
+  "typeNotAddressed": "Nicht angesprochen",
+  "typeUncertain": "Unklar",
+  "typeEquivalent": "Umformuliert",
+  "catDeliverable": "Leistung",
+  "catQuantity": "Umfang oder Menge",
+  "catDate": "Datum oder Frist",
+  "catOwner": "Zuständigkeit",
+  "catApproval": "Freigaberegelung",
+  "catOther": "Sonstiges",
+  "catStructure": "Struktur",
+  "sideEarlier": "Früher",
+  "sideNewer": "Neuer",
+  "findingTitle": "Befund",
+  "evidenceTitle": "Belegstellen",
+  "showInDocument": "Im Dokument anzeigen",
+  "reviewConfirmed": "Von dir bestätigt",
+  "reviewCorrected": "Von dir korrigiert",
+  "reviewDismissed": "Von dir verworfen",
+  "notReviewed": "Noch nicht geprüft",
+  "actionConfirm": "Bestätigen",
+  "actionCorrect": "Korrigieren",
+  "actionDismiss": "Verwerfen",
+  "actionNote": "Notiz hinzufügen",
+  "noteLabel": "Notiz",
+  "correctTitle": "Diesen Befund korrigieren",
+  "correctHint": "Deine Korrektur wird als neue Fassung gespeichert. Der ursprüngliche Befund bleibt erhalten.",
+  "changeTypeLabel": "Art der Änderung",
+  "categoryLabel": "Kategorie",
+  "explanationLabel": "Erläuterung",
+  "historyTitle": "Verlauf",
+  "revisionLabel": "Fassung {n}",
+  "@revisionLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "{count, plural, =1{1 Notiz} other{{count} Notizen}}",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalTitle": "Kundenfreigabe",
+  "approvalRecorded": "Kundenfreigabe dokumentiert (von ChangeLens nicht überprüft)",
+  "approvalNone": "Keine Kundenfreigabe dokumentiert.",
+  "approvalHint": "Dokumentiere nur, was jemand mitgeteilt hat, zum Beispiel eine eingefügte E-Mail. Das Prüfen eines Befunds dokumentiert niemals eine Freigabe.",
+  "recordApproval": "Kundenfreigabe dokumentieren",
+  "approvalEvidence": "Nachweis, zum Beispiel ein E-Mail-Auszug",
+  "approvalStatedBy": "Mitgeteilt von",
+  "approvalStatedOn": "Mitgeteilt am {date}",
+  "@approvalStatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalLine": "{by}, {date}",
+  "@approvalLine": {
+    "placeholders": {
+      "by": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "highlightFallback": "Die Textstelle konnte in der PDF nicht markiert werden. Deshalb wird der ausgelesene Text angezeigt.",
+  "loadFailed": "Laden fehlgeschlagen: {reason}",
+  "@loadFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "contentLoadFailed": "Dieser Inhalt konnte nicht geöffnet werden. Prüfe deine Verbindung und versuche es erneut.",
+  "deleteProject": "Projekt löschen",
+  "deleteProjectConfirmation": "Dies kann nicht rückgängig gemacht werden. „{name}“ mit allen Dokumenten, Vergleichen und Prüfungen löschen?",
+  "@deleteProjectConfirmation": {"placeholders": {"name": {"type": "String"}}},
+  "deletingProject": "Projekt wird gelöscht…",
+  "deleteProjectFailed": "Die Löschung konnte nicht bestätigt werden. Versuche es erneut, um sie zu prüfen und abzuschließen.",
+  "retryDeleteProject": "Löschung erneut versuchen",
+  "projectDeleted": "Projekt gelöscht.",
+  "projectDeletionPending": "Projekt ausgeblendet. Die Daten werden gelöscht.",
+  "saveFailed": "Speichern fehlgeschlagen: {reason}",
+  "@saveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "projectsIntro": "Briefings vergleichen. Quellen prüfen.",
+  "swapVersions": "Frühere und neuere Version tauschen",
+  "comparisonReturnHint": "Du kannst diese Ansicht verlassen und den Vergleich später im Projekt wieder öffnen.",
+  "returnToProjects": "Zurück zu den Projekten",
+  "reportHeading": "Was sich geändert hat",
+  "reviewProgress": "Deine Prüfung · {reviewed} von {total}",
+  "@reviewProgress": {
+    "placeholders": {
+      "reviewed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewAcrossTopics": "Über alle Themen hinweg",
+  "noTopicChanges": "Keine wesentlichen Änderungen in diesem Thema.",
+  "sourceUnavailable": "Quellenbezeichnung nicht verfügbar",
+  "evidencePage": "Seite {page}",
+  "@evidencePage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "yourReview": "Deine Prüfung",
+  "confirmAndNext": "Bestätigen und weiter",
+  "findingPosition": "Änderung {position} von {total}",
+  "@findingPosition": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "evidenceModePdf": "Textstelle markiert",
+  "evidenceModeFallback": "Textansicht als Ersatz",
+  "evidenceModeText": "Reine Textquelle",
+  "readableText": "Lesbare Textansicht",
+  "pdfPage": "PDF-Seite",
+  "saving": "Wird gespeichert…"
+}

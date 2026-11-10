@@ -13,6 +13,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'ChangeLens';
 
   @override
+  String get compareBriefs => 'Compare two briefs';
+
+  @override
+  String get compareLoadFailed =>
+      'Could not load your versions. Check your connection and try again.';
+
+  @override
+  String get compareRejected =>
+      'The comparison could not be accepted. Check both inputs, then try again.';
+
+  @override
+  String get compareRetrySame =>
+      'The submission has not been confirmed. Retry to check the same comparison without creating a duplicate.';
+
+  @override
+  String get readyToSubmit => 'Ready to send';
+
+  @override
+  String get submittingComparison => 'Sending comparison…';
+
+  @override
+  String get compareSubmitHint =>
+      'Start sends both inputs together. You can leave this screen once the comparison is reading.';
+
+  @override
+  String get comparePickFailed =>
+      'The PDF could not be prepared. Try picking it again.';
+
+  @override
+  String get useText => 'Use this text';
+
+  @override
+  String get comparisonReading => 'Reading versions';
+
+  @override
+  String get loadingComparison => 'Loading comparison…';
+
+  @override
+  String get settingsSaveFailed =>
+      'Settings could not be saved. Please try again.';
+
+  @override
+  String get evidenceChecking => 'Checking the source passages…';
+
+  @override
+  String get evidenceCheckFailed =>
+      'The source passages could not be checked. Retry before reviewing this finding.';
+
+  @override
+  String get evidenceFallbackReview =>
+      'A PDF highlight could not be placed. Review the quoted text before confirming.';
+
+  @override
+  String get findingChanged =>
+      'This finding changed. Review the current revision before trying again.';
+
+  @override
+  String get topicDeadlines => 'Deadlines';
+
+  @override
+  String get topicDeliverables => 'Deliverables';
+
+  @override
+  String get topicResponsibilities => 'Responsibilities';
+
+  @override
+  String get topicApprovalWording => 'Approval wording';
+
+  @override
+  String get topicBudget => 'Budget';
+
+  @override
+  String get topicOther => 'Other';
+
+  @override
+  String get topicAll => 'All topics';
+
+  @override
   String get projectsTitle => 'Projects';
 
   @override
@@ -162,7 +240,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scopePartialHint =>
-      'Changes some items; everything else still stands.';
+      'Unmentioned items are not addressed. This does not confirm whether they still apply.';
 
   @override
   String get scopeUnknown => 'Not sure';
@@ -200,6 +278,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get comparisonFailed => 'Failed';
+
+  @override
+  String get comparisonFailedDetails =>
+      'This comparison could not be completed. Start a new comparison to try again.';
+
+  @override
+  String get comparisonCostStopped =>
+      'The cost limit was reached, so processing has stopped.';
+
+  @override
+  String get comparisonLoadFailed =>
+      'Comparison details could not be loaded. Check your connection and retry.';
+
+  @override
+  String comparisonInputRejected(String label, String reason) {
+    return '“$label” could not be read: $reason';
+  }
+
+  @override
+  String get parseNoTextLayer =>
+      'the PDF has no selectable text. Use a text-based PDF or paste the text.';
+
+  @override
+  String get parseMalformedPdf =>
+      'the PDF could not be opened. Export it again or paste the text.';
+
+  @override
+  String get parseTooManyPages =>
+      'the PDF exceeds the page limit. Choose a shorter document.';
+
+  @override
+  String get parseTooManyWords =>
+      'the document exceeds the word limit. Choose a shorter document.';
+
+  @override
+  String get parseTooManyBytes =>
+      'the file exceeds the size limit. Choose a smaller file.';
+
+  @override
+  String get parseTooMuchText =>
+      'the PDF contains too much text. Choose a shorter document.';
+
+  @override
+  String get parseNotUtf8 =>
+      'the text encoding is unsupported. Paste the text or save it as UTF-8.';
+
+  @override
+  String get parseUnsupported =>
+      'this file type is unsupported. Use pasted text or a PDF with selectable text.';
+
+  @override
+  String get parseTimeout =>
+      'reading the document took too long. Try a simpler or shorter document.';
+
+  @override
+  String get parseMemoryLimit =>
+      'the document is too complex to read. Try a simpler or shorter document.';
+
+  @override
+  String get parseFailed =>
+      'the document could not be processed. Export it again or paste the text.';
 
   @override
   String earlierToNewer(String earlier, String newer) {
@@ -437,7 +576,100 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get contentLoadFailed =>
+      'This content could not be opened. Check your connection and retry.';
+
+  @override
+  String get deleteProject => 'Delete project';
+
+  @override
+  String deleteProjectConfirmation(String name) {
+    return 'This cannot be undone. Delete “$name” and its documents, comparisons and reviews?';
+  }
+
+  @override
+  String get deletingProject => 'Deleting project…';
+
+  @override
+  String get deleteProjectFailed =>
+      'Deletion could not be confirmed. Retry to check and finish deleting the project.';
+
+  @override
+  String get retryDeleteProject => 'Retry deletion';
+
+  @override
+  String get projectDeleted => 'Project deleted.';
+
+  @override
+  String get projectDeletionPending =>
+      'Project hidden. Its data is being deleted.';
+
+  @override
   String saveFailed(String reason) {
     return 'Could not save: $reason';
   }
+
+  @override
+  String get projectsIntro => 'Compare briefs. Check the source.';
+
+  @override
+  String get swapVersions => 'Swap earlier and newer';
+
+  @override
+  String get comparisonReturnHint =>
+      'You can leave this screen and return to the comparison from its project.';
+
+  @override
+  String get returnToProjects => 'Back to projects';
+
+  @override
+  String get reportHeading => 'What changed';
+
+  @override
+  String reviewProgress(int reviewed, int total) {
+    return 'Your review · $reviewed of $total';
+  }
+
+  @override
+  String get reviewAcrossTopics => 'Across all topics';
+
+  @override
+  String get noTopicChanges => 'No material changes in this topic.';
+
+  @override
+  String get sourceUnavailable => 'Source label unavailable';
+
+  @override
+  String evidencePage(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String get yourReview => 'Your review';
+
+  @override
+  String get confirmAndNext => 'Confirm and next';
+
+  @override
+  String findingPosition(int position, int total) {
+    return 'Finding $position of $total';
+  }
+
+  @override
+  String get evidenceModePdf => 'Highlight located';
+
+  @override
+  String get evidenceModeFallback => 'Text fallback';
+
+  @override
+  String get evidenceModeText => 'Text-only source';
+
+  @override
+  String get readableText => 'Readable text';
+
+  @override
+  String get pdfPage => 'PDF page';
+
+  @override
+  String get saving => 'Saving…';
 }
