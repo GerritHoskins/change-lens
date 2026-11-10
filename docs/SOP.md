@@ -1,6 +1,19 @@
-# SOP — Running and Changing the ChangeLens Plan
+# SOP — Running and Changing ChangeLens
 
-This repository is a plan, not an application. "Running" it means running its checks; "changing" it means editing the plan without losing traceability.
+This repository holds the plan (`docs/`), the development backend (`backend/`), the Flutter app (`app/`), the D-15 proof of concept (`poc/`) and the evaluation tools (`scripts/eval/`). In this SOP, "running" means running the checks and "changing" means editing the plan and code without losing traceability. To start the software, see [backend/README.md](../backend/README.md) and [app/README.md](../app/README.md). Nothing is deployed publicly, and the backend must not be until I-8 replaces its dev token.
+
+## Status on 2026-11-06
+
+| State | What | Evidence |
+|---|---|---|
+| Built and tested | Dev API and worker (I-22), parsing (I-1, I-1c), the fact pipeline (I-2 to I-6) and the IONOS model check (D-17) | Backend unit tests in CI; integration tests run locally only (§1); a row per task in 06 |
+| Built, closed with a deviation | Evaluation harness (I-7): 2 fabricated scope changes against a gate of 0 | `scripts/eval/i7_receipt.json` and 06. I-7b is open and must pass before external testers |
+| Built, awaiting a device check | App shell and report screens (I-9, I-10) | The M1 end-to-end check passed on Android (06, 2026-11-01). It has not been run on the iPhone, so M1 is open. The D-15 proof of concept, a separate app, passed on both phones |
+| Local checks done, one decision open | Logto checks (D-8) | Local kit in `scripts/d8-logto/`, run on 2026-11-10 against Logto 1.45.0 (06): MFA, orphan users, link visibility and defaults are recorded; account linking (C2) needs an owner decision for AC-26. The IONOS hosting checks and Apple sign-in in D-8 have not started and do not use this kit |
+| Planned, not built | The M1b redesign (I-23 to I-26), I-7b and the rest of M2 to M5 | 05 |
+| Not in v1 | Share links (I-12), push notifications (I-27) and teams | 05 |
+
+`verification.md` records plan checks. Its Product evidence section says how far each AC is backed by the built product.
 
 ## 1. Run the checks
 
@@ -12,7 +25,7 @@ powershell -NoProfile -File scripts/ci.ps1
 
 It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and separate text, visual, hidden-text and labelling-kit evaluation test stages (see 07 §3 and §5), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
 
-CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py`, `test_label_kit.py` and `test_label_rounds.py` as separate stages; an install/import failure, a failing test or zero tests in any stage fails CI. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
+CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py`, `test_label_kit.py`, `test_label_rounds.py` and `test_split.py` as separate stages; an install/import failure, a failing test or zero tests in any stage fails CI. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
 
 ```bash
 .venv/Scripts/python -m unittest discover -s scripts/eval
@@ -42,7 +55,7 @@ The check passes only if:
 
 Save the output to `evidence/check-trace.txt` when it is used as evidence.
 
-Cost-model benchmark. The defaults are the D-7 prices for Claude Sonnet 5.5 on AWS Bedrock (€1.97 / €9.85 per million input / output tokens); if the provider or prices change, pass `-PIn` and `-POut` and update the defaults in the same commit. `-TokenFactor` (default 1.3) sets the informational tokenizer sensitivity:
+Cost-model benchmark. The defaults are the D-7 prices for Claude Sonnet 5.5 on AWS Bedrock (€1.97 / €9.85 per million input / output tokens). They are a conservative budgeting case, not the provider in use: D-17 led to IONOS (ADR-0021), whose recorded list prices are about a third of these, and the defaults stay so that every gate is tested with headroom (03 §8). The output is an estimate, not a measured cost. To try other prices, pass `-PIn` and `-POut`; if the defaults change, update 03 §8 in the same commit. `-TokenFactor` (default 1.3) sets the informational tokenizer sensitivity:
 
 ```powershell
 powershell -NoProfile -File scripts/cost-model.ps1 [-PIn <EUR> -POut <EUR>]
@@ -56,7 +69,7 @@ Mission completion check (fails until independent verification and review closur
 powershell -NoProfile -File scripts/check-verification.ps1
 ```
 
-It passes only if every AC has a row in `docs/verification.md` from a verifier who is not the author (the names `author`, `planner`, `claude-main` and `self` are rejected), with a result of `pass` or `accepted-gap` (a `fail` row fails the check) and evidence, and every finding in `docs/review-ledger.md` is `resolved` (with a reference) or `accepted` (with a reason). Ledger rows are recognised by an ID with an uppercase prefix, a hyphen and a number (`SEC-1`, `REV-20`, `SA-3`, `CR-13`); any new review may use a new prefix.
+It passes only if every AC has a row in `docs/verification.md` from a verifier who is not the author (the names `author`, `planner`, `claude-main` and `self` are rejected), with a result of `pass` or `accepted-gap` (a `fail` row fails the check) and evidence, and every finding in `docs/review-ledger.md` is `resolved` (with a reference) or `accepted` (with a reason). A pass means the plan covers every AC, not that the product does: see the Product evidence section of `docs/verification.md`. Ledger rows are recognised by an ID with an uppercase prefix, a hyphen and a number (`SEC-1`, `REV-20`, `SA-3`, `CR-13`); any new review may use a new prefix.
 
 ## 2. Change a requirement
 
@@ -107,8 +120,10 @@ Real labelling is postponed until the owner is ready after building the app. Fol
 | [0013](adr/0013-cross-tenant-not-found.md) | Cross-tenant access returns not_found (AD-6) | Accepted |
 | [0014](adr/0014-deterministic-verification.md) | Deterministic evidence verification | Accepted |
 | [0015](adr/0015-share-snapshots.md) | Share snapshots and web share page (AD-7) | Accepted |
-| [0016](adr/0016-push-plus-polling.md) | Push plus polling (AD-8) | Accepted |
+| [0016](adr/0016-push-plus-polling.md) | Push plus polling (AD-8) | Superseded by 0022 |
 | [0017](adr/0017-llm-port.md) | Model provider behind an injected port (AD-9) | Accepted |
 | [0018](adr/0018-pilot-billing-distribution.md) | Pilot billing and distribution | Accepted |
-| [0019](adr/0019-model-provider.md) | Model provider selection | Proposed |
+| [0019](adr/0019-model-provider.md) | Model provider selection | Superseded by 0021 |
 | [0020](adr/0020-self-hosted-logto.md) | Self-hosted Logto on IONOS for sign-in | Accepted |
+| [0021](adr/0021-ionos-only-comparison-model.md) | IONOS Qwen as the only v1 comparison model | Accepted |
+| [0022](adr/0022-polling-push-deferred.md) | Polling in v1, push deferred (AD-8) | Accepted |

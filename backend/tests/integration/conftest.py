@@ -26,7 +26,8 @@ S3 = os.environ.get("CHANGELENS_TEST_S3", "http://127.0.0.1:59000")
 TEST_DB = "changelens_test"
 TENANT_A = uuid.UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
-TABLES = "client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects"
+TABLES = ("client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects, "
+          "object_write_intents, object_purge_intents, comparison_cost_tombstones, project_deletions")
 
 
 def pytest_collection_modifyitems(items):
@@ -86,7 +87,8 @@ class Env:
         return self.client.post("/projects/%s/versions" % project_id, data=data, headers=auth(token), **kw)
 
     def compare(self, project_id, earlier, later, scope="complete", token=TOKEN_A):
-        return self.client.post("/projects/%s/comparisons" % project_id, headers=auth(token),
+        return self.client.post("/projects/%s/comparisons" % project_id,
+                                headers={**auth(token), "Idempotency-Key": str(uuid.uuid4())},
                                 json={"earlier_id": earlier, "later_id": later, "scope": scope})
 
     def get(self, path, token=TOKEN_A):

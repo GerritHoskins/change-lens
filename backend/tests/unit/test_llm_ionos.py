@@ -6,6 +6,8 @@ from decimal import Decimal
 import httpx
 import pytest
 
+from changelens.llm import MeteredLlm
+from changelens.metering import CeilingReached, CostMeter
 from changelens.llm.ionos import (IonosConfig, IonosLlm, LlmAuthError, LlmOutputInvalid, LlmUnavailable,
                                   read_token)
 from changelens.llm.schemas import CHANGE_FINDINGS, SchemaError, validate
@@ -148,3 +150,139 @@ def test_read_token_from_env_file_in_place(tmp_path, monkeypatch):
         read_token(tmp_path / "missing.env")
     monkeypatch.setenv("IONOS_API_TOKEN", "from-env")
     assert read_token(f) == "from-env"
+
+
+def test_invalid_output_retry_checks_remaining_budget_before_second_http_attempt():
+    # Original failure: one preflight admitted two paid attempts and spent EUR 1.5112912.
+    llm, seen = adapter([reply("{", usage=(1500, 4096)), reply(json.dumps(GOOD), usage=(1500, 4096))])
+    meter = CostMeter(Decimal("1.50"))
+    meter.record(Decimal("1.48"))
+    with pytest.raises(CeilingReached):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "Compare.", ["a"])
+    assert len(seen) == 1
+    assert meter.actual == Decimal("1.4956456")
+    assert meter.reserved == 0 and meter.total <= meter.ceiling
+
+
+def test_first_attempt_is_blocked_without_network_when_budget_is_insufficient():
+    llm, seen = adapter([])
+    meter = CostMeter(Decimal("0.0001"))
+    with pytest.raises(CeilingReached):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "Compare.", ["a"])
+    assert seen == [] and meter.calls == 0 and meter.total == 0
+
+
+def test_metered_retry_with_room_accounts_each_attempt_exactly_once():
+    llm, seen = adapter([reply("{"), reply(json.dumps(GOOD))])
+    meter = CostMeter(Decimal("1"))
+    assert MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"]) == GOOD
+    assert len(seen) == meter.calls == 2
+    assert meter.actual == Decimal("0.00048") and meter.reserved == 0
+
+
+def test_both_invalid_outputs_keep_their_charges_without_double_counting():
+    llm, seen = adapter([reply("{"), reply("[]")])
+    meter = CostMeter(Decimal("1"))
+    with pytest.raises(LlmOutputInvalid) as exc:
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == meter.calls == 2
+    assert meter.actual == exc.value.cost == Decimal("0.00048")
+    assert meter.reserved == 0
+
+
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout("slow"), httpx.ConnectError("down"),
+                                     httpx.Response(503, text="busy")])
+def test_unknown_failed_attempt_retains_its_hold_and_blocks_fresh_call(failure):
+    llm, seen = adapter([failure])
+    meter = CostMeter(Decimal("0.02"))
+    wrapped = MeteredLlm(llm, meter)
+    with pytest.raises(LlmUnavailable):
+        wrapped.structured("ChangeFindings", "s", ["a"])
+    assert meter.actual == 0 and meter.reserved > 0
+    with pytest.raises(CeilingReached):
+        wrapped.structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == meter.calls == 1
+
+
+@pytest.mark.parametrize("usage", [None, {}, {"prompt_tokens": 100},
+    {"prompt_tokens": -1, "completion_tokens": 50},
+    {"prompt_tokens": True, "completion_tokens": 50},
+    {"prompt_tokens": "100", "completion_tokens": 50},
+    {"prompt_tokens": 1.5, "completion_tokens": 50}])
+def test_missing_or_invalid_usage_never_releases_the_budget(usage):
+    response = httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(GOOD)}}], "usage": usage})
+    llm, seen = adapter([response])
+    meter = CostMeter(Decimal("1"))
+    assert MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"]) == GOOD
+    assert len(seen) == 1 and meter.actual == 0 and meter.reserved > 0
+
+
+def test_invalid_envelope_without_usage_blocks_the_output_retry():
+    llm, seen = adapter([httpx.Response(200, text="not a response")])
+    meter = CostMeter(Decimal("0.02"))
+    with pytest.raises(CeilingReached):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.reserved > 0 and meter.actual == 0
+
+
+def test_valid_usage_on_http_error_is_accounted():
+    llm, seen = adapter([reply("", status=503)])
+    meter = CostMeter(Decimal("1"))
+    with pytest.raises(LlmUnavailable):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.actual == Decimal("0.00024") and meter.reserved == 0
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_metered_auth_rejection_releases_hold_without_retry(status):
+    llm, seen = adapter([httpx.Response(status, json={"error": "unauthorised"})])
+    meter = CostMeter(Decimal("1"))
+    with pytest.raises(LlmAuthError):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.total == 0
+
+
+def test_actual_usage_above_estimate_is_recorded_and_stops_further_attempts():
+    llm, seen = adapter([reply("{", usage=(100_000, 4096))])
+    meter = CostMeter(Decimal("0.02"))
+    with pytest.raises(CeilingReached):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.actual == Decimal("0.0747456") and meter.reserved == 0
+
+
+def test_budget_estimate_includes_system_prompt_and_multibyte_text():
+    llm, seen = adapter([])
+    with pytest.raises(CeilingReached):
+        MeteredLlm(llm, CostMeter(Decimal("0.02"))).structured("ChangeFindings", "界" * 10_000, ["a"])
+    assert seen == []
+
+
+@pytest.mark.parametrize("prices", [{}, {"price_in_eur": Decimal("1")},
+    {"price_in_eur": Decimal("NaN"), "price_out_eur": Decimal("1")},
+    {"price_in_eur": Decimal("1"), "price_out_eur": Decimal("-1")},
+    {"price_in_eur": Decimal("Infinity"), "price_out_eur": Decimal("1")}])
+def test_unknown_or_invalid_model_prices_cannot_bypass_budget(prices):
+    with pytest.raises(ValueError):
+        IonosLlm(IonosConfig(model="unpriced-model", api_key=FAKE_TOKEN, **prices))
+
+
+def test_unknown_model_accepts_explicit_valid_prices():
+    config = IonosConfig(model="explicit-model", api_key=FAKE_TOKEN,
+                         price_in_eur=Decimal("1"), price_out_eur=Decimal("2"))
+    assert config.prices() == (Decimal("1"), Decimal("2"))
+
+
+def test_unexpected_content_parser_failure_still_settles_known_usage():
+    llm, seen = adapter([reply("[" * 2000 + "0" + "]" * 2000)])
+    meter = CostMeter(Decimal("1"))
+    with pytest.raises(RecursionError):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.actual == Decimal("0.00024") and meter.reserved == 0
+
+
+def test_unexpected_transport_failure_keeps_unknown_usage_reserved():
+    llm, seen = adapter([RuntimeError("unexpected transport failure")])
+    meter = CostMeter(Decimal("1"))
+    with pytest.raises(RuntimeError):
+        MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])
+    assert len(seen) == 1 and meter.actual == 0 and meter.reserved > 0

@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_theme.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 
 String typeLabel(AppLocalizations l, String t) => switch (t) {
@@ -19,10 +21,55 @@ String categoryLabel(AppLocalizations l, String c) => switch (c) {
       'quantity' => l.catQuantity,
       'date_deadline' => l.catDate,
       'responsibility_owner' => l.catOwner,
-      'approval' => l.catApproval,
+      'approval' || 'approval_wording' => l.catApproval,
+      'budget' => l.topicBudget,
       'structure' => l.catStructure,
       _ => l.catOther,
     };
+
+String topicLabel(AppLocalizations l, String topic) => switch (topic) {
+  'deadlines' => l.topicDeadlines,
+  'deliverables' => l.topicDeliverables,
+  'responsibilities' => l.topicResponsibilities,
+  'approval_wording' => l.topicApprovalWording,
+  'budget' => l.topicBudget,
+  _ => l.topicOther,
+};
+
+class TopicFilters extends StatelessWidget {
+  const TopicFilters({super.key, required this.counts, required this.selected, required this.onSelected});
+  final Map<String, int> counts;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(spacing: 8, children: [
+        ChoiceChip(label: Text(l.topicAll), selected: selected == null,
+          onSelected: (_) => onSelected(null)),
+        for (final topic in findingTopics)
+          ChoiceChip(key: ValueKey('topic-$topic'),
+            label: Text('${topicLabel(l, topic)} (${counts[topic] ?? 0})'),
+            selected: selected == topic, onSelected: (_) => onSelected(topic)),
+      ])),
+    );
+  }
+}
+
+/// Group only inside the existing priority/review section: topics never change certainty.
+List<Widget> topicFindings(AppLocalizations l, List<Finding> findings, String? selected,
+    void Function(Finding) onOpen) => [
+  for (final topic in findingTopics)
+    if ((selected == null || selected == topic) && findings.any((f) => f.topic == topic)) ...[
+      Semantics(header: true, child: Padding(
+        padding: const EdgeInsets.only(top: 18, bottom: 4),
+        child: Text(topicLabel(l, topic)))),
+      for (final f in findings.where((f) => f.topic == topic)) FindingTile(finding: f, onTap: () => onOpen(f)),
+    ],
+];
 
 String? reviewLabel(AppLocalizations l, Review? r) => switch (r?.action) {
       'confirmed' => l.reviewConfirmed,
@@ -41,27 +88,51 @@ IconData typeIcon(String t) => switch (t) {
 
 /// One quoted passage, labelled with its side; tap to open it in the document.
 class QuoteCard extends StatelessWidget {
-  const QuoteCard({super.key, required this.evidence, this.onTap});
+  const QuoteCard({super.key, required this.evidence, this.onTap,
+    this.versionLabel, this.evidenceLabel});
 
   final Evidence evidence;
   final VoidCallback? onTap;
+  final String? versionLabel;
+  /// A localized observation supplied by the device's evidence resolver, never inferred here.
+  final String? evidenceLabel;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      color: evidence.earlier ? scheme.errorContainer.withValues(alpha: 0.35) : scheme.primaryContainer.withValues(alpha: 0.35),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(evidence.earlier ? l.sideEarlier : l.sideNewer, style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 4),
-            Text(evidence.quote),
-          ]),
+    final colors = CalmColors.of(context);
+    final type = Theme.of(context).textTheme;
+    final source = [evidence.earlier ? l.sideEarlier : l.sideNewer,
+      ?versionLabel,
+      if (evidence.page != null && evidence.page! > 0) l.evidencePage(evidence.page!),
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Material(
+        color: colors.quote,
+        borderRadius: BorderRadius.circular(CalmRadius.lg),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(CalmRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(source, style: type.labelLarge?.copyWith(color: colors.muted)),
+              if (evidenceLabel != null) Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(evidenceLabel!, style: type.bodySmall?.copyWith(color: colors.muted))),
+              const SizedBox(height: 12),
+              Text(evidence.quote, style: type.bodyLarge),
+              if (onTap != null) Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(children: [
+                  Expanded(child: Text(l.showInDocument, style: type.labelLarge?.copyWith(
+                    decoration: TextDecoration.underline))),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.open_in_new, size: 18),
+                ])),
+            ]),
+          ),
         ),
       ),
     );
@@ -80,44 +151,57 @@ class FindingTile extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final f = finding;
     final reviewed = reviewLabel(l, f.review);
-    final dismissed = f.review?.action == 'dismissed';
-    return Opacity(
-      opacity: dismissed ? 0.55 : 1,
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 6),
+    final colors = CalmColors.of(context);
+    final type = Theme.of(context).textTheme;
+    final uncertain = f.group == 'needs_review';
+    final foreground = uncertain ? Theme.of(context).colorScheme.onSurface : colors.topicForeground(f.topic);
+    final tile = Material(
+        color: uncertain ? colors.quote : colors.topicSurface(f.topic),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.lg)),
         child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(CalmRadius.lg),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Icon(typeIcon(f.changeType), size: 18),
-                const SizedBox(width: 6),
+                if (uncertain) const CalmReviewDisc()
+                else Icon(typeIcon(f.changeType), size: 20, color: foreground),
+                const SizedBox(width: 8),
                 Expanded(child: Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
-                    style: Theme.of(context).textTheme.titleSmall)),
+                    style: type.titleMedium?.copyWith(color: foreground, fontWeight: FontWeight.w600))),
               ]),
               for (final e in f.evidence)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text('${e.earlier ? l.sideEarlier : l.sideNewer}: ${e.quote}',
-                      maxLines: 3, overflow: TextOverflow.ellipsis),
-                ),
-              if (f.explanation != null)
-                Padding(padding: const EdgeInsets.only(top: 6), child: Text(f.explanation!,
-                    style: Theme.of(context).textTheme.bodySmall)),
-              if (reviewed != null || f.clientApprovalRecorded)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Wrap(spacing: 6, runSpacing: 4, children: [
-                    if (reviewed != null) Chip(label: Text(reviewed), visualDensity: VisualDensity.compact),
-                    if (f.clientApprovalRecorded)
-                      Chip(label: Text(l.approvalRecorded), visualDensity: VisualDensity.compact),
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(e.earlier ? l.sideEarlier : l.sideNewer,
+                      style: type.labelMedium?.copyWith(color: foreground)),
+                    const SizedBox(height: 3),
+                    // The API supplies passages, not extracted display values. Keep its exact text.
+                    Text(e.quote, maxLines: 3, overflow: TextOverflow.ellipsis,
+                      style: type.bodyLarge?.copyWith(color: foreground, height: 1.45)),
                   ]),
                 ),
+              if (f.explanation != null)
+                Padding(padding: const EdgeInsets.only(top: 12), child: Text(f.explanation!,
+                    style: type.bodyMedium?.copyWith(color: foreground))),
+              Padding(padding: const EdgeInsets.only(top: 14), child: Row(children: [
+                Expanded(child: Text(reviewed ?? l.notReviewed,
+                  style: type.labelLarge?.copyWith(color: foreground))),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: foreground),
+              ])),
+              if (f.clientApprovalRecorded) Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(l.approvalRecorded, style: type.bodySmall?.copyWith(color: foreground))),
             ]),
           ),
         ),
-      ),
+      );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: uncertain ? CalmDashedBorder(child: tile) : tile,
     );
   }
 }
@@ -130,10 +214,12 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 4),
+        padding: const EdgeInsets.only(top: 26, bottom: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(text, style: Theme.of(context).textTheme.titleMedium),
-          if (hint != null) Text(hint!, style: Theme.of(context).textTheme.bodySmall),
+          Semantics(header: true, child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
+          if (hint != null) Padding(padding: const EdgeInsets.only(top: 5),
+            child: Text(hint!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: CalmColors.of(context).muted))),
         ]),
       );
 }

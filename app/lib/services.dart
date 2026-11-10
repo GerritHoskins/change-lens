@@ -1,8 +1,8 @@
 // App-wide services: dev connection settings, the API client and document import.
-// Document bytes stay in memory; picker temp copies are purged after every import and on start (AC-25).
-import 'dart:typed_data';
-
+// Document bytes stay in memory; picker cleanup is requested after import and on start (AC-25).
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -33,15 +33,17 @@ class PickedDocument {
   final Uint8List bytes;
 }
 
-/// The PDF picker, behind an interface so tests can check that temp copies are purged.
+/// The PDF picker, behind an interface so tests can check that cleanup is requested.
 abstract class DocumentPicker {
   Future<PickedDocument?> pickPdf();
 
-  /// Deletes the picker's cached copies of picked files.
+  /// Requests deletion of picker copies and discards available recovery metadata.
   Future<void> purge();
 }
 
 class PlatformDocumentPicker implements DocumentPicker {
+  static const _androidPicker = MethodChannel('miguelruivo.flutter.plugins.filepicker');
+
   @override
   Future<PickedDocument?> pickPdf() async {
     final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['pdf']);
@@ -50,7 +52,21 @@ class PlatformDocumentPicker implements DocumentPicker {
   }
 
   @override
-  Future<void> purge() => FilePicker.clearTemporaryFiles();
+  Future<void> purge() async {
+    try {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        // FilePicker has no cross-platform recovery API. The pinned Android plugin's
+        // retrieveLostData wrapper reconstructs file handles from saved metadata; drain
+        // its native one-shot result directly instead, without parsing or opening them.
+        // It also waits for an already-running restore before we clear its file copies.
+        await _androidPicker.invokeMethod<Object?>('retrieveLostData');
+      }
+    } finally {
+      // Native plugins discard their cleanup result: this attempts cleanup, not proof of
+      // erasure. A restore arriving after this call still needs device lifecycle testing.
+      await FilePicker.clearTemporaryFiles();
+    }
+  }
 }
 
 class Services extends ChangeNotifier {
@@ -64,14 +80,18 @@ class Services extends ChangeNotifier {
   String baseUrl = '';
   String token = '';
   Api? _api;
+  ComparisonSubmission? pendingComparison;
 
   bool get configured => baseUrl.isNotEmpty && token.isNotEmpty;
 
   Api get api => _api ??= apiFactory(baseUrl, token);
 
   Future<void> load() async {
-    baseUrl = await store.read(_baseKey) ?? '';
-    token = await store.read(_tokenKey) ?? '';
+    final newBase = await store.read(_baseKey) ?? '';
+    final newToken = await store.read(_tokenKey) ?? '';
+    if (newBase != baseUrl || newToken != token) pendingComparison = null;
+    baseUrl = newBase;
+    token = newToken;
     _api = null;
     notifyListeners();
   }
@@ -82,14 +102,11 @@ class Services extends ChangeNotifier {
     await load();
   }
 
-  /// Uploads a picked PDF, then purges the picker cache whether or not the upload worked (AC-25).
+  /// Attempts picker cleanup after selecting, reading or uploading a PDF, including failures.
   Future<Version?> importPdf(String projectId, String label) async {
-    final doc = await picker.pickPdf();
-    if (doc == null) {
-      await picker.purge();
-      return null;
-    }
     try {
+      final doc = await picker.pickPdf();
+      if (doc == null) return null;
       return await api.upload(projectId, label, bytes: doc.bytes, filename: doc.name);
     } finally {
       await picker.purge();
@@ -98,6 +115,15 @@ class Services extends ChangeNotifier {
 
   Future<Version> importText(String projectId, String label, String text) =>
       api.upload(projectId, label, text: text);
+}
+
+/// In-memory recovery only; no source documents or submission bodies go to device storage.
+class ComparisonSubmission {
+  ComparisonSubmission(this.project, this.earlier, this.later, this.scope) : key = comparisonRequestKey();
+  final Project project;
+  final ComparisonInput earlier, later;
+  final Scope scope;
+  final String key;
 }
 
 /// Makes [Services] available to the widget tree.

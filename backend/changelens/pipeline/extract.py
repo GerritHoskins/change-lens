@@ -24,8 +24,9 @@ from typing import Optional, Protocol, Sequence
 from changelens.llm.errors import LlmOutputInvalid
 from changelens.llm.schemas import FACT_LIST
 from changelens.pipeline.types import Block, ExtractedFact, Locator, ParsedDocument
+from changelens.topics import canonical_category
 
-EXTRACT_VERSION = "extract-v4"  # v2: D-17 categories; v3: sentence quotes + `context`; v4: context wraps only in PDFs
+EXTRACT_VERSION = "extract-v7"  # O-14: financial budget, approval wording and distinct facts per topic
 CHUNK_CHARS = 6000
 CONFIDENCE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 
@@ -39,8 +40,11 @@ fact that a later version could add, change or drop:
   3 videos, 24 pages, 15 photographs).
 - date_deadline: a date, deadline, duration or milestone.
 - responsibility_owner: who provides, does, organises or owns a task.
-- approval: who signs off, approves or must confirm something, and how binding it is.
-- other_material: budget, fees, prices, VAT, payment and any other material term or condition.
+- approval_wording: who signs off, approves or must confirm something, and how binding it is.
+  This is wording in the brief, not a record that the client actually approved.
+- budget: financial budgets, fees, prices, VAT, payment amounts and payment conditions.
+  Counts of work belong to quantity; dates and deadlines belong to date_deadline.
+- other_material: any other material term or condition that does not fit a category above.
 
 For each fact:
 - subject: a short, stable name for what the fact is about, without its value
@@ -57,6 +61,11 @@ For each fact:
 
 List deliverables one by one when a line lists several. Do not invent facts, values or numbers
 that are not in the text. Headings, greetings and notes addressed to the reader are not facts.
+A sentence can state facts in more than one topic. Emit a separate fact for each distinct topic,
+with its own category, subject and value; the facts may quote the same complete sentence.
+For example, "Produce a logo for EUR 800 by 12 June" states a deliverable, a budget and a deadline:
+return three facts, all citing that sentence. Never merge topics into one fact or invent a topic
+that the sentence does not state.
 Return {"facts": []} if there are none."""
 
 # Fingerprint of everything that shapes the output, for the cache key.
@@ -89,7 +98,8 @@ class ExtractionResult:
 
     @classmethod
     def from_json(cls, d: dict, cached: bool = False) -> "ExtractionResult":
-        facts = [ExtractedFact(**{**f, "locator": Locator(**f["locator"])}) for f in d["facts"]]
+        facts = [ExtractedFact(**{**f, "type": canonical_category(f["type"]),
+                                "locator": Locator(**f["locator"])}) for f in d["facts"]]
         return cls(facts, [Locator(**u) for u in d["unextracted"]], d["unlocated"], d["chunks"], cached)
 
 
@@ -122,6 +132,26 @@ def normalise(s: Optional[str]) -> str:
     if not s:
         return ""
     return _SEP.sub("", _WS.sub(" ", s).strip(_TRIM).casefold())
+
+
+# The first standalone number in a value (not part of "PDF/X-4" or "v2.1"), and what follows it.
+_NUMBER = re.compile(r"(?<![\w/.\-])\d+(?:[.,]\d+)?")
+_UNIT = re.compile(r"\s?(?:mm|cm|m|km|inch(?:es)?|ft|px|pt|dpi|ppi|[kmg]b|tb|k?hz|mhz|[km]bps|fps|p|k|"
+                   r"s|secs?|seconds?|mins?|minutes?|hrs?|hours?|%|x)(?![\w%])", re.I)
+_SIZED = frozenset({"deliverable", "quantity"})
+
+
+def fact_type(model_type: str, value: str) -> str:
+    """The 07 §4 boundary, enforced between deliverable and quantity: a count of things ("3",
+    "24 pages", "design packaging for 5 tea flavours") is a quantity, and a measurement of the thing
+    delivered ("1080p", "30 seconds", "48 kHz", "3 mm bleed", "2 m by 1 m") is a deliverable. The
+    first standalone number decides. The model does not always follow the prompt (I-7), and the two
+    versions must type the same item alike to align. Other types are never changed."""
+    model_type = canonical_category(model_type)
+    m = _NUMBER.search(value or "")
+    if model_type not in _SIZED or m is None:
+        return model_type
+    return "deliverable" if _UNIT.match(value, m.end()) else "quantity"
 
 
 def locate(doc: ParsedDocument, block: Block, quote: str) -> Optional[Locator]:
@@ -191,8 +221,9 @@ def extract(doc: ParsedDocument, llm: Llm) -> ExtractionResult:
             if loc is None:
                 result.unlocated += 1
                 continue
+            value = normalise(f["value"])
             result.facts.append(ExtractedFact(
-                type=f["type"], raw_text=doc.slice(loc), normalised_value=normalise(f["value"]),
+                type=fact_type(f["type"], value), raw_text=doc.slice(loc), normalised_value=value,
                 locator=loc, status="ambiguous" if f["ambiguity"] else "ok",
                 confidence=CONFIDENCE[f["confidence"]], subject=normalise(f["subject"]),
                 ambiguity=f["ambiguity"], context=sentence_of(doc.pages[(loc.page or 1) - 1], loc, doc.kind == "pdf")))

@@ -1,6 +1,6 @@
 # ADR 0016: Push notification plus polling for comparison status (AD-8)
 
-**Status:** Accepted (2026-10-30)
+**Status:** Superseded by ADR-0022 (2026-11-06). Accepted on 2026-10-30.
 
 ## Context
 

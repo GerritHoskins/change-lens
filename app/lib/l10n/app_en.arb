@@ -1,6 +1,29 @@
 {
   "@@locale": "en",
   "appTitle": "ChangeLens",
+  "compareBriefs": "Compare two briefs",
+  "compareLoadFailed": "Could not load your versions. Check your connection and try again.",
+  "compareRejected": "The comparison could not be accepted. Check both inputs, then try again.",
+  "compareRetrySame": "The submission has not been confirmed. Retry to check the same comparison without creating a duplicate.",
+  "readyToSubmit": "Ready to send",
+  "submittingComparison": "Sending comparison…",
+  "compareSubmitHint": "Start sends both inputs together. You can leave this screen once the comparison is reading.",
+  "comparePickFailed": "The PDF could not be prepared. Try picking it again.",
+  "useText": "Use this text",
+  "comparisonReading": "Reading versions",
+  "loadingComparison": "Loading comparison…",
+  "settingsSaveFailed": "Settings could not be saved. Please try again.",
+  "evidenceChecking": "Checking the source passages…",
+  "evidenceCheckFailed": "The source passages could not be checked. Retry before reviewing this finding.",
+  "evidenceFallbackReview": "A PDF highlight could not be placed. Review the quoted text before confirming.",
+  "findingChanged": "This finding changed. Review the current revision before trying again.",
+  "topicDeadlines": "Deadlines",
+  "topicDeliverables": "Deliverables",
+  "topicResponsibilities": "Responsibilities",
+  "topicApprovalWording": "Approval wording",
+  "topicBudget": "Budget",
+  "topicOther": "Other",
+  "topicAll": "All topics",
   "projectsTitle": "Projects",
   "projectsEmpty": "No projects yet. Create one for each client engagement.",
   "newProject": "New project",
@@ -65,7 +88,7 @@
   "scopeComplete": "Complete replacement",
   "scopeCompleteHint": "A full brief that replaces the earlier one.",
   "scopePartial": "Partial update",
-  "scopePartialHint": "Changes some items; everything else still stands.",
+  "scopePartialHint": "Unmentioned items are not addressed. This does not confirm whether they still apply.",
   "scopeUnknown": "Not sure",
   "scopeUnknownHint": "It is unclear whether the rest still stands.",
   "startComparison": "Start comparison",
@@ -84,6 +107,22 @@
   "comparisonComplete": "Complete",
   "comparisonPartial": "Partial: some content could not be processed",
   "comparisonFailed": "Failed",
+  "comparisonFailedDetails": "This comparison could not be completed. Start a new comparison to try again.",
+  "comparisonCostStopped": "The cost limit was reached, so processing has stopped.",
+  "comparisonLoadFailed": "Comparison details could not be loaded. Check your connection and retry.",
+  "comparisonInputRejected": "“{label}” could not be read: {reason}",
+  "@comparisonInputRejected": {"placeholders": {"label": {"type": "String"}, "reason": {"type": "String"}}},
+  "parseNoTextLayer": "the PDF has no selectable text. Use a text-based PDF or paste the text.",
+  "parseMalformedPdf": "the PDF could not be opened. Export it again or paste the text.",
+  "parseTooManyPages": "the PDF exceeds the page limit. Choose a shorter document.",
+  "parseTooManyWords": "the document exceeds the word limit. Choose a shorter document.",
+  "parseTooManyBytes": "the file exceeds the size limit. Choose a smaller file.",
+  "parseTooMuchText": "the PDF contains too much text. Choose a shorter document.",
+  "parseNotUtf8": "the text encoding is unsupported. Paste the text or save it as UTF-8.",
+  "parseUnsupported": "this file type is unsupported. Use pasted text or a PDF with selectable text.",
+  "parseTimeout": "reading the document took too long. Try a simpler or shorter document.",
+  "parseMemoryLimit": "the document is too complex to read. Try a simpler or shorter document.",
+  "parseFailed": "the document could not be processed. Export it again or paste the text.",
   "earlierToNewer": "{earlier} → {newer}",
   "@earlierToNewer": {
     "placeholders": {
@@ -210,6 +249,15 @@
       }
     }
   },
+  "contentLoadFailed": "This content could not be opened. Check your connection and retry.",
+  "deleteProject": "Delete project",
+  "deleteProjectConfirmation": "This cannot be undone. Delete “{name}” and its documents, comparisons and reviews?",
+  "@deleteProjectConfirmation": {"placeholders": {"name": {"type": "String"}}},
+  "deletingProject": "Deleting project…",
+  "deleteProjectFailed": "Deletion could not be confirmed. Retry to check and finish deleting the project.",
+  "retryDeleteProject": "Retry deletion",
+  "projectDeleted": "Project deleted.",
+  "projectDeletionPending": "Project hidden. Its data is being deleted.",
   "saveFailed": "Could not save: {reason}",
   "@saveFailed": {
     "placeholders": {
@@ -217,5 +265,51 @@
         "type": "String"
       }
     }
-  }
+  },
+  "projectsIntro": "Compare briefs. Check the source.",
+  "swapVersions": "Swap earlier and newer",
+  "comparisonReturnHint": "You can leave this screen and return to the comparison from its project.",
+  "returnToProjects": "Back to projects",
+  "reportHeading": "What changed",
+  "reviewProgress": "Your review · {reviewed} of {total}",
+  "@reviewProgress": {
+    "placeholders": {
+      "reviewed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewAcrossTopics": "Across all topics",
+  "noTopicChanges": "No material changes in this topic.",
+  "sourceUnavailable": "Source label unavailable",
+  "evidencePage": "Page {page}",
+  "@evidencePage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "yourReview": "Your review",
+  "confirmAndNext": "Confirm and next",
+  "findingPosition": "Finding {position} of {total}",
+  "@findingPosition": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "evidenceModePdf": "Highlight located",
+  "evidenceModeFallback": "Text fallback",
+  "evidenceModeText": "Text-only source",
+  "readableText": "Readable text",
+  "pdfPage": "PDF page",
+  "saving": "Saving…"
 }

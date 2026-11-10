@@ -20,7 +20,8 @@ from changelens.llm.errors import LlmOutputInvalid, LlmUnavailable
 from changelens.metering import CeilingReached
 from changelens.pipeline.types import DraftFinding
 
-MATERIAL = {"deliverable", "quantity", "date_deadline", "responsibility_owner", "approval"}
+MATERIAL = {"deliverable", "quantity", "date_deadline", "responsibility_owner", "approval", "approval_wording",
+            "budget", "other_material"}
 MODEL_WORDED = {"changed", "added", "equivalent"}
 GROUP_ORDER = {"prioritised": 0, "needs_review": 1, "other": 2}
 

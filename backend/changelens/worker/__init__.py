@@ -8,21 +8,20 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from decimal import Decimal
 from typing import Optional
 
 from changelens import MODEL_CONFIG_ID, jobs
 from changelens.config import Settings
 from changelens.domain import Database, DbFactCache
+from changelens.domain.budget import DbCostMeter
+from changelens.domain.comparison_queue import resume_waiting
+from changelens.domain.storage_intents import reconcile_pending_writes
 from changelens.domain.models import Finding
-from changelens.llm import FakeLlm, LlmPort, MeteredLlm
-from changelens.metering import CeilingReached, CostMeter
-from changelens.pipeline.align import align
-from changelens.pipeline.compare import compare
-from changelens.pipeline.extract import extract_cached
-from changelens.pipeline.report import report
+from changelens.llm import FakeLlm, LlmPort
 from changelens.pipeline.sandbox import parse_sandboxed
-from changelens.pipeline.types import PARTIAL_WARNINGS, Evidence, ParsedDocument, ParseRejected, VerifyResult
-from changelens.pipeline.verify import verify
+from changelens.pipeline.run import run_comparison
+from changelens.pipeline.types import Evidence, ParsedDocument, ParseRejected, VerifyResult
 from changelens.storage import ObjectStore
 
 log = logging.getLogger("changelens.worker")
@@ -40,12 +39,16 @@ class Worker:
     def run_once(self) -> bool:
         """Process at most one job. Returns False when the queue had nothing ready."""
         with self.db.system_session() as s:
-            for dead in jobs.reclaim_expired(s, self.settings.job_lease_seconds):
-                log.warning("job %s (%s) failed: lease expired after %d attempts", dead.id, dead.kind, dead.attempts)
-                self._on_final_failure(dead)
+            dead_jobs = jobs.reclaim_expired(s, self.settings.job_lease_seconds)
+        # Never hold queue row locks while taking a project lifecycle lock: retention
+        # takes the project lock before deleting the corresponding queue rows.
+        for dead in dead_jobs:
+            log.warning("job %s (%s) failed: lease expired after %d attempts", dead.id, dead.kind, dead.attempts)
+            self._on_final_failure(dead)
         with self.db.system_session() as s:
             job = jobs.claim(s)
         if job is None:
+            self.reconcile_uploads(limit=1)
             return False
         log.info("job %s (%s) attempt %d/%d started", job.id, job.kind, job.attempts, job.max_attempts)
         try:
@@ -68,6 +71,10 @@ class Worker:
         log.info("job %s (%s) done", job.id, job.kind)
         return True
 
+    def reconcile_uploads(self, limit: int = 100) -> int:
+        """Maintenance hook; idle queue ticks process one intent without delaying queued jobs."""
+        return reconcile_pending_writes(self.db, self.store, limit=limit)
+
     def run_until_idle(self, max_jobs: int = 1000) -> int:
         n = 0
         while n < max_jobs and self.run_once():
@@ -82,10 +89,16 @@ class Worker:
     def _on_final_failure(self, job: jobs.ClaimedJob) -> None:
         with self.db.tenant_scope(job.tenant_id) as repo:
             if job.kind == "parse":
+                if not repo.lock_for_version(job.ids["version_id"]):
+                    return
                 v = repo.version(job.ids["version_id"], lock=True)
                 if v is not None and v.status == "uploaded":
                     v.status, v.reject_reason = "rejected", "parse_failed"
+                    repo.s.flush()
+                    resume_waiting(repo, v.id, self.settings.job_max_attempts)
             elif job.kind == "compare":
+                if not repo.lock_for_comparison(job.ids["comparison_id"]):
+                    return
                 c = repo.comparison(job.ids["comparison_id"], lock=True)
                 if c is not None and c.status not in TERMINAL:
                     c.status = "failed"
@@ -94,31 +107,39 @@ class Worker:
     # Handlers -------------------------------------------------------------------------------
     def handle_parse(self, tenant_id: uuid.UUID, version_id: uuid.UUID) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
+            if not repo.lock_for_version(version_id):
+                return
             v = repo.version(version_id)
             if v is None or v.status != "uploaded":
                 return  # another tenant's ID or already done: nothing to do (idempotent)
             key, kind = v.original_object_key, v.kind
-        data = self.store.get(key)
+            data = self.store.get(key)
         # PDFs are parsed in the capped sandbox child (03 §6); a breach rejects the version.
         try:
             doc, reason = parse_sandboxed(data, kind, self.settings.limits), None
         except ParseRejected as r:
             doc, reason = None, r.code
         with self.db.tenant_scope(tenant_id) as repo:
+            if not repo.lock_for_version(version_id):
+                return
             v = repo.version(version_id, lock=True)
             if v is None or v.status != "uploaded":
                 return
             if doc is None:
                 v.status, v.reject_reason = "rejected", reason
-                return
-            v.parsed_pages, v.blocks, v.page_count = doc.pages, doc.blocks_json(), doc.page_count
-            v.parse_warnings = doc.to_json()["warnings"]
-            v.status = "parsed"
+            else:
+                v.parsed_pages, v.blocks, v.page_count = doc.pages, doc.blocks_json(), doc.page_count
+                v.parse_warnings = doc.to_json()["warnings"]
+                v.status = "parsed"
+            repo.s.flush()
+            resume_waiting(repo, v.id, self.settings.job_max_attempts)
 
     def handle_compare(self, tenant_id: uuid.UUID, comparison_id: uuid.UUID) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
+            if not repo.lock_for_comparison(comparison_id):
+                return
             c = repo.comparison(comparison_id, lock=True)
-            if c is None or c.status in TERMINAL:
+            if c is None or c.status not in ("queued", "running"):
                 return
             c.status = "running"
             e, l = repo.version(c.earlier_id), repo.version(c.later_id)
@@ -126,45 +147,21 @@ class Worker:
             later = ParsedDocument.from_stored(l.kind, l.parsed_pages, l.blocks, l.page_count, l.parse_warnings)
             sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
             ceiling, scope = c.cost_ceiling, c.scope_snapshot
-        meter = CostMeter(ceiling)
-        llm = MeteredLlm(self.llm, meter)
-        warnings = []
-        # Hidden blocks are never sent to the model nor diffed, and are reported; unread or
-        # unchecked content makes the result partial (AC-11, AC-18).
-        codes = {w.code for w in earlier.warnings + later.warnings}
-        if "hidden_text" in codes:
-            warnings.append({"code": "hidden_text"})
-        if codes & PARTIAL_WARNINGS:
-            warnings.append({"code": "parse_warnings"})
         config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
-        facts, unextracted, stage = [], 0, "extract"
-        try:
-            for version_id, sha, doc in sides:  # facts per version, cached (I-2)
-                res = extract_cached(doc, sha, config_id, DbFactCache(self.db, tenant_id, version_id), llm)
-                facts.append(res.facts)
-                unextracted += len(res.unextracted)
-            stage = "compare"
-            drafts = compare(align(facts[0], facts[1], llm), scope, llm)  # I-3, I-4
-        except CeilingReached:
-            log.warning("comparison %s stopped at the cost ceiling during %s", comparison_id, stage)
-            self._finish(tenant_id, comparison_id, VerifyResult([], 0, []), "failed",
-                         warnings + [{"code": "cost_ceiling", "stage": stage}], meter.total)
-            return
-        if unextracted:
-            warnings.append({"code": "unextracted", "chunks": unextracted})  # AC-11
-        checked = verify(drafts, earlier, later)  # I-5: exact quotes, needs review, block cross-check
-        checked.findings, templated = report(checked.findings, llm)
-        if templated:  # verified findings are kept with template wording, never dropped (AC-21)
-            warnings.append({"code": "cost_ceiling", "stage": "report", "templated_findings": templated})
-            log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, meter.calls)
-        partial = {"code": "parse_warnings"} in warnings or unextracted > 0 or templated > 0
-        status = "partial" if partial else "complete"
-        self._finish(tenant_id, comparison_id, checked, status, warnings, meter.total)
+        meter = DbCostMeter(self.db, tenant_id, comparison_id)
+        out = run_comparison([(sha, doc, DbFactCache(self.db, tenant_id, vid)) for vid, sha, doc in sides],
+                             scope, self.llm, ceiling, config_id, meter=meter)
+        if any(w.get("code") == "cost_ceiling" for w in out.warnings):
+            log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, out.calls)
+        self._finish(tenant_id, comparison_id, out.checked, out.status, out.warnings)
         log.info("comparison %s %s: %d findings, %d withheld, %d unexplained, cost %s of %s", comparison_id,
-                 status, len(checked.findings), checked.withheld_count, len(checked.unexplained), meter.total, ceiling)
+                 out.status, len(out.checked.findings), out.checked.withheld_count, len(out.checked.unexplained),
+                 out.cost, ceiling)
 
-    def _finish(self, tenant_id, comparison_id, checked: VerifyResult, status, warnings, cost) -> None:
+    def _finish(self, tenant_id, comparison_id, checked: VerifyResult, status, warnings) -> None:
         with self.db.tenant_scope(tenant_id) as repo:
+            if not repo.lock_for_comparison(comparison_id):
+                return
             c = repo.comparison(comparison_id, lock=True)
             if c is None or c.status in TERMINAL:
                 return
@@ -176,7 +173,11 @@ class Worker:
             c.withheld_count = checked.withheld_count
             c.unexplained = [_evidence_json(ev) for ev in checked.unexplained]
             c.presentation_only = [_evidence_json(ev) for ev in checked.presentation_only]
-            c.status, c.warnings, c.cost_actual = status, warnings, cost
+            c.status, c.warnings = status, warnings
+            # Model attempts already persisted actual usage and outstanding holds. A retry
+            # or late worker must never replace that history with its own run's total.
+            if c.cost_actual is None:
+                c.cost_actual = Decimal("0")  # a fully cached run may make no requests
 
 
 def _evidence_json(ev: Evidence) -> dict:

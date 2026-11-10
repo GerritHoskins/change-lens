@@ -147,7 +147,7 @@ def test_results_with_unextracted_chunks_are_not_cached():
 @pytest.mark.parametrize("mutate", [
     lambda f: f.update(material=True),          # extra property
     lambda f: f.update(block="2"),              # wrong type
-    lambda f: f.update(type="budget"),          # not in the enum
+    lambda f: f.update(type="unsupported_type"),  # not in the enum (budget is valid in extract-v7)
     lambda f: f.update(ambiguity=True),         # booleans are not allowed anywhere
     lambda f: f.pop("quote"),                   # missing required field
 ])

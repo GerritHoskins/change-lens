@@ -14,6 +14,14 @@ def _compared(env, earlier=None, later=None):
 
 
 def _post(env, path, body, token=TOKEN_A):
+    if path.endswith("/reviews"):
+        # These fixtures use pasted text. Derive absent sides from the actual finding so
+        # the request represents this test client's evidence view, not production defaults.
+        finding = env.get(path.removesuffix("/reviews")).json()
+        sides = {item["side"] for item in finding["evidence"]}
+        body = {**body, "evidence_mode": {"before": "text_only" if "earlier" in sides else None,
+                                         "after": "text_only" if "later" in sides else None},
+                "page_opened": False}
     return env.client.post(path, json=body, headers=auth(token))
 
 
@@ -27,6 +35,7 @@ def test_confirm_and_dismiss_are_reviews_never_approvals(env):
     assert first["review"] is None and first["client_approval_recorded"] is False
     r = _post(env, "/findings/%s/reviews" % first["id"], {"action": "confirmed"})
     assert r.status_code == 201 and r.json()["finding"]["review"]["action"] == "confirmed"
+    assert r.json()["review"]["page_opened"] is False
     assert _post(env, "/findings/%s/reviews" % second["id"], {"action": "dismissed", "note": "not relevant"}).status_code == 201
     got = {f["id"]: f for f in _findings(env, cid)}
     assert got[first["id"]]["review"]["action"] == "confirmed" and got[second["id"]]["review"]["action"] == "dismissed"

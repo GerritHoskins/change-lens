@@ -147,17 +147,25 @@ PARSE_JOB(tenant, version_id):
 ## P4. Start a comparison
 
 ```
-API_CREATE_COMPARISON(project, earlier_id, later_id, scope): # GUARD first
+API_CREATE_COMPARISON(project, earlier, later, scope, idempotency_key): # GUARD first; the only start path (O-15)
+  if c ← comparison_by_key(tenant, idempotency_key): return 202, c.id       # a retry creates nothing
   if scope not in {complete, partial, unknown}: reject(scope_not_confirmed)   [AC-14]
-  if earlier_id = later_id or either not parsed: reject(scope_not_confirmed)  [AC-14]
-  # The order comes only from the user's choice in this request,
+  if earlier or later missing: reject(scope_not_confirmed)                   [AC-14]
+  # The order comes only from the user's slots in this request,
   # never from upload time, filename or dates in the text.                    [AC-14]
-  units ← 4 if is_heavy(earlier) or is_heavy(later) else 1   # heavy = > 5,000 words
-  if allowance_remaining(tenant) < units: reject(allowance_exhausted)         [AC-21]
+  E, L ← for each slot: the existing version, or IMPORT(upload or paste) per P2, in one transaction with c
+  if E = L or either is rejected: reject(scope_not_confirmed)                 [AC-14]
+  if allowance_remaining(tenant) < 1: reject(allowance_exhausted)             # early check; nothing charged  [AC-21]
   if month_spend(tenant) ≥ tenant_spend_cap or global_kill_switch_on(): reject(spend_cap_reached)  # counts failed runs too (SA-4)  [AC-21]
-  c ← Comparison(earlier_id, later_id, scope_snapshot=scope, status=queued)
-  jobs.enqueue(compare, ids={tenant, c.id})                  [AC-23]
+  status ← queued if E and L are parsed else waiting_for_versions
+  c ← Comparison(E, L, scope_snapshot=scope, status, idempotency_key)
+  if status = queued: jobs.enqueue(compare, ids={tenant, c.id})            [AC-23]
   return 202, c.id
+
+ON_PARSE_DONE(version):                                      # end of the P3 parse job
+  for c in comparisons waiting_for_versions on version:
+     if version is rejected: c.status ← failed(reason=version.reject_reason)   # no allowance spent  [AC-11, AC-21]
+     elif both versions are parsed: c.status ← queued; jobs.enqueue(compare, ids={tenant, c.id})  [AC-23]
 ```
 
 ## P5. Compare job
@@ -167,6 +175,9 @@ COMPARE_JOB(tenant, comparison_id):
   db.set_tenant(tenant)                                      [AC-19]
   c ← load(comparison_id); meter ← CostMeter(ceiling=€1.50)                   [AC-21]
   E, L ← load_parsed(c.earlier_id), load_parsed(c.later_id)
+  units ← 4 if is_heavy(E) or is_heavy(L) else 1             # heavy = > 5,000 words
+  if not charge_allowance(tenant, c, units):                 # at queued → running; keyed by c.id, so a job retry never charges twice (O-15)  [AC-21]
+     c.status ← failed(allowance_exhausted); return
   try:
      FE ← cached_facts(E) or EXTRACT(E, meter)
      FL ← cached_facts(L) or EXTRACT(L, meter)
@@ -286,9 +297,13 @@ REPORT(findings, presentation_only, meter):
         if x is none or contradicts(x, f.change_type):        # e.g. "removed"/"cancelled" for a non-removal
            x ← template(f)                                    [AC-2, AC-3, AC-4]
         f.explanation ← x
-     f.priority ← material if f.category in {deliverable, quantity, date, responsibility, approval} else other
+     f.topic ← TOPIC[f.category]   # deliverable, quantity → deliverables; date → deadlines; responsibility → responsibilities;
+                                   # approval_wording → approval_wording; budget → budget; other_material, structure → other (O-14)
+                                   # set after VERIFY decided needs_review, and never changes it
+     f.priority ← material if f.category in {deliverable, quantity, date, responsibility, approval_wording, budget} else other
   report.prioritised ← [f for f in findings if f.priority = material and f.group ≠ needs_review]  [AC-10]
   report.needs_review ← [f for f in findings if f.group = needs_review]          [AC-10]
+  report.topic_counts ← number of findings per topic          # the app never recounts (O-14)
   report.all_differences ← everything, including equivalent findings with their text diffs
                            and presentation_only (reordered) blocks             [AC-5, AC-13]
   report.banner ← "Selected summary — N other differences"   [AC-13]
@@ -298,8 +313,8 @@ REPORT(findings, presentation_only, meter):
 ## P6. Review and client approval
 
 ```
-REVIEW(finding_id, action, correction?, note?):
-  append ReviewEvent(finding_id, actor, action, note, at=now)                 [AC-12]
+REVIEW(finding_id, action, correction?, note?, evidence_mode{before, after}, page_opened):
+  append ReviewEvent(finding_id, actor, action, note, evidence_mode, page_opened, at=now)                 [AC-12]
   if action = corrected:
      new ← copy(finding) with correction; new.revision += 1; new.supersedes ← finding.id
      # the original AI finding is kept unchanged                               [AC-15]
@@ -352,17 +367,17 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            revoke every share they created; call Apple /auth/revoke with the stored Apple refresh token, retried until it
            succeeds (AR-1: first,
            while the row still holds it); then replace the user row with a tombstone ID (apple_refresh_token_enc ← null),
-           delete the IdP user and all linked identities, delete device tokens  [AC-22, AC-26]
+           delete the IdP user and all linked identities, delete device tokens (with I-27)  [AC-22, AC-26]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
   tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,
-           DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens), then
+           DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens with I-27), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,
-            vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs),
+            vps_snapshots, model_provider, idp, logs, error_tracker, queue, push (FCM/APNs; only with I-27, not in v1),
             email_sender, ci, mobile_crash_and_analytics, apple_token_park}  # SA-7, SA-8, AR-5
   for s in stores: assert s is in the deletion plan or holds no document content  [AC-23]
   # The same list is the published sub-processor list and the store privacy declarations (SA-5).
@@ -392,7 +407,7 @@ TRACING_CONFIG (OpenTelemetry, incl. the setup reused from mobile-engineering-in
   db instrumentation: capture statement parameters = off      # SQL parameters can contain text  [AC-23]
   llm calls: record token counts and cost only, never prompts or completions    [AC-23]
 
-NOTIFY(comparison):
+NOTIFY(comparison):                                           # after v1 (O-18, I-27); a no-op in v1
   push(device_tokens(owner), title="Comparison ready", data={comparison_id})
   # never document text or finding content                    [AC-25]
 ```
@@ -422,8 +437,15 @@ OPEN_EVIDENCE(version_id, locator):
   pdf ← stream_into_memory(url)                               # not cached to disk  [AC-25]
   pdfrx.show(page=locator.page, highlight=locator.boxes)
   if highlight cannot be placed: show parsed_text with span highlighted        [AC-9]
+FINDING_SCREEN(f):                                           # screen P4 (O-17)
+  for side in f.evidence:
+     mode[side] ← text_only if version.kind = text
+                  else pdf_highlight if PLACE(side) else text_fallback   # checked before Confirm, without opening the page view
+  if text_fallback in mode: pin the fallback banner above Confirm      # focus order: banner, then button
+  on Confirm: REVIEW(f, confirmed, evidence_mode=mode, page_opened)    # never approval  [AC-12]
+              if f.group = needs_review: stay on f, shown as confirmed; else go to the next finding
 ON_APP_BACKGROUND or LOGOUT: clear in-memory documents        [AC-25]
-LOGOUT: revoke refresh token at the IdP; DELETE /devices/{id}; delete Keychain / Keystore tokens  # SA-11  [AC-26]
+LOGOUT: revoke refresh token at the IdP; DELETE /devices/{id} (with I-27); delete Keychain / Keystore tokens  # SA-11  [AC-26]
 ```
 
 ## Coverage
