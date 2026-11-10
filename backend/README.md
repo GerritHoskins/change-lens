@@ -2,7 +2,7 @@
 
 A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Authentication is a single dev token. **Never deploy this publicly.** I-8 replaces the dev token with Logto JWTs, tenants and row-level security.
 
-The comparison runs the fact pipeline (`pipeline_version = "facts-2"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
+The comparison runs the fact pipeline (`pipeline_version = "facts-4"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
 
 Module layout follows `docs/03-technical-design.md` §9.1:
 
@@ -78,6 +78,7 @@ Deadline: 15 March' | python -c "import sys,json;print(json.load(sys.stdin)['id'
 B=$(curl -s -X POST localhost:8000/projects/$P/versions -H "$H" -F label=v2 -F file=@newer.pdf | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
 curl -s localhost:8000/versions/$B -H "$H"          # wait for "status":"parsed"
 C=$(curl -s -X POST localhost:8000/projects/$P/comparisons -H "$H" -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
   -d "{\"earlier_id\":\"$A\",\"later_id\":\"$B\",\"scope\":\"complete\"}" | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
 curl -s localhost:8000/comparisons/$C -H "$H"       # queued -> complete | partial | failed
 curl -s localhost:8000/comparisons/$C/findings -H "$H"
@@ -264,20 +265,43 @@ The actor is the fixed `dev-token-user` until real auth (I-8).
 ```powershell
 $env:CHANGELENS_IONOS_ENV_FILE = ".env"
 .venv\Scripts\python -m tools.i7_run --split development --runs 1 --baseline   # try changes here
-.venv\Scripts\python -m tools.i7_run --split held_out --runs 2 --baseline      # the gate run
+# A held-out gate additionally requires a fresh, reviewed split file; the exposed cohort is exhausted.
 ```
 
 **The held-out split is frozen (07 §5.4).** Never use it to tune or debug.
 
 - A held-out run refuses a working tree with uncommitted changes, and records the commit.
-- It refuses a second run for the same fingerprint unless `--rerun-reason` gives a reason.
+- The exposed historical held-out cohort is exhausted and cannot be run again, even with `--rerun-reason`. Prepare a fresh reviewed split. Reruns of an eligible split also require an explicit reason.
 - It writes `../scripts/eval/i7_receipt.json`. The receipt holds aggregates only; per-pair output with quotes stays in `../../change-lens-data/i7/`.
 
 **Regression check.** The fingerprint is a hash of every prompt, output schema, the extraction prompt version, the pipeline version, the model configuration and its prices. `tests/unit/test_i7.py` fails in CI when the committed receipt's fingerprint differs from the current one. A prompt or model change therefore needs a new held-out run and a decision-log row before it can merge.
+
+## 13. Cost accounting and primary retention
+
+Each model attempt reserves its estimated charge before the request. Actual usage and unresolved reservations persist across worker retries; unknown outcomes are not free. Provider charges above an estimate remain recorded and block further attempts when the ceiling is reached. Content deletion preserves a content-free cost ledger so a late response can settle exactly once.
+
+The owner-defined 30-day policy uses explicit actions, never polling:
+
+- `POST /comparisons/{id}/opened` extends that comparison and both inputs.
+- `POST /versions/{id}/opened` extends only that source.
+- Imports, submitted comparisons and successful review/approval records extend the resources they use.
+- GET requests do not touch activity. API responses use `Cache-Control: no-store`.
+
+Expired comparisons in any state are removed first; an old source is retained while a live comparison references it. Automatic expiry keeps project metadata. Legacy rows with untracked use receive one initial 30-day bootstrap grace, without changing clocks already populated.
+
+`DELETE /projects/{id}` freezes access and starts durable primary cleanup. It returns 204 only after content rows and all object versions are purged, or 202 while cleanup is pending. Retries are tenant-scoped and idempotent. Unknown writes keep recurring cleanup records and cannot be falsely reported as completed erasure.
+
+From `backend/`, preview one batch against the deliberately configured database:
+
+```powershell
+.venv\Scripts\python -m changelens.retention --once
+```
+
+Preview is read-only and creates no schema or bucket. `--apply --once` executes one batch; `--apply --interval-seconds 60` runs continuously. Deploy and supervise this process independently of the comparison worker so a busy queue cannot starve cleanup. No existing user or production data was used for local lifecycle tests. Account/IdP deletion, Apple revocation, backups/PITR/snapshots and native erasure remain acceptance work; see the [data inventory](../docs/data-inventory.md).
 
 ## What is placeholder or out of scope
 
 - Image (screenshot) parsing and its vision passes (I-1b); image regions in PDFs are only warned.
 - Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
 - Alembic migrations: the schema is created with `create_all` on start, until I-8.
-- Images, notifications, retention, sharing and the remaining 03 §9.4 routes.
+- Images, notifications, sharing, full account/backup deletion and the remaining 03 §9.4 routes.
