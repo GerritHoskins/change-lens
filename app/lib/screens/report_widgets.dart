@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../design/calm_theme.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 
 String typeLabel(AppLocalizations l, String t) => switch (t) {
@@ -109,12 +110,12 @@ class QuoteCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Material(
         color: colors.quote,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CalmRadius.lg),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(CalmRadius.lg),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(source, style: type.labelLarge?.copyWith(color: colors.muted)),
               if (evidenceLabel != null) Padding(
@@ -154,21 +155,18 @@ class FindingTile extends StatelessWidget {
     final type = Theme.of(context).textTheme;
     final uncertain = f.group == 'needs_review';
     final foreground = uncertain ? Theme.of(context).colorScheme.onSurface : colors.topicForeground(f.topic);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Material(
+    final tile = Material(
         color: uncertain ? colors.quote : colors.topicSurface(f.topic),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16),
-          side: uncertain ? BorderSide(color: colors.warning) : BorderSide.none),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.lg)),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(CalmRadius.lg),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Icon(uncertain ? Icons.help_outline : typeIcon(f.changeType), size: 20,
-                  color: uncertain ? colors.warning : foreground),
+                if (uncertain) const CalmReviewDisc()
+                else Icon(typeIcon(f.changeType), size: 20, color: foreground),
                 const SizedBox(width: 8),
                 Expanded(child: Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
                     style: type.titleMedium?.copyWith(color: foreground, fontWeight: FontWeight.w600))),
@@ -200,7 +198,10 @@ class FindingTile extends StatelessWidget {
             ]),
           ),
         ),
-      ),
+      );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: uncertain ? CalmDashedBorder(child: tile) : tile,
     );
   }
 }

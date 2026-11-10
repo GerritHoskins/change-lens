@@ -134,7 +134,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 for (final p in projects)
                   Material(color: Colors.transparent, child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CalmRadius.md),
                     onTap: () async {
                       final deleted = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(builder: (_) => ProjectScreen(project: p)));

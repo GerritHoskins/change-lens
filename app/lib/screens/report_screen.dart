@@ -108,11 +108,11 @@ class _ReportScreenState extends State<ReportScreen> {
                 if (needsReview.isNotEmpty) Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.help_outline, color: colors.warning, size: 22),
+                    const CalmReviewDisc(),
                     const SizedBox(width: 10),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${l.groupNeedsReview} · ${needsReview.length}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(color: colors.warning)),
+                        style: Theme.of(context).textTheme.titleSmall),
                       Text(l.reviewAcrossTopics, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.muted)),
                     ])),
                   ])),
