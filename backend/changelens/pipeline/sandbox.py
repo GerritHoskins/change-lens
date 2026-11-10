@@ -62,7 +62,9 @@ def run_sandboxed(entry: str, payload: bytes, header: dict, limits: Limits,
     kwargs = {}
     if sys.platform != "win32":
         kwargs["preexec_fn"] = _posix_limits(limits)
-    proc = subprocess.Popen([_interpreter(), "-I", "-c", boot], stdin=subprocess.PIPE,
+    # -B is needed because -I ignores PYTHONDONTWRITEBYTECODE: a .pyc write would breach
+    # RLIMIT_FSIZE=0 on Linux and kill the child with SIGXFSZ.
+    proc = subprocess.Popen([_interpreter(), "-I", "-B", "-c", boot], stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=_child_env(),
                             cwd=BACKEND_ROOT, **kwargs)
     job = None
