@@ -51,7 +51,7 @@ def check(root: Path) -> list[str]:
         require(variable in gradle, "release signing input missing: " + variable)
 
     config = (root / "codemagic.yaml").read_text(encoding="utf-8")
-    for name in ("app-android-release", "ios-testflight"):
+    for name in ("app-android-release", "ios-testflight", "ios-device-check"):
         block = workflow(config, name)
         require("<<: *real_app" in block, name + " must build app/, not the PoC")
         require("- *release_config" in block, name + " must run the offline release hook")
@@ -61,6 +61,9 @@ def check(root: Path) -> list[str]:
     require("bundle_identifier: dev.changelens.app\n" in ios, "TestFlight must sign the real bundle ID")
     require("$CM_BUILD_DIR/app/build/ios/ipa/*.ipa" in ios, "TestFlight must export the real-app IPA")
     require("--project ios/Runner.xcodeproj" in ios, "signing profiles must target the current app project")
+    device = workflow(config, "ios-device-check")
+    require("distribution_type: ad_hoc\n" in device and "bundle_identifier: dev.changelens.app\n" in device,
+            "device checks must use ad hoc signing for the real bundle ID")
     android = workflow(config, "app-android-release")
     require("android_signing:" in android and "changelens_release" in android,
             "Android release must request its external signing identity")
