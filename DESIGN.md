@@ -46,6 +46,7 @@ so the tokens' 800 weight renders as 700 and 500 as 400.
 | running text | bodyMedium | Android 16, iOS 17 / 1.45 / 400 | |
 | meta | bodySmall | 14 / 20 / 400, muted | |
 | button label | labelLarge | 17 / 22 / 600 | |
+| label (chips, text buttons) | labelMedium | 14 / 20 / 600 | |
 | eyebrow | labelSmall | 13 / 16 / 600 | 0.4 |
 
 Sizes are logical pixels and respect system text scaling. Full evidence wraps;
@@ -115,7 +116,8 @@ partial processing, personal review and client approval always have explicit tex
   a separate, unverified record; confirming a finding never records approval.
 
 Shared components live in app/lib/design/calm_widgets.dart. Normal content uses
-20-pixel horizontal padding and 18-pixel card padding. Radii follow the tokens:
+20-pixel horizontal padding and 18-pixel card padding; review cards, banners and
+quotes use the 16-pixel `space-inset`. Radii follow the tokens:
 18 for rows and fields, 24 for cards, 28 for dialogs, 36 for bottom-sheet tops,
 and pills for buttons and chips. Text/icon buttons have a 48-pixel minimum target;
 the main action is a 60-pixel pill.
