@@ -4,7 +4,8 @@ Definitions (also in the decision log row):
 - **Reportable** findings have change_type `added`, `changed`, `removed` or `uncertain`, in the gold
   labels and in the model output. `equivalent` and `not_addressed` mean "nothing to report" and
   are neither predictions nor gold changes.
-- **Match:** same category, and either the values agree (on every side where both the gold
+- **Match:** same category (the constructed labels predate O-14, so `budget` scores as the
+  `other_material` it was split from), and either the values agree (on every side where both the gold
   finding and the model give a value, one normalised value contains the other; at least one side
   compared) or the evidence overlaps (the model's quote, found in that side's text with flexible
   whitespace, overlaps the gold evidence span). Matching is one-to-one, best score first
@@ -68,8 +69,15 @@ def evidence_overlap(side: Side, gold_span: Optional[dict], quote: Optional[str]
     return any(s < gold_span["end"] and e > gold_span["start"] for s, e in find_spans(page, quote))
 
 
+def score_category(category: str) -> str:
+    """Scoring-only category: O-14 split `other_material` into `budget` and the rest, while the
+    constructed gold labels still say `other_material`. The pipeline's categories are unchanged."""
+    category = canonical_category(category)
+    return "other_material" if category == "budget" else category
+
+
 def match_score(g: dict, m: dict, old: Side, new: Side, use_category: bool = True) -> int:
-    if use_category and canonical_category(g["category"]) != canonical_category(m["category"]):
+    if use_category and score_category(g["category"]) != score_category(m["category"]):
         return 0
     compared, values_ok = 0, True
     for k in ("old_value", "new_value"):
