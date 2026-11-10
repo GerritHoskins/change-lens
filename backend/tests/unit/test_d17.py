@@ -116,6 +116,10 @@ def test_match_by_value_or_evidence_and_category():
     s = sc.score_pair(rec, [wrong_cat], old, new)
     assert s["tp"] == 0 and s["tp_relaxed"] == 1
     assert sc.score_pair(rec, [wrong_value], old, new)["tp"] == 0
+    # O-14: a budget finding matches gold labelled other_material (labels predate the split).
+    budget_gold = dict(GOLD_QTY, category="other_material")
+    assert sc.score_pair(record("P-2", [budget_gold]), [model_f("budget", "changed", "4 posters", "5 posters")],
+                         old, new)["tp"] == 1
     # Non-reportable model findings are not predictions; extra reportable ones are false positives.
     s = sc.score_pair(rec, [by_value, model_f("deliverable", "equivalent"), model_f("approval", "added", None, "x")], old, new)
     assert (s["tp"], s["pred"], s["gold"]) == (1, 2, 1)
