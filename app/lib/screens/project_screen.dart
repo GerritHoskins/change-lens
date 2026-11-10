@@ -249,7 +249,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
             child: Text(l.comparisonsEmpty, style: text.bodyMedium?.copyWith(color: colors.muted))),
           for (final c in comparisons)
             Material(color: Colors.transparent, child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(CalmRadius.md),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => ComparisonScreen(comparisonId: c.id, versions: versions))),
               child: Padding(padding: const EdgeInsets.symmetric(vertical: 12),
@@ -261,7 +261,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(child: Text(comparisonStatusLabel(l, c.status), style: text.labelLarge?.copyWith(
-                      color: c.status == 'partial' || c.status == 'failed' ? colors.warning : colors.muted))),
+                      color: c.status == 'failed' ? Theme.of(context).colorScheme.error
+                        : c.status == 'partial' ? colors.warning : colors.muted))),
                     const SizedBox(width: 12),
                     Icon(Icons.chevron_right, color: colors.muted),
                   ]),
@@ -285,7 +286,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   Text(v.label, style: text.titleMedium),
                   const SizedBox(height: 5),
                   Text([_status(l, v), if (v.warnings > 0) l.warningsCount(v.warnings)].join(' · '),
-                    style: text.bodyMedium?.copyWith(color: v.status == 'rejected' ? colors.warning : colors.muted)),
+                    style: text.bodyMedium?.copyWith(color: v.status == 'rejected' ? Theme.of(context).colorScheme.error : colors.muted)),
                 ])),
               ]),
             ),

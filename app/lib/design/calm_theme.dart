@@ -1,144 +1,172 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-/// Semantic colours for the approved Calm Bold direction. No meaning relies on colour alone.
+/// Radii and sizes from the Calm Bold design-system tokens (radius-*, button-main, target-min).
+abstract final class CalmRadius {
+  static const sm = 6.0, md = 18.0, lg = 24.0, xl = 28.0, sheet = 36.0;
+}
+
+abstract final class CalmSize {
+  static const buttonMain = 60.0, targetMin = 48.0, dash = 2.0;
+}
+
+/// Semantic colours from the Calm Bold tokens. No meaning relies on colour alone.
 @immutable
 class CalmColors extends ThemeExtension<CalmColors> {
   const CalmColors({required this.dark, required this.muted, required this.line,
     required this.soft, required this.marker, required this.onMarker,
-    required this.warning, required this.warningSurface, required this.quote});
+    required this.warning, required this.warningSurface, required this.quote,
+    required this.review, required this.link});
 
   final bool dark;
-  final Color muted, line, soft, marker, onMarker, warning, warningSurface, quote;
+  /// [soft] is the `disabled` token; [warning]/[warningSurface] draw the fallback banner
+  /// (ink text on surface, 2px solid ink border); [review] is only for "needs a second look".
+  final Color muted, line, soft, marker, onMarker, warning, warningSurface, quote, review, link;
+
+  static const ink = Color(0xff111114);
+  static const markerFill = Color(0x8cdfff4f);
 
   static CalmColors of(BuildContext context) =>
       Theme.of(context).extension<CalmColors>() ?? light;
 
-  static const light = CalmColors(dark: false, muted: Color(0xff60615b),
-    line: Color(0xffd2d4ca), soft: Color(0xffe6e9dc), marker: Color(0xffe4f78d),
-    onMarker: Color(0xff20211e), warning: Color(0xff794300),
-    warningSurface: Color(0xfffff1d9), quote: Colors.white);
-  static const night = CalmColors(dark: true, muted: Color(0xffb8bdb2),
-    line: Color(0xff4d5247), soft: Color(0xff303728), marker: Color(0xff4a5825),
-    onMarker: Color(0xfff3f4ec), warning: Color(0xffffd49b),
-    warningSurface: Color(0xff3f301b), quote: Color(0xff242821));
+  static const light = CalmColors(dark: false, muted: Color(0xff5e5e66),
+    line: Color(0xffdcdcd6), soft: Color(0xffe4e4de), marker: Color(0xffdfff4f),
+    onMarker: ink, warning: ink, warningSurface: Colors.white, quote: Colors.white,
+    review: Color(0xfff05a1e), link: Color(0xff4b3bff));
+  static const night = CalmColors(dark: true, muted: Color(0xffa6a6ae),
+    line: Color(0xff34343a), soft: Color(0xff2a2a2f), marker: Color(0xffdfff4f),
+    onMarker: ink, warning: Color(0xfff3f3ef), warningSurface: Color(0xff1e1e22),
+    quote: Color(0xff1e1e22), review: Color(0xfff05a1e), link: Color(0xffa99fff));
 
+  /// Topic blocks keep the same pastel in both themes, always with [topicForeground] text.
   Color topicSurface(String topic) => switch (topic) {
-    'budget' => dark ? const Color(0xff454024) : const Color(0xfff4edb8),
-    'deadlines' => dark ? const Color(0xff372c49) : const Color(0xffece4fb),
-    'deliverables' => dark ? const Color(0xff26463a) : const Color(0xffd9f2e4),
-    _ => quote,
+    'deadlines' => const Color(0xffcdbeff),
+    'deliverables' => const Color(0xffa8f0c6),
+    'responsibilities' => const Color(0xffa9dcff),
+    'approval_wording' => const Color(0xffffb3d1),
+    'budget' => const Color(0xffffe45c),
+    _ => const Color(0xffe4e4de),
   };
 
-  Color topicForeground(String topic) => switch (topic) {
-    'budget' => dark ? const Color(0xfff6edb7) : const Color(0xff4a4219),
-    'deadlines' => dark ? const Color(0xffe8dcff) : const Color(0xff39275c),
-    'deliverables' => dark ? const Color(0xffd3efde) : const Color(0xff204932),
-    _ => dark ? const Color(0xfff3f4ec) : const Color(0xff20211e),
-  };
+  Color topicForeground(String topic) => ink;
 
   @override
   CalmColors copyWith({bool? dark, Color? muted, Color? line, Color? soft,
-    Color? marker, Color? onMarker, Color? warning, Color? warningSurface, Color? quote}) =>
+    Color? marker, Color? onMarker, Color? warning, Color? warningSurface, Color? quote,
+    Color? review, Color? link}) =>
     CalmColors(dark: dark ?? this.dark, muted: muted ?? this.muted, line: line ?? this.line,
       soft: soft ?? this.soft, marker: marker ?? this.marker, onMarker: onMarker ?? this.onMarker,
       warning: warning ?? this.warning, warningSurface: warningSurface ?? this.warningSurface,
-      quote: quote ?? this.quote);
+      quote: quote ?? this.quote, review: review ?? this.review, link: link ?? this.link);
 
   @override
   CalmColors lerp(covariant CalmColors? other, double t) {
     if (other == null) return this;
+    Color mix(Color a, Color b) => Color.lerp(a, b, t)!;
     return CalmColors(dark: t < .5 ? dark : other.dark,
-      muted: Color.lerp(muted, other.muted, t)!, line: Color.lerp(line, other.line, t)!,
-      soft: Color.lerp(soft, other.soft, t)!, marker: Color.lerp(marker, other.marker, t)!,
-      onMarker: Color.lerp(onMarker, other.onMarker, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      warningSurface: Color.lerp(warningSurface, other.warningSurface, t)!,
-      quote: Color.lerp(quote, other.quote, t)!);
+      muted: mix(muted, other.muted), line: mix(line, other.line), soft: mix(soft, other.soft),
+      marker: mix(marker, other.marker), onMarker: mix(onMarker, other.onMarker),
+      warning: mix(warning, other.warning), warningSurface: mix(warningSurface, other.warningSurface),
+      quote: mix(quote, other.quote), review: mix(review, other.review), link: mix(link, other.link));
   }
 }
 
 ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   final dark = brightness == Brightness.dark;
   final colors = dark ? CalmColors.night : CalmColors.light;
-  final ink = dark ? const Color(0xfff3f4ec) : const Color(0xff20211e);
-  final background = dark ? const Color(0xff171916) : const Color(0xfff4f4ef);
-  final surface = dark ? const Color(0xff232621) : Colors.white;
-  final primary = dark ? const Color(0xffe5f78e) : const Color(0xff25261f);
-  final onPrimary = dark ? const Color(0xff20251a) : Colors.white;
+  final ink = dark ? const Color(0xfff3f3ef) : CalmColors.ink;
+  final background = dark ? const Color(0xff121214) : const Color(0xfff5f5f2);
+  final surface = dark ? const Color(0xff1e1e22) : Colors.white;
+  final primary = ink; // `action`: the one main button, selected chip, progress fill.
+  final onPrimary = dark ? CalmColors.ink : Colors.white;
+  final disabledText = dark ? const Color(0xff6e6e76) : const Color(0xff8a8a92);
   final target = platform ?? defaultTargetPlatform;
   final bodySize = target == TargetPlatform.iOS ? 17.0 : 16.0;
   final scheme = ColorScheme.fromSeed(seedColor: primary, brightness: brightness).copyWith(
     primary: primary, onPrimary: onPrimary, primaryContainer: colors.soft, onPrimaryContainer: ink,
     secondary: primary, onSecondary: onPrimary, secondaryContainer: colors.soft, onSecondaryContainer: ink,
-    tertiary: colors.warning, onTertiary: colors.warningSurface,
+    tertiary: colors.link, onTertiary: onPrimary,
     tertiaryContainer: colors.warningSurface, onTertiaryContainer: colors.warning,
     surface: background, onSurface: ink, onSurfaceVariant: colors.muted,
     surfaceContainerLowest: background, surfaceContainerLow: surface,
     surfaceContainer: surface, surfaceContainerHigh: colors.soft, surfaceContainerHighest: colors.soft,
     outline: colors.line, outlineVariant: colors.line,
-    error: dark ? const Color(0xffffb8ad) : const Color(0xffa12e2e),
+    error: dark ? const Color(0xffff8a65) : const Color(0xffc4320a),
   );
-  TextStyle role(double size, FontWeight weight, double height, {Color? color, double? tracking}) =>
-      TextStyle(fontFamily: 'Roboto', fontSize: size, fontWeight: weight, height: height,
+  // Roboto is bundled at 400/600/700 (owner choice over Inter Tight), so the tokens'
+  // 800 and 500 weights map to 700 and 400.
+  TextStyle role(double size, FontWeight weight, double lineHeight, {Color? color, double? tracking}) =>
+      TextStyle(fontFamily: 'Roboto', fontSize: size, fontWeight: weight, height: lineHeight / size,
         color: color ?? ink, letterSpacing: tracking);
   final text = TextTheme(
-    displayLarge: role(32, FontWeight.w700, 1.16, tracking: -.64),
-    displayMedium: role(30, FontWeight.w700, 1.16, tracking: -.6),
-    displaySmall: role(28, FontWeight.w700, 1.2, tracking: -.56),
-    headlineLarge: role(30, FontWeight.w700, 1.16, tracking: -.6),
-    headlineMedium: role(28, FontWeight.w700, 1.2, tracking: -.56),
-    headlineSmall: role(24, FontWeight.w700, 1.2, tracking: -.36),
-    titleLarge: role(20, FontWeight.w700, 1.3),
-    titleMedium: role(17, FontWeight.w600, 1.4),
-    titleSmall: role(16, FontWeight.w600, 1.4),
-    bodyLarge: role(17, FontWeight.w400, dark ? 1.65 : 1.58, tracking: dark ? .085 : 0),
-    bodyMedium: role(bodySize, FontWeight.w400, 1.5),
-    bodySmall: role(14, FontWeight.w400, 1.5, color: colors.muted),
-    labelLarge: role(16, FontWeight.w600, 1.4),
-    labelMedium: role(14, FontWeight.w600, 1.5),
-    labelSmall: role(14, FontWeight.w400, 1.5, color: colors.muted),
+    displayLarge: role(54, FontWeight.w700, 54, tracking: -2),   // display
+    displayMedium: role(64, FontWeight.w700, 56, tracking: -2),  // figure
+    displaySmall: role(38, FontWeight.w700, 40, tracking: -1.4),
+    headlineLarge: role(38, FontWeight.w700, 40, tracking: -1.4), // headline
+    headlineMedium: role(28, FontWeight.w700, 32, tracking: -.8), // value
+    headlineSmall: role(24, FontWeight.w700, 29, tracking: -.4),
+    titleLarge: role(20, FontWeight.w700, 26),
+    titleMedium: role(17, FontWeight.w600, 22),                   // title
+    titleSmall: role(16, FontWeight.w600, 22),
+    bodyLarge: role(16, FontWeight.w400, 23),                     // body (quoted passages)
+    bodyMedium: role(bodySize, FontWeight.w400, bodySize * 1.45),
+    bodySmall: role(14, FontWeight.w400, 20, color: colors.muted), // meta
+    labelLarge: role(17, FontWeight.w600, 22),                    // button labels
+    labelMedium: role(14, FontWeight.w600, 20),
+    labelSmall: role(13, FontWeight.w600, 16, tracking: .4),      // eyebrow
   );
-  final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+  const pill = StadiumBorder();
+  final focusRing = BorderSide(color: colors.link, width: 2);
+  OutlineInputBorder field(BorderSide side) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(CalmRadius.md), borderSide: side);
   return ThemeData(
     useMaterial3: true, platform: target, brightness: brightness, colorScheme: scheme,
     fontFamily: 'Roboto', textTheme: text, scaffoldBackgroundColor: background,
     extensions: [colors], materialTapTargetSize: MaterialTapTargetSize.padded,
+    focusColor: colors.link.withValues(alpha: .24),
     appBarTheme: AppBarTheme(backgroundColor: background, foregroundColor: ink,
       elevation: 0, scrolledUnderElevation: 0, centerTitle: false, titleTextStyle: text.titleMedium),
     cardTheme: CardThemeData(color: surface, elevation: 0, margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.lg))),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-      minimumSize: const Size(48, 52), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      textStyle: text.labelLarge, shape: rounded)),
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.buttonMain),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      disabledBackgroundColor: colors.soft, disabledForegroundColor: disabledText,
+      textStyle: text.labelLarge, shape: pill)),
     outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
-      minimumSize: const Size(48, 48), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      side: BorderSide(color: colors.line), textStyle: text.labelLarge, shape: rounded)),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(
-      minimumSize: const Size(48, 48), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      backgroundColor: surface, side: BorderSide.none, textStyle: text.labelLarge, shape: pill)),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: ink,
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       textStyle: text.labelMedium)),
-    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(minimumSize: const Size(48, 48))),
+    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(
+      minimumSize: const Size(CalmSize.targetMin, CalmSize.targetMin))),
     chipTheme: ChipThemeData(backgroundColor: surface, selectedColor: primary,
       secondarySelectedColor: primary, labelStyle: text.labelMedium,
       secondaryLabelStyle: text.labelMedium?.copyWith(color: onPrimary),
-      side: BorderSide(color: colors.line), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
-      shape: const StadiumBorder(), showCheckmark: false),
+      side: BorderSide.none, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+      shape: pill, showCheckmark: false),
     inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: surface,
       labelStyle: text.bodySmall, hintStyle: text.bodySmall,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: colors.line)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: colors.line)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primary, width: 2))),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      border: field(BorderSide(color: colors.line)),
+      enabledBorder: field(BorderSide(color: colors.line)),
+      focusedBorder: field(focusRing)),
     dividerTheme: DividerThemeData(color: colors.line, thickness: 1, space: 32),
     listTileTheme: ListTileThemeData(contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
       titleTextStyle: text.titleMedium, subtitleTextStyle: text.bodySmall, minVerticalPadding: 12),
     dialogTheme: DialogThemeData(backgroundColor: surface, titleTextStyle: text.titleLarge,
-      contentTextStyle: text.bodyMedium, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface, showDragHandle: true),
+      contentTextStyle: text.bodyMedium,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.xl))),
+    bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface, showDragHandle: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(
+        top: Radius.circular(CalmRadius.sheet)))),
     snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, backgroundColor: ink,
       contentTextStyle: text.bodyMedium?.copyWith(color: background)),
-    textSelectionTheme: TextSelectionThemeData(cursorColor: primary,
-      selectionColor: colors.marker, selectionHandleColor: primary),
-    progressIndicatorTheme: ProgressIndicatorThemeData(color: primary, linearTrackColor: colors.soft),
+    textSelectionTheme: TextSelectionThemeData(cursorColor: colors.link,
+      selectionColor: colors.marker.withValues(alpha: .55), selectionHandleColor: colors.link),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: primary, linearTrackColor: colors.line),
   );
 }

@@ -31,17 +31,22 @@ made by the app. The fonts are static normal-width instances of the official
 with actual 400, 600 and 700 weights. The SIL OFL is bundled and registered with
 Flutter's license registry. No package dependency was added.
 
-| Role | Size / weight | Line height |
-| --- | --- | --- |
-| Screen title | 30 / 700 | 1.16 |
-| Prominent value | 28 / 700 | 1.2 |
-| Feature heading | 24 / 700 | 1.2 |
-| Section heading | 20 / 700 | 1.3 |
-| Evidence | 17 / 400 | 1.58 light, 1.65 dark |
-| Body | Android 16, iOS 17 / 400 | 1.5 |
-| Source label | 17 / 600 | 1.4 |
-| Actions | 16 / 600 | 1.4 |
-| Metadata | 14 / 400 or 600 | 1.5 |
+Sizes and line heights follow the Calm Bold design-system tokens (artifact
+V9325dymoruEtTngXEULo5, aligned 10 November 2026). Roboto ships only 400/600/700,
+so the tokens' 800 weight renders as 700 and 500 as 400.
+
+| Token role | Flutter role | Size / line height / weight | Tracking |
+| --- | --- | --- | --- |
+| display | displayLarge | 54 / 54 / 700 | -2 |
+| figure | displayMedium | 64 / 56 / 700 | -2 |
+| headline (screen title) | headlineLarge | 38 / 40 / 700 | -1.4 |
+| value | headlineMedium | 28 / 32 / 700 | -0.8 |
+| title | titleMedium | 17 / 22 / 600 | |
+| body (quotes) | bodyLarge | 16 / 23 / 400 | |
+| running text | bodyMedium | Android 16, iOS 17 / 1.45 / 400 | |
+| meta | bodySmall | 14 / 20 / 400, muted | |
+| button label | labelLarge | 17 / 22 / 600 | |
+| eyebrow | labelSmall | 13 / 16 / 600 | 0.4 |
 
 Sizes are logical pixels and respect system text scaling. Full evidence wraps;
 list previews may truncate and open the complete finding. Quotes are not rewritten
@@ -54,18 +59,25 @@ Source: app/lib/design/calm_theme.dart. ThemeMode.system follows the device them
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| Canvas | #F4F4EF | #171916 |
-| Surface | #FFFFFF | #232621 |
-| Quote | #FFFFFF | #242821 |
-| Ink | #20211E | #F3F4EC |
-| Secondary text | #60615B | #B8BDB2 |
-| Separator | #D2D4CA | #4D5247 |
-| Primary / text | #25261F / #FFFFFF | #E5F78E / #20251A |
-| Personal review marker | #E4F78D | #4A5825 |
-| Warning / text | #FFF1D9 / #794300 | #3F301B / #FFD49B |
-| Budget surface | #F4EDB8 | #454024 |
-| Deadline surface | #ECE4FB | #372C49 |
-| Deliverable surface | #D9F2E4 | #26463A |
+| ground (canvas) | #F5F5F2 | #121214 |
+| surface / quote | #FFFFFF | #1E1E22 |
+| line | #DCDCD6 | #34343A |
+| ink | #111114 | #F3F3EF |
+| muted | #5E5E66 | #A6A6AE |
+| action / on-action | #111114 / #FFFFFF | #F3F3EF / #111114 |
+| link (also focus ring) | #4B3BFF | #A99FFF |
+| disabled / disabled-text | #E4E4DE / #8A8A92 | #2A2A2F / #6E6E76 |
+| marker / on-marker | #DFFF4F / #111114 | same |
+| marker-fill (PDF highlight) | #DFFF4F at 55% | same |
+| review (dashed border, ? disc) | #F05A1E | same |
+| error | #C4320A | #FF8A65 |
+| topic deadlines / deliverables / responsibilities | #CDBEFF / #A8F0C6 / #A9DCFF | same |
+| topic approval wording / budget / other | #FFB3D1 / #FFE45C / #E4E4DE | same |
+| on-topic | #111114 | same |
+
+The text fallback banner is surface with a 2px solid ink border. Needs-review
+findings use a 2px dashed review border and the ? disc; failed and rejected
+states use error text.
 
 Measured text pairs, including the topic foregrounds, have contrast from 5.67:1
 upward. Separator colors are decorative and are not used as text. Uncertainty,
@@ -102,9 +114,10 @@ partial processing, personal review and client approval always have explicit tex
   a separate, unverified record; confirming a finding never records approval.
 
 Shared components live in app/lib/design/calm_widgets.dart. Normal content uses
-20-pixel horizontal padding, 12–16-pixel card padding/radii, and larger spacing
-between task sections. Text/icon buttons have a 48-pixel minimum target; primary
-actions have a 52-pixel minimum height.
+20-pixel horizontal padding and 18-pixel card padding. Radii follow the tokens:
+18 for rows and fields, 24 for cards, 28 for dialogs, 36 for bottom-sheet tops,
+and pills for buttons and chips. Text/icon buttons have a 48-pixel minimum target;
+the main action is a 60-pixel pill.
 
 ## Motion and platform behavior
 

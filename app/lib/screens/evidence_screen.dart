@@ -87,7 +87,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
 
   void _paint(Canvas canvas, Rect pageRect, PdfPage page) {
     if (page.pageNumber != widget.evidence.page) return;
-    final fill = Paint()..color = CalmColors.light.marker.withValues(alpha: 0.6);
+    final fill = Paint()..color = CalmColors.markerFill;
     for (final r in presentation!.boxes) {
       canvas.drawRect(r.toRectInDocument(page: page, pageRect: pageRect), fill);
     }

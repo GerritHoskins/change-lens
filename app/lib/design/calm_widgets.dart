@@ -4,7 +4,7 @@ import '../l10n/app_localizations.dart';
 import 'calm_theme.dart';
 
 class CalmCard extends StatelessWidget {
-  const CalmCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(16)});
+  const CalmCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(18)});
   final Widget child;
   final Color? color;
   final EdgeInsetsGeometry padding;
@@ -12,7 +12,7 @@ class CalmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(color: color ?? Theme.of(context).cardTheme.color,
-      borderRadius: BorderRadius.circular(16)),
+      borderRadius: BorderRadius.circular(CalmRadius.lg)),
     child: Padding(padding: padding, child: child),
   );
 }
@@ -42,8 +42,11 @@ class CalmWarning extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = CalmColors.of(context);
     return DecoratedBox(
-      decoration: BoxDecoration(color: colors.warningSurface, borderRadius: BorderRadius.circular(12)),
-      child: Padding(padding: const EdgeInsets.all(14),
+      // Text fallback banner: surface with a 2px solid ink border; never the dashed review style.
+      decoration: BoxDecoration(color: colors.warningSurface,
+        border: Border.all(color: colors.warning, width: CalmSize.dash),
+        borderRadius: BorderRadius.circular(CalmRadius.lg)),
+      child: Padding(padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.warning, height: 1.55)),
           if (child != null) Padding(padding: const EdgeInsets.only(top: 6), child: child!),
@@ -139,4 +142,47 @@ class CalmReviewMark extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// "Needs a second look": the 2px dashed `review` border. Always paired with [CalmReviewDisc].
+class CalmDashedBorder extends StatelessWidget {
+  const CalmDashedBorder({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    foregroundPainter: _DashedRRect(CalmColors.of(context).review), child: child);
+}
+
+class _DashedRRect extends CustomPainter {
+  const _DashedRRect(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const inset = CalmSize.dash / 2;
+    final rrect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(inset), const Radius.circular(CalmRadius.lg - inset));
+    final paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = CalmSize.dash;
+    for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 10) {
+        canvas.drawPath(metric.extractPath(d, d + 6), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRect old) => old.color != color;
+}
+
+/// The "?" disc in `review` with `on-review` ink; excluded from semantics because the text says it.
+class CalmReviewDisc extends StatelessWidget {
+  const CalmReviewDisc({super.key});
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(child: Container(
+    width: 24, height: 24, alignment: Alignment.center,
+    decoration: BoxDecoration(color: CalmColors.of(context).review, shape: BoxShape.circle),
+    child: const Text('?', textScaler: TextScaler.noScaling, style: TextStyle(
+      color: CalmColors.ink, fontSize: 15, fontWeight: FontWeight.w700, height: 1))));
 }

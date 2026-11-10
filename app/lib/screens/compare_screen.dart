@@ -116,7 +116,7 @@ class _CompareScreenState extends State<CompareScreen> {
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CalmRadius.lg),
         border: before ? null : Border.all(color: colors.marker, width: 2)),
       child: CalmCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Semantics(header: true, child: Text(label, style: text.titleMedium)),
