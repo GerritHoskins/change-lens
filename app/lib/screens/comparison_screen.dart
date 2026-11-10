@@ -117,16 +117,14 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       body: SafeArea(top: false, child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: ListView(children: [
-          CalmPageHeader(title: status),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: CalmPageHeader(title: status, liveRegion: true)),
+            if (error == null && (c == null || !c.finished)) const Padding(
+                padding: EdgeInsets.only(left: 12, top: 20),
+                child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
+          ]),
           if (c != null) SourcePairSummary(earlier: _label(c.earlierId),
             newer: _label(c.laterId), scope: c.scope),
-          const SizedBox(height: 12),
-          Row(children: [
-            if (error == null && (c == null || !c.finished)) const Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
-            Expanded(child: Semantics(liveRegion: true, child: Text(l.comparisonStatus(status)))),
-          ]),
           if (c != null)
             for (final message in _failureMessages(l, c))
               Padding(padding: const EdgeInsets.only(top: 12),
