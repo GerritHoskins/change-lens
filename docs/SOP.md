@@ -8,7 +8,7 @@ This repository holds the plan (`docs/`), the development backend (`backend/`), 
 |---|---|---|
 | Built and tested | Dev API and worker (I-22), parsing (I-1, I-1c), the fact pipeline (I-2 to I-6) and the IONOS model check (D-17) | Backend unit tests in CI; integration tests run locally only (§1); a row per task in 06 |
 | Built, closed with a deviation | Evaluation harness (I-7): 2 fabricated scope changes against a gate of 0 | `scripts/eval/i7_receipt.json` and 06. I-7b is open and must pass before external testers |
-| Built, awaiting a device check | App shell and report screens (I-9, I-10) | The M1 end-to-end check passed on Android (06, 2026-11-01). It has not been run on the iPhone, so M1 is open. The D-15 proof of concept, a separate app, passed on both phones |
+| Built, device-checked on both phones (M1) | App shell and report screens (I-9, I-10) | The M1 end-to-end check passed on Android (06, 2026-11-01) and on the iPhone (06, 2026-11-10). On the iPhone the new comparison used pasted text only, so the iOS PDF picker is not yet exercised |
 | Local checks done, one decision open | Logto checks (D-8) | Local kit in `scripts/d8-logto/`, run on 2026-11-10 against Logto 1.45.0 (06): MFA, orphan users, link visibility and defaults are recorded; account linking (C2) needs an owner decision for AC-26. The IONOS hosting checks and Apple sign-in in D-8 have not started and do not use this kit |
 | Planned, not built | The M1b redesign (I-23 to I-26), I-7b and the rest of M2 to M5 | 05 |
 | Not in v1 | Share links (I-12), push notifications (I-27) and teams | 05 |
