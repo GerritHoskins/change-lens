@@ -37,7 +37,7 @@ Stop and delete everything afterwards: `docker compose down -v`.
 5. **Management API access.** Applications → create a **Machine-to-machine** app, assign the role with
    Logto Management API access, and note its App ID and App secret. In Git Bash:
    ```bash
-   ID='<app id>'; SECRET='<app secret>'
+   read -rp 'App ID> ' ID; read -rsp 'App secret (hidden)> ' SECRET; echo   # not kept in shell history
    TOKEN=$(curl -s -u "$ID:$SECRET" http://localhost:3001/oidc/token \
      -d grant_type=client_credentials -d resource=https://default.logto.app/api -d scope=all \
      | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
