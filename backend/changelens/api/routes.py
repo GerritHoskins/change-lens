@@ -3,19 +3,21 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from starlette.datastructures import UploadFile
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from changelens import MODEL_CONFIG_ID, PIPELINE_VERSION, jobs
+from changelens import jobs
 from changelens.api import uploads
 from changelens.api.auth import current_tenant
 from changelens.api.errors import ApiError, not_found
 from changelens.domain.models import Comparison, Project, SourceVersion
-from changelens.storage import original_key
+from changelens.domain.storage_intents import prepare_write, write_prepared, reconcile_write
 
 router = APIRouter()
 SCOPES = ("complete", "partial", "unknown")
@@ -24,12 +26,6 @@ SCOPES = ("complete", "partial", "unknown")
 class ProjectIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     client_label: Optional[str] = Field(default=None, max_length=200)
-
-
-class ComparisonIn(BaseModel):
-    earlier_id: uuid.UUID
-    later_id: uuid.UUID
-    scope: str  # checked by hand so a bad value maps to scope_not_confirmed (AC-14)
 
 
 def _project_out(p: Project) -> dict:
@@ -44,11 +40,14 @@ def _version_out(v: SourceVersion) -> dict:
 
 
 def _comparison_out(c: Comparison) -> dict:
+    reservations = c.cost_reservations or {}
     return {"id": str(c.id), "project_id": str(c.project_id), "earlier_id": str(c.earlier_id),
             "later_id": str(c.later_id), "scope": c.scope_snapshot, "status": c.status,
             "pipeline_version": c.pipeline_version, "model_config_id": c.model_config_id,
             "placeholder": c.pipeline_version.startswith("placeholder"),
             "cost_ceiling": str(c.cost_ceiling), "cost_actual": None if c.cost_actual is None else str(c.cost_actual),
+            "cost_reserved": str(sum((Decimal(value) for value in reservations.values()), Decimal("0"))),
+            "cost_pending": bool(reservations),
             "warnings": c.warnings, "created_at": c.created_at.isoformat()}
 
 
@@ -63,7 +62,9 @@ def create_project(body: ProjectIn, request: Request, tenant: uuid.UUID = Depend
 @router.get("/projects")
 def list_projects(request: Request, tenant: uuid.UUID = Depends(current_tenant)):
     with request.app.state.db.tenant_scope(tenant) as repo:
-        return {"projects": [_project_out(p) for p in repo.projects()]}
+        counts = repo.active_comparison_counts()
+        return {"projects": [{**_project_out(p), "comparison_counts": counts.get(p.id, {})}
+                             for p in repo.projects()]}
 
 
 @router.get("/projects/{project_id}/versions")
@@ -121,18 +122,32 @@ async def upload_version(project_id: uuid.UUID, request: Request, tenant: uuid.U
     label = uploads.check_label(label, state.settings.limits)
     kind = uploads.sniff(data)
     uploads.check_limits(data, kind, state.settings.limits)
-    with state.db.tenant_scope(tenant) as repo:
-        if repo.project(project_id) is None:
-            raise not_found()
-    key = original_key(tenant, project_id)
-    state.store.put(key, data)  # immutable original (AC-15)
-    with state.db.tenant_scope(tenant) as repo:
-        v = repo.add(SourceVersion(project_id=project_id, label=label, kind=kind, original_object_key=key,
-                                   sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data),
-                                   status="uploaded", parse_warnings=[]))
-        jobs.enqueue(repo.s, tenant, "parse", {"version_id": v.id}, state.settings.job_max_attempts)
-        repo.s.refresh(v)
-        return _version_out(v)
+    return await run_in_threadpool(_store_version, state, tenant, project_id, data, label, kind)
+
+
+def _store_version(state, tenant, project_id, data, label, kind):
+    # The legacy single-upload path needs the same crash-safe compensation as I-24.
+    # Its random request lock is independent of client-provided comparison keys.
+    request_key, ticket = "upload-" + str(uuid.uuid4()), None
+    try:
+        with state.db.tenant_scope(tenant) as repo:
+            repo.lock_project(project_id)
+            repo.lock_comparison_key(request_key)
+            if repo.project(project_id) is None:
+                raise not_found()
+            ticket = prepare_write(state.db, tenant, project_id, request_key)
+            write_prepared(state.db, state.store, ticket, data)
+            v = repo.add(SourceVersion(project_id=project_id, label=label, kind=kind,
+                original_object_key=ticket.object_key, sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data),
+                status="uploaded", parse_warnings=[]))
+            jobs.enqueue(repo.s, tenant, "parse", {"version_id": v.id}, state.settings.job_max_attempts)
+            repo.touch_version(v)
+            repo.s.refresh(v)
+            result = _version_out(v)
+        return result
+    finally:
+        if ticket is not None:
+            reconcile_write(state.db, state.store, tenant, ticket.id)
 
 
 @router.get("/versions/{version_id}")
@@ -142,31 +157,6 @@ def get_version(version_id: uuid.UUID, request: Request, tenant: uuid.UUID = Dep
         if v is None:
             raise not_found()
         return _version_out(v)
-
-
-@router.post("/projects/{project_id}/comparisons", status_code=202)
-def create_comparison(project_id: uuid.UUID, body: ComparisonIn, request: Request,
-                      tenant: uuid.UUID = Depends(current_tenant)):
-    """This call is the user's order and scope confirmation (AC-14)."""
-    settings = request.app.state.settings
-    with request.app.state.db.tenant_scope(tenant) as repo:
-        if repo.project(project_id) is None:
-            raise not_found()
-        earlier, later = repo.version(body.earlier_id), repo.version(body.later_id)
-        if earlier is None or later is None or earlier.project_id != project_id or later.project_id != project_id:
-            raise not_found()
-        if body.scope not in SCOPES:
-            raise ApiError(422, "scope_not_confirmed", "scope must be complete, partial or unknown")
-        if earlier.id == later.id:
-            raise ApiError(422, "scope_not_confirmed", "earlier and later must differ")
-        if earlier.status != "parsed" or later.status != "parsed":
-            raise ApiError(409, "scope_not_confirmed", "both versions must be parsed")
-        c = repo.add(Comparison(project_id=project_id, earlier_id=earlier.id, later_id=later.id,
-                                scope_snapshot=body.scope, pipeline_version=PIPELINE_VERSION,
-                                model_config_id=MODEL_CONFIG_ID, status="queued",
-                                cost_ceiling=settings.cost_ceiling_eur, warnings=[]))
-        jobs.enqueue(repo.s, tenant, "compare", {"comparison_id": c.id}, settings.job_max_attempts)
-        return {"id": str(c.id), "status": c.status}
 
 
 @router.get("/comparisons/{comparison_id}")
