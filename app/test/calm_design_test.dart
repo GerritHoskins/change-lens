@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:changelens/design/calm_controls.dart';
 import 'package:changelens/api.dart';
 import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/main.dart';
@@ -125,15 +126,15 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('German correction form remains operable with large text and keyboard', (tester) async {
+  testWidgets('German correction sheet remains operable with large text and keyboard', (tester) async {
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(ChangeLensApp(services: await CedarScenario().services(), locale: const Locale('de'),
-      home: Scaffold(body: Builder(builder: (context) => TextButton(onPressed: () => showDialog<void>(
-        context: context, builder: (_) => CorrectionDialog(finding: CedarScenario().report.findings.first)),
+      home: Scaffold(body: Builder(builder: (context) => TextButton(onPressed: () => showCalmSheet<void>(
+        context, builder: (_) => CorrectionSheet(finding: CedarScenario().report.findings.first)),
         child: const Text('Open'))))));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();

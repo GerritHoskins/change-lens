@@ -7,6 +7,8 @@ import 'package:flutter/semantics.dart';
 import 'package:intl/intl.dart';
 
 import '../api.dart';
+import '../design/calm_controls.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
@@ -158,33 +160,24 @@ class _FindingScreenState extends State<FindingScreen> {
   Future<String?> _askNote({required bool required}) async {
     final l = AppLocalizations.of(context);
     final field = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text(l.noteLabel),
-        content: TextField(key: const Key('note-field'), controller: field, maxLines: 4, autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-          TextButton(
-              onPressed: () {
-                if (required && field.text.trim().isEmpty) return;
-                Navigator.pop(context, field.text.trim());
-              },
-              child: Text(l.save)),
-        ],
-      ),
-    );
+    return showCalmSheet<String>(context, builder: (context) => CalmSheet(
+      title: l.noteLabel,
+      action: l.save,
+      onAction: () {
+        if (required && field.text.trim().isEmpty) return;
+        Navigator.pop(context, field.text.trim());
+      },
+      children: [TextField(key: const Key('note-field'), controller: field, minLines: 3, maxLines: 6, autofocus: true)],
+    ));
   }
 
   Future<void> _correct(Finding f) async {
-    final result = await showDialog<Map<String, String>>(
-        context: context, builder: (_) => CorrectionDialog(finding: f));
+    final result = await showCalmSheet<Map<String, String>>(context, builder: (_) => CorrectionSheet(finding: f));
     if (result != null && result.isNotEmpty) await _review('corrected', correction: result);
   }
 
   Future<void> _recordApproval() async {
-    final result = await showDialog<(String, String, DateTime)>(context: context, builder: (_) => const ApprovalDialog());
+    final result = await showCalmSheet<(String, String, DateTime)>(context, builder: (_) => const ApprovalSheet());
     if (result == null) return;
     await _save(() => ServicesScope.of(context).api.recordApproval(id, result.$1, result.$2, result.$3));
   }
@@ -271,8 +264,8 @@ class _FindingScreenState extends State<FindingScreen> {
             child: CalmReviewMark(key: ValueKey('$id-${f.review?.at}'),
               text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved)),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton(onPressed: canReview ? () => _correct(f) : null, child: Text(l.actionCorrect)),
-            OutlinedButton(onPressed: canReview ? () async {
+            TextButton(onPressed: canReview ? () => _correct(f) : null, child: Text(l.actionCorrect)),
+            TextButton(onPressed: canReview ? () async {
               final note = await _askNote(required: false);
               if (note != null) await _review('dismissed', note: note.isEmpty ? null : note);
             } : null, child: Text(l.actionDismiss)),
@@ -298,7 +291,7 @@ class _FindingScreenState extends State<FindingScreen> {
           for (final a in d.approvals)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.mark_email_read_outlined),
+                leading: const Icon(CalmIcons.approval),
                 title: Text(l.approvalRecorded),
                 subtitle: Text('${l.approvalLine(a.statedBy, date.format(a.statedAt.toLocal()))}\n${a.evidenceText}'),
                 isThreeLine: true,
@@ -306,7 +299,7 @@ class _FindingScreenState extends State<FindingScreen> {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval, icon: const Icon(Icons.add),
+            child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval, icon: const Icon(CalmIcons.add),
                 label: Text(l.recordApproval)),
           ),
         ]),
@@ -315,110 +308,91 @@ class _FindingScreenState extends State<FindingScreen> {
   }
 }
 
-class CorrectionDialog extends StatefulWidget {
-  const CorrectionDialog({super.key, required this.finding});
+class CorrectionSheet extends StatefulWidget {
+  const CorrectionSheet({super.key, required this.finding});
 
   final Finding finding;
 
   @override
-  State<CorrectionDialog> createState() => _CorrectionDialogState();
+  State<CorrectionSheet> createState() => _CorrectionSheetState();
 }
 
-class _CorrectionDialogState extends State<CorrectionDialog> {
+class _CorrectionSheetState extends State<CorrectionSheet> {
   late String type = widget.finding.changeType,
     category = widget.finding.category == 'approval' ? 'approval_wording' : widget.finding.category;
   late final explanation = TextEditingController(text: widget.finding.explanation ?? '');
 
   @override
+  void dispose() { explanation.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final f = widget.finding;
-    return AlertDialog(
-      scrollable: true,
-      title: Text(l.correctTitle),
-      content: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(l.correctHint, style: Theme.of(context).textTheme.bodySmall),
-          DropdownButtonFormField<String>(
-            key: const Key('type-field'),
-            isExpanded: true, itemHeight: null,
-            initialValue: type,
-            decoration: InputDecoration(labelText: l.changeTypeLabel),
-            items: [for (final t in changeTypes) DropdownMenuItem(value: t, child: Text(typeLabel(l, t)))],
-            onChanged: (v) => setState(() => type = v ?? type),
-          ),
-          DropdownButtonFormField<String>(
-            key: const Key('category-field'),
-            isExpanded: true, itemHeight: null,
-            initialValue: category,
-            decoration: InputDecoration(labelText: l.categoryLabel),
-            items: [for (final c in categories) DropdownMenuItem(value: c, child: Text(categoryLabel(l, c)))],
-            onChanged: (v) => setState(() => category = v ?? category),
-          ),
-          TextField(controller: explanation, maxLines: 3, decoration: InputDecoration(labelText: l.explanationLabel)),
-        ]),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-        TextButton(
-          onPressed: () => Navigator.pop(context, {
-            if (type != f.changeType) 'change_type': type,
-            if (category != f.category) 'category': category,
-            if (explanation.text.trim() != (f.explanation ?? '') && explanation.text.trim().isNotEmpty)
-              'explanation': explanation.text.trim(),
-          }),
-          child: Text(l.save),
-        ),
+    return CalmSheet(
+      title: l.correctTitle,
+      lead: l.correctHint,
+      action: l.save,
+      onAction: () => Navigator.pop(context, {
+        if (type != f.changeType) 'change_type': type,
+        if (category != f.category) 'category': category,
+        if (explanation.text.trim() != (f.explanation ?? '') && explanation.text.trim().isNotEmpty)
+          'explanation': explanation.text.trim(),
+      }),
+      children: [
+        CalmSelectField<String>(key: const Key('type-field'), label: l.changeTypeLabel, value: type,
+          options: [for (final t in changeTypes) CalmOption(t, typeLabel(l, t))],
+          onChanged: (v) => setState(() => type = v)),
+        CalmSelectField<String>(key: const Key('category-field'), label: l.categoryLabel, value: category,
+          options: [for (final c in categories) CalmOption(c, categoryLabel(l, c))],
+          onChanged: (v) => setState(() => category = v)),
+        TextField(controller: explanation, minLines: 2, maxLines: 4,
+          decoration: InputDecoration(labelText: l.explanationLabel)),
       ],
     );
   }
 }
 
-class ApprovalDialog extends StatefulWidget {
-  const ApprovalDialog({super.key});
+class ApprovalSheet extends StatefulWidget {
+  const ApprovalSheet({super.key});
 
   @override
-  State<ApprovalDialog> createState() => _ApprovalDialogState();
+  State<ApprovalSheet> createState() => _ApprovalSheetState();
 }
 
-class _ApprovalDialogState extends State<ApprovalDialog> {
+class _ApprovalSheetState extends State<ApprovalSheet> {
   final evidence = TextEditingController(), statedBy = TextEditingController();
   DateTime statedAt = DateTime.now();
+
+  @override
+  void dispose() { evidence.dispose(); statedBy.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final date = DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag());
-    return AlertDialog(
-      scrollable: true,
-      title: Text(l.recordApproval),
-      content: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(l.approvalHint, style: Theme.of(context).textTheme.bodySmall),
-          TextField(key: const Key('approval-evidence'), controller: evidence, maxLines: 4,
-              decoration: InputDecoration(labelText: l.approvalEvidence)),
-          TextField(key: const Key('approval-by'), controller: statedBy,
-              decoration: InputDecoration(labelText: l.approvalStatedBy)),
-          TextButton.icon(
-            icon: const Icon(Icons.event),
-            label: Text(l.approvalStatedOn(date.format(statedAt))),
-            onPressed: () async {
-              final picked = await showDatePicker(context: context, initialDate: statedAt,
-                  firstDate: DateTime(2000), lastDate: DateTime.now());
-              if (picked != null) setState(() => statedAt = picked);
-            },
-          ),
-        ]),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-        TextButton(
-          onPressed: () {
-            if (evidence.text.trim().isEmpty || statedBy.text.trim().isEmpty) return;
-            Navigator.pop(context, (evidence.text.trim(), statedBy.text.trim(), statedAt));
+    return CalmSheet(
+      title: l.recordApproval,
+      lead: l.approvalHint,
+      action: l.save,
+      onAction: () {
+        if (evidence.text.trim().isEmpty || statedBy.text.trim().isEmpty) return;
+        Navigator.pop(context, (evidence.text.trim(), statedBy.text.trim(), statedAt));
+      },
+      children: [
+        TextField(key: const Key('approval-evidence'), controller: evidence, minLines: 3, maxLines: 5,
+            decoration: InputDecoration(labelText: l.approvalEvidence)),
+        TextField(key: const Key('approval-by'), controller: statedBy,
+            decoration: InputDecoration(labelText: l.approvalStatedBy)),
+        Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(
+          icon: const Icon(CalmIcons.calendar),
+          label: Text(l.approvalStatedOn(date.format(statedAt))),
+          onPressed: () async {
+            final picked = await showDatePicker(context: context, initialDate: statedAt,
+                firstDate: DateTime(2000), lastDate: DateTime.now());
+            if (picked != null) setState(() => statedAt = picked);
           },
-          child: Text(l.save),
-        ),
+        )),
       ],
     );
   }

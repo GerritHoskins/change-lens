@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_controls.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
@@ -68,8 +70,8 @@ class _CompareScreenState extends State<CompareScreen> {
   }
 
   Future<void> _input(bool before, {required bool paste}) async {
-    final input = await showDialog<ComparisonInput>(context: context,
-        builder: (_) => _InputDialog(paste: paste, services: services!));
+    final input = await showCalmSheet<ComparisonInput>(context,
+        builder: (_) => _InputSheet(paste: paste, services: services!));
     if (input == null || !mounted) return;
     setState(() { if (before) { earlier = input; } else { later = input; } error = null; });
   }
@@ -118,12 +120,12 @@ class _CompareScreenState extends State<CompareScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(CalmRadius.lg),
         border: before ? null : Border.all(color: colors.marker, width: 2)),
-      child: CalmCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      child: CalmCard(child: CalmSurfaceScope(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Semantics(header: true, child: Text(label, style: text.titleMedium)),
       const SizedBox(height: 12),
       if (value != null && value.versionId == null)
         Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(value.bytes == null ? Icons.notes : Icons.picture_as_pdf_outlined, color: colors.muted),
+          Icon(value.bytes == null ? CalmIcons.text : CalmIcons.document, color: colors.muted),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(value.label!, style: text.titleMedium),
@@ -131,28 +133,25 @@ class _CompareScreenState extends State<CompareScreen> {
             Text(l.readyToSubmit, style: text.bodyMedium?.copyWith(color: colors.muted)),
           ])),
         ])),
-      if (versions.isNotEmpty)
-        DropdownButtonFormField<String>(
+      if (versions.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 4),
+        child: CalmSelectField<String>(
           key: ValueKey('$key-${value?.versionId ?? "new"}'),
-          initialValue: currentExists ? value?.versionId : null,
-          isExpanded: true,
-          itemHeight: null,
-          decoration: InputDecoration(labelText: l.chooseVersion, border: const OutlineInputBorder()),
-          items: [for (final v in versions) DropdownMenuItem(value: v.id, enabled: v.status != 'rejected',
-              child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(v.label)))],
+          label: l.chooseVersion,
+          value: currentExists ? value?.versionId : null,
+          options: [for (final v in versions) CalmOption(v.id, v.label, enabled: v.status != 'rejected')],
           onChanged: locked ? null : (id) => setState(() {
-            final input = id == null ? null : ComparisonInput.existing(id);
+            final input = ComparisonInput.existing(id);
             if (before) { earlier = input; } else { later = input; }
           }),
-        ),
-      const SizedBox(height: 12),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        OutlinedButton.icon(key: Key('$key-paste'), onPressed: locked ? null : () => _input(before, paste: true),
-            icon: const Icon(Icons.content_paste), label: Text(l.importPaste)),
-        OutlinedButton.icon(key: Key('$key-pdf'), onPressed: locked ? null : () => _input(before, paste: false),
-            icon: const Icon(Icons.upload_file), label: Text(l.importPdf)),
-      ]),
-    ])));
+        )),
+      // Secondary actions: plain ink text buttons, aligned with the card's text edge.
+      Transform.translate(offset: const Offset(-12, 0), child: Wrap(spacing: 4, children: [
+        TextButton.icon(key: Key('$key-paste'), onPressed: locked ? null : () => _input(before, paste: true),
+            icon: const Icon(CalmIcons.paste), label: Text(l.importPaste)),
+        TextButton.icon(key: Key('$key-pdf'), onPressed: locked ? null : () => _input(before, paste: false),
+            icon: const Icon(CalmIcons.pickPdf), label: Text(l.importPdf)),
+      ])),
+    ]))));
   }
 
   @override
@@ -168,10 +167,9 @@ class _CompareScreenState extends State<CompareScreen> {
         CalmPageHeader(title: l.compareBriefs,
           subtitle: widget.project != null || submission != null ? project!.name : null),
         if (widget.project == null && submission == null) ...[
-          DropdownButtonFormField<String>(key: const Key('comparison-project'),
-            initialValue: project?.id, isExpanded: true, itemHeight: null,
-            decoration: InputDecoration(labelText: l.projectName, border: const OutlineInputBorder()),
-            items: [for (final p in projects) DropdownMenuItem(value: p.id, child: Text(p.name))],
+          CalmSelectField<String>(key: const Key('comparison-project'),
+            label: l.projectName, value: project?.id,
+            options: [for (final p in projects) CalmOption(p.id, p.name, detail: p.clientLabel)],
             onChanged: locked ? null : (id) {
               setState(() { project = projects.firstWhere((p) => p.id == id); earlier = later = null; versions = []; });
               _load();
@@ -192,21 +190,18 @@ class _CompareScreenState extends State<CompareScreen> {
               scope = null;
               error = null;
             }),
-            icon: const Icon(Icons.swap_vert), label: Text(l.swapVersions)))),
+            icon: const Icon(CalmIcons.swap), label: Text(l.swapVersions)))),
         _slot(false),
         if (!distinct) Padding(padding: const EdgeInsets.only(top: 12), child: CalmWarning(text: l.sameVersion)),
         const SizedBox(height: 28),
         Semantics(header: true, child: Text(l.scopeQuestion, style: text.titleLarge)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         RadioGroup<Scope>(groupValue: scope,
           onChanged: (s) { if (!locked) setState(() => scope = s); },
-          child: Column(children: [for (final e in scopes.entries) RadioListTile<Scope>(
+          child: CalmRadioRows(children: [for (final e in scopes.entries) CalmRadioRow<Scope>(
             key: Key('scope-${e.key.name}'), value: e.key, enabled: !locked,
-            contentPadding: EdgeInsets.zero,
-            title: Text(e.value.$1, style: text.titleMedium),
-            subtitle: Padding(padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Text(e.value.$2, style: text.bodyMedium?.copyWith(color: colors.muted))))])),
-        const SizedBox(height: 16),
+            title: e.value.$1, subtitle: e.value.$2)])),
+        const SizedBox(height: 24),
         if (error != null) Semantics(liveRegion: true, child: Padding(
             padding: const EdgeInsets.only(bottom: 12), child: CalmWarning(text: error!))),
         if (error == l.compareLoadFailed) TextButton(onPressed: loading ? null : _load, child: Text(l.retry)),
@@ -219,15 +214,15 @@ class _CompareScreenState extends State<CompareScreen> {
   }
 }
 
-class _InputDialog extends StatefulWidget {
-  const _InputDialog({required this.paste, required this.services});
+class _InputSheet extends StatefulWidget {
+  const _InputSheet({required this.paste, required this.services});
   final bool paste;
   final Services services;
   @override
-  State<_InputDialog> createState() => _InputDialogState();
+  State<_InputSheet> createState() => _InputSheetState();
 }
 
-class _InputDialogState extends State<_InputDialog> {
+class _InputSheetState extends State<_InputSheet> {
   final label = TextEditingController(), text = TextEditingController();
   bool busy = false;
   String? error;
@@ -257,15 +252,17 @@ class _InputDialogState extends State<_InputDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AlertDialog(title: Text(widget.paste ? l.importPaste : l.importPdf),
-      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(key: const Key('label'), controller: label, maxLength: 100,
+    return CalmSheet(
+      title: widget.paste ? l.importPaste : l.importPdf,
+      action: widget.paste ? l.useText : l.importPdf, actionKey: const Key('confirm-import'),
+      onAction: busy ? null : _choose,
+      children: [
+        TextField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
             decoration: InputDecoration(labelText: l.versionLabel, hintText: l.versionLabelHint)),
         if (widget.paste) TextField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
-            decoration: InputDecoration(hintText: l.pasteHint, border: const OutlineInputBorder())),
-        if (error != null) Text(error!),
-      ])), actions: [TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: Text(l.cancel)),
-        FilledButton(key: const Key('confirm-import'), onPressed: busy ? null : _choose,
-            child: Text(widget.paste ? l.useText : l.importPdf))]);
+            decoration: InputDecoration(hintText: l.pasteHint)),
+        if (error != null) Semantics(liveRegion: true, child: CalmWarning(text: error!)),
+      ],
+    );
   }
 }
