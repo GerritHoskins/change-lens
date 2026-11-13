@@ -1,80 +1,84 @@
 {
  "split": "held_out",
  "model": "Qwen/Qwen3.5-397B-A17B",
- "fingerprint": "351e258033e959cd",
- "commit": "bda6712cfb88fbcbcb2d6f3ff534ec90d16fb969",
- "date": "2026-11-01",
+ "fingerprint": "2bed6f10eec74e32",
+ "commit": "5af1ca54987fa2cae3e24d3f91146e4fd01bfd0f",
+ "split_fingerprint": "4d46b6ca1a718fc2df523fd8a797651cd1eb4ca6f6ac9be3a0c21c509c32ae14",
+ "date": "2026-11-13",
  "runs": 2,
- "skipped_image_pairs": 8,
+ "skipped_image_pairs": 0,
  "real_pairs": 0,
- "rerun_reason": "Second look after Q1=A: extract-v6 category rule, duplicate merge, same-sentence rules; tuned on development only incl. P-700..P-719. Last held-out look for I-7 (owner).",
- "calls": 461,
- "pairs": 46,
- "comparisons": 92,
+ "rerun_reason": null,
+ "calls": 606,
+ "no_change_pairs": 12,
+ "pairs": 72,
+ "comparisons": 144,
  "status": {
-  "complete": 92,
+  "complete": 144,
   "partial": 0,
   "failed": 0
  },
- "precision": 0.945,
+ "precision": 0.912,
  "precision_ci": [
-  0.871,
-  0.994
+  0.862,
+  0.954
  ],
- "recall": 1.0,
+ "recall": 0.972,
  "recall_ci": [
-  1.0,
-  1.0
+  0.944,
+  0.996
  ],
- "material_recall": 1.0,
+ "material_recall": 0.972,
  "material_recall_ci": [
-  1.0,
-  1.0
+  0.944,
+  0.996
  ],
  "tp_pred_gold": [
-  156,
-  165,
-  156
+  239,
+  262,
+  246
  ],
  "material_tp_gold": [
-  128,
-  128
+  239,
+  246
  ],
- "change_type_agreement_on_matches": "149/156",
+ "change_type_agreement_on_matches": "222/239",
  "false_removals": 0,
- "scope_pairs": 8,
- "false_removal_rate_upper_95": 0.375,
+ "scope_pairs": 18,
+ "false_removal_rate_upper_95": 0.167,
  "evidence_location": 1.0,
  "evidence_location_ci": [
-  0.985,
+  0.99,
   1.0
  ],
  "located_locatable": [
-  250,
-  250
+  386,
+  386
  ],
  "unsupported_rate": 0.0,
  "unsupported_ci": [
   0.0,
-  0.015
+  0.008
  ],
  "unsupported_shown": [
   0,
-  248
+  474
  ],
- "fabricated_scope_changes": 2,
+ "fabricated_scope_changes": 4,
  "withheld": 0,
- "cost_p50_eur": 0.0051,
- "cost_p90_typical_eur": 0.0061,
+ "cost_p50_eur": 0.0057,
+ "cost_p90_typical_eur": 0.0068,
  "cost_p90_heavy_eur": null,
  "typical_heavy_comparisons": [
-  92,
+  144,
   0
  ],
- "latency_p50_s": 23.7,
- "latency_p90_s": 38.3,
- "cost_eur_total": 0.4858,
- "identical_runs": "34/46",
+ "latency_p50_s": 17.8,
+ "latency_p90_s": 26.4,
+ "cost_eur_total": 0.8364,
+ "cost_actual_eur_total": 0.8364,
+ "cost_reserved_eur_total": 0.0,
+ "identical_runs": "48/72",
  "gates": {
   "false_removals": {
    "value": 0,
@@ -82,17 +86,17 @@
    "pass": true
   },
   "material_recall": {
-   "value": 1.0,
+   "value": 0.972,
    "limit": ">= 0.95",
    "pass": true
   },
   "recall": {
-   "value": 1.0,
+   "value": 0.972,
    "limit": ">= 0.9",
    "pass": true
   },
   "precision": {
-   "value": 0.945,
+   "value": 0.912,
    "limit": ">= 0.9",
    "pass": true
   },
@@ -107,12 +111,12 @@
    "pass": true
   },
   "fabricated_scope_changes": {
-   "value": 2,
+   "value": 4,
    "limit": "== 0",
    "pass": false
   },
   "cost_p90_typical_eur": {
-   "value": 0.0061,
+   "value": 0.0068,
    "limit": "<= 0.2",
    "pass": true
   },
@@ -121,29 +125,26 @@
    "limit": "<= 0.6",
    "pass": null
   },
-  "advantage_over_baseline": {
-   "value": {
-    "false_removals": [
-     0,
-     0
-    ],
-    "missed_material": [
-     0,
-     16
-    ]
-   },
-   "pass": true,
-   "directional": true
+  "evaluated_comparisons": {
+   "value": 144,
+   "limit": "> 0",
+   "pass": true
+  },
+  "no_failed_comparisons": {
+   "value": 0,
+   "limit": "== 0",
+   "pass": true
+  },
+  "scope_coverage": {
+   "value": 18,
+   "limit": "> 0",
+   "pass": true
+  },
+  "no_change_coverage": {
+   "value": 12,
+   "limit": "> 0",
+   "pass": true
   }
- },
- "baseline": {
-  "precision": 0.933,
-  "recall": 0.897,
-  "material_recall": 0.875,
-  "false_removals": 0,
-  "fabricated_scope_changes": 0,
-  "missed_material": 16,
-  "failed": 0
  },
  "verdict": "FAIL"
 }
