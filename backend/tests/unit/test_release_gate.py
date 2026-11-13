@@ -11,7 +11,8 @@ from tools import i7_metrics as im, release_gate as gate
 def evidence():
     # Synthetic passing aggregates based on the receipt shape, never a replacement receipt.
     receipt = json.loads(gate.RECEIPT.read_text(encoding="utf-8"))
-    split = {"development": ["P-900"], "held_out": [f"P-{n}" for n in range(1000, 1054)]}
+    held_out = receipt["pairs"] + receipt["skipped_image_pairs"]
+    split = {"development": ["P-900"], "held_out": [f"P-{n}" for n in range(1000, 1000 + held_out)]}
     receipt.update(no_change_pairs=8, split_fingerprint=gate.split_fingerprint(split),
                    fabricated_scope_changes=0, verdict="PASS", fingerprint=im.fingerprint(gate.MODEL))
     receipt["gates"]["fabricated_scope_changes"] = im.check("fabricated_scope_changes", 0)
@@ -24,9 +25,11 @@ def test_measured_gates_pass_with_explicitly_unmeasured_heavy_bucket(evidence):
 
 def test_current_failed_receipt_is_blocked_without_changing_it(capsys):
     original = gate.RECEIPT.read_bytes()
+    fabricated = json.loads(original)["fabricated_scope_changes"]
+    assert fabricated > 0, "the committed receipt is expected to fail this gate; update the test when it passes"
     assert gate.main([]) == 1
     output = capsys.readouterr().out
-    assert "fabricated_scope_changes: 2 fails == 0" in output
+    assert f"fabricated_scope_changes: {fabricated} fails == 0" in output
     assert "I-7 RELEASE BLOCKED" in output
     assert gate.RECEIPT.read_bytes() == original
 
