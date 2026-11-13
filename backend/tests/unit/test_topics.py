@@ -196,11 +196,15 @@ def test_legacy_approval_correction_is_canonical_and_does_not_record_client_appr
     assert historical.category == "approval"
 
 
-def test_scoring_treats_approval_rename_as_alias_but_does_not_invent_budget_labels():
+def test_scoring_treats_approval_rename_as_alias_and_budget_only_as_other_material():
     side = d17_score.Side("CEO", ["CEO"])
     gold = {"category": "approval", "new_value": "CEO"}
     assert d17_score.match_score(gold, {"category": "approval_wording", "new_value": "CEO"}, side, side) > 0
+    # O-14: gold labels predate the budget split, so budget scores as other_material (I-7b, 06).
     assert d17_score.match_score({"category": "other_material", "new_value": "EUR 800"},
+                                {"category": "budget", "new_value": "EUR 800"}, side, side) > 0
+    # ...but budget never matches an unrelated category.
+    assert d17_score.match_score({"category": "deliverable", "new_value": "EUR 800"},
                                 {"category": "budget", "new_value": "EUR 800"}, side, side) == 0
 
 

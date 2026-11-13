@@ -6,7 +6,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $errors = @()
-$files = git ls-files -- docs scripts '*.md' | Sort-Object -Unique
+# Binary files (images, PDFs) are tracked too, but the line and UTF-8 checks only apply to text.
+$files = git ls-files -- docs scripts '*.md' | Where-Object { $_ -notmatch '\.(png|jpe?g|gif|webp|ico|pdf)$' } | Sort-Object -Unique
 $strict = New-Object System.Text.UTF8Encoding($false, $true)
 
 # Build 1: size limit (project rule: files under 500 lines)
