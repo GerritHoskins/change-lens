@@ -80,7 +80,7 @@ cd backend
 
 Built: projects and immutable versions, text and PDF import, one-screen compare, topic-grouped reports, finding review with corrections and history, the separate client-approval record, PDF evidence with a text fallback, 30-day retention after last use, and the German locale. The end-to-end check has passed on an Android phone and an iPhone (on the iPhone with pasted text; the iOS PDF picker is not yet exercised).
 
-Planned for v1: public sign-in with account linking and in-app account deletion, screenshot and share-sheet import (gated on measured passage placement), allowances and subscriptions. Push notifications, share links and teams come later. The [backlog](docs/05-backlog.md) has the details.
+Planned for v1: public sign-in with account linking and in-app account deletion, and a fair-use allowance. The first release is free; screenshot and share-sheet import and subscriptions follow after launch, once real usage informs the pricing. Push notifications, share links and teams come later. The [backlog](docs/05-backlog.md) has the details.
 
 ---
 

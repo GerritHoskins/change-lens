@@ -10,7 +10,8 @@ This repository holds the plan (`docs/`), the development backend (`backend/`), 
 | Built, closed with a deviation | Evaluation harness (I-7): 2 fabricated scope changes against a gate of 0 | `scripts/eval/i7_receipt.json` and 06. I-7b is open and must pass before external testers |
 | Built, device-checked on both phones (M1) | App shell and report screens (I-9, I-10) | The M1 end-to-end check passed on Android (06, 2026-11-01) and on the iPhone (06, 2026-11-10). On the iPhone the new comparison used pasted text only, so the iOS PDF picker is not yet exercised |
 | Local checks done, one decision open | Logto checks (D-8) | Local kit in `scripts/d8-logto/`, run on 2026-11-10 against Logto 1.45.0 (06): MFA, orphan users, link visibility and defaults are recorded; account linking (C2) needs an owner decision for AC-26. The IONOS hosting checks and Apple sign-in in D-8 have not started and do not use this kit |
-| Planned, not built | The M1b redesign (I-23 to I-26), I-7b and the rest of M2 to M5 | 05 |
+| Planned, not built | The M1b redesign (I-23 to I-26), I-7b and the rest of M2, I-14 and M5 | 05 |
+| After a free launch (O-20, 2026-11-13) | Subscriptions (I-19) and screenshots and share sheet (M3), rescheduled with the billing decision from the D-18 readout | 05, 06 |
 | Not in v1 | Share links (I-12), push notifications (I-27) and teams | 05 |
 
 `verification.md` records plan checks. Its Product evidence section says how far each AC is backed by the built product.
