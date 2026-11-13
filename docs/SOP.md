@@ -2,15 +2,18 @@
 
 This repository holds the plan (`docs/`), the development backend (`backend/`), the Flutter app (`app/`), the D-15 proof of concept (`poc/`) and the evaluation tools (`scripts/eval/`). In this SOP, "running" means running the checks and "changing" means editing the plan and code without losing traceability. To start the software, see [backend/README.md](../backend/README.md) and [app/README.md](../app/README.md). Nothing is deployed publicly, and the backend must not be until I-8 replaces its dev token.
 
-## Status on 2026-11-06
+## Status on 2026-11-13
 
 | State | What | Evidence |
 |---|---|---|
-| Built and tested | Dev API and worker (I-22), parsing (I-1, I-1c), the fact pipeline (I-2 to I-6) and the IONOS model check (D-17) | Backend unit tests in CI; integration tests run locally only (§1); a row per task in 06 |
-| Built, closed with a deviation | Evaluation harness (I-7): 2 fabricated scope changes against a gate of 0 | `scripts/eval/i7_receipt.json` and 06. I-7b is open and must pass before external testers |
-| Built, device-checked on both phones (M1) | App shell and report screens (I-9, I-10) | The M1 end-to-end check passed on Android (06, 2026-11-01) and on the iPhone (06, 2026-11-10). On the iPhone the new comparison used pasted text only, so the iOS PDF picker is not yet exercised |
-| Local checks done, one decision open | Logto checks (D-8) | Local kit in `scripts/d8-logto/`, run on 2026-11-10 against Logto 1.45.0 (06): MFA, orphan users, link visibility and defaults are recorded; account linking (C2) needs an owner decision for AC-26. The IONOS hosting checks and Apple sign-in in D-8 have not started and do not use this kit |
-| Planned, not built | The M1b redesign (I-23 to I-26), I-7b and the rest of M2, I-14 and M5 | 05 |
+| Built and tested | Dev API and worker (I-22), parsing (I-1, I-1c), the fact pipeline (I-2 to I-6) and the IONOS model check (D-17) | Backend unit tests in CI (`plan-checks`); integration tests in CI (`backend-integration`) and locally (§1); a row per task in 06 |
+| Built, closed with a deviation | Evaluation harness (I-7): 2 fabricated scope changes against a gate of 0 | `scripts/eval/i7_receipt.json` and 06 |
+| Met on both phones (M1, 2026-11-10) | App shell and report screens (I-9, I-10) | Android (06, 2026-11-01) and iPhone (06, 2026-11-10). On the iPhone the comparison used pasted text only, so the iOS PDF picker is not yet exercised |
+| Built, M1b exit not yet recorded | Finding topics and extract-v7 (I-23, `f6fb4e6`); one-screen compare (I-24) and review evidence telemetry (I-26, `f5cbea1`); the Calm Bold app screens P0–P7 with German strings (I-25, `87ae0e9`, `5f940a4`) | Unit and widget tests. The iPhone M1 build already ran this app, but the M1b exit check (05) on both phones is not in 06 |
+| Open, development part passes | I-7b fabricated scope changes: 0 over 2 development runs (06, 2026-11-10) | The held-out part waits for the owner review and freeze of `constructed-fresh-20261110`. Until a fresh receipt exists, `test_i7.py` fails in CI on purpose (extract-v7 changed the prompt fingerprint). Must pass before external testers |
+| Partly built | M2: Logto checks run locally (D-8; C2 decided as O-19, the backend owns Google linking); JWT verifier and Apple refresh-token encryption (I-8 groundwork, `f91b2f5`, not wired into the API); project deletion, 30-day retention and the data inventory (I-13). I-14: the per-comparison cost ceiling only | D-8 IONOS hosting and Apple sign-in checks not started; the dev token is still the only API authentication; account deletion waits for I-8; the fair-use allowance, spend cap and kill switch wait for I-8 and I-14 |
+| Release tooling, nothing published | Release config and acceptance checks (`scripts/release/`), the manual `release-readiness` job, Codemagic ad hoc iOS and signed Android builds (I-17 prep) | `release-readiness` is expected to block on the stale I-7 receipt |
+| Planned, not built | I-8 public sign-up, I-18 account screens, I-20 privacy texts, the I-14 fair-use allowance, and M5 (I-21, I-17, D-9, D-10, D-18) | 05 |
 | After a free launch (O-20, 2026-11-13) | Subscriptions (I-19) and screenshots and share sheet (M3), rescheduled with the billing decision from the D-18 readout | 05, 06 |
 | Not in v1 | Share links (I-12), push notifications (I-27) and teams | 05 |
 
