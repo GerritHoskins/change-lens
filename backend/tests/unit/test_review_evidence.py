@@ -4,14 +4,17 @@ from decimal import Decimal
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
+from pathlib import Path
+
 import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from changelens.api.errors import ApiError, install
 from changelens.api.review_evidence import ReviewTelemetryIn, review_evidence_out, validate_review_evidence
-from changelens.domain import DEV_COLUMNS
 from changelens.domain.models import ClientApprovalRecord, ReviewEvent
+
+BASELINE = Path(__file__).resolve().parents[2] / "migrations" / "versions" / "0001_baseline.py"
 
 
 def body(before="text_only", after="text_only", page_opened=False):
@@ -103,9 +106,11 @@ def test_schema_and_dev_upgrade_preserve_unobserved_legacy_rows():
     for name in ("evidence_mode_before", "evidence_mode_after", "page_opened"):
         column = ReviewEvent.__table__.c[name]
         assert column.nullable and column.default is None and column.server_default is None
-        statements = [s for s in DEV_COLUMNS if "ADD COLUMN" in s and "review_events" in s and name in s]
+        # The migrated schema (Alembic baseline, I-8 S1) keeps them nullable with no default.
+        statements = [line for line in BASELINE.read_text(encoding="utf-8").splitlines()
+                      if "sa.Column('%s'" % name in line]
         assert len(statements) == 1
-        assert "IF NOT EXISTS" in statements[0] and "DEFAULT" not in statements[0] and "NOT NULL" not in statements[0]
+        assert "nullable=True" in statements[0] and "default" not in statements[0]
     ddl = str(CreateTable(ReviewEvent.__table__).compile(dialect=postgresql.dialect()))
     assert "ck_review_evidence_before" in ddl and "ck_review_evidence_after" in ddl
     assert "page_opened BOOLEAN" in ddl

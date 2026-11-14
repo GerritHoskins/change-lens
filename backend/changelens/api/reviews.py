@@ -15,15 +15,15 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
-from changelens.api.auth import current_tenant
+from changelens.api.auth import current_principal, current_tenant
 from changelens.api.errors import ApiError, not_found
 from changelens.api.review_evidence import ReviewTelemetryIn, validate_review_evidence, review_evidence_out
+from changelens.domain.identity import Principal
 from changelens.domain.models import ClientApprovalRecord, Finding, ReviewEvent
 from changelens.llm.schemas import CATEGORIES, CHANGE_TYPES
 from changelens.topics import canonical_category, topic_counts, topic_for_category
 
 router = APIRouter()
-DEV_ACTOR = "dev-token-user"  # I-8 replaces this with the signed-in user
 ACTIONS = ("confirmed", "corrected", "dismissed", "note")
 REVIEWABLE = ("complete", "partial")
 # UI wording for the record; never "approved" or "agreed" (02 §5, AC-12).
@@ -146,7 +146,8 @@ def get_finding(finding_id: uuid.UUID, request: Request, tenant: uuid.UUID = Dep
 
 
 @router.post("/findings/{finding_id}/reviews", status_code=201)
-def review(finding_id: uuid.UUID, body: ReviewIn, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+def review(finding_id: uuid.UUID, body: ReviewIn, request: Request,
+           principal: Principal = Depends(current_principal)):
     """Confirm, correct, dismiss or note. Writes only ReviewEvents (and, for a correction, a new
     finding revision); there is no path from here to a ClientApprovalRecord (AC-12)."""
     if body.action not in ACTIONS:
@@ -155,7 +156,7 @@ def review(finding_id: uuid.UUID, body: ReviewIn, request: Request, tenant: uuid
         raise ApiError(422, "invalid_request", "a note needs text")
     if (body.action == "corrected") != (body.correction is not None):
         raise ApiError(422, "invalid_request", "a correction is sent with action corrected, and only then")
-    with request.app.state.db.tenant_scope(tenant) as repo:
+    with request.app.state.db.tenant_scope(principal.tenant_id) as repo:
         if not repo.lock_for_finding(finding_id):
             raise not_found()
         f, chain = _current(repo, finding_id, lock=True)
@@ -184,7 +185,7 @@ def review(finding_id: uuid.UUID, body: ReviewIn, request: Request, tenant: uuid
                 change_type=changed.get("change_type", f.change_type), evidence=list(f.evidence),
                 explanation=changed.get("explanation", f.explanation), uncertainty=f.uncertainty, note=f.note,
                 review_group=f.review_group, priority=f.priority, revision=f.revision + 1, supersedes_id=f.id))
-        event = repo.add(ReviewEvent(finding_id=f.id, actor=DEV_ACTOR, action=body.action, note=body.note, **metadata))
+        event = repo.add(ReviewEvent(finding_id=f.id, actor=str(principal.user_id), action=body.action, note=body.note, **metadata))
         repo.touch_comparison(comparison)
         repo.s.refresh(event)
         chain = chain + ([current] if current is not f else [])
@@ -195,15 +196,15 @@ def review(finding_id: uuid.UUID, body: ReviewIn, request: Request, tenant: uuid
 
 @router.post("/findings/{finding_id}/client-approvals", status_code=201)
 def record_client_approval(finding_id: uuid.UUID, body: ApprovalIn, request: Request,
-                           tenant: uuid.UUID = Depends(current_tenant)):
+                           principal: Principal = Depends(current_principal)):
     """Record that someone stated the client approved. Writes no ReviewEvent and changes no
     finding (AC-12). Text evidence only for now; attachments follow the upload rules later."""
-    with request.app.state.db.tenant_scope(tenant) as repo:
+    with request.app.state.db.tenant_scope(principal.tenant_id) as repo:
         if not repo.lock_for_finding(finding_id):
             raise not_found()
         f, _ = _current(repo, finding_id)
         a = repo.add(ClientApprovalRecord(finding_id=f.id, evidence_text=body.evidence_text,
-                                          stated_by=body.stated_by, stated_at=body.stated_at, recorded_by=DEV_ACTOR))
+                                          stated_by=body.stated_by, stated_at=body.stated_at, recorded_by=str(principal.user_id)))
         repo.s.refresh(a)
         repo.touch_comparison(repo.comparison(f.comparison_id))
         return _approval_out(a)

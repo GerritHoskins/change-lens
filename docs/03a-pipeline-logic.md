@@ -12,7 +12,10 @@ Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` n
 GUARD(request):
   claims ← verify_jwt(request.token, idp_keys)              # signature, expiry, audience
   if claims invalid or session revoked at IdP: reject(unauthenticated)        [AC-26]
-  m ← membership_of(claims.subject)                          # tenant comes from here, never from the request body
+  u ← user_by_subject(claims.subject)
+  # Checked on every request: a deleted user keeps valid cached tokens until they expire (D-8 side finding).
+  if u is none or u.deleted_at is set: reject(unauthenticated)                [AC-26]
+  m ← active_membership(u)                                   # tenant comes from here, never from the request body
   if m is none or m.status ≠ active: reject(unauthenticated)                   [AC-19, AC-26]
   tenant ← m.tenant
   db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)               [AC-19]

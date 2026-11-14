@@ -1,6 +1,6 @@
 # ChangeLens dev comparison API (I-22)
 
-A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Authentication is a single dev token. **Never deploy this publicly.** I-8 replaces the dev token with Logto JWTs, tenants and row-level security.
+A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Every route goes through GUARD (03a P0): a Logto access token (`logto` mode) or, locally, a dev token (`dev` mode) becomes a subject, and the subject must have a user and an active membership, from which the tenant comes. Sign-up (`POST /session`) and row-level security are later I-8 slices. **Never deploy this publicly.**
 
 The comparison runs the fact pipeline (`pipeline_version = "facts-4"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
 
@@ -8,8 +8,10 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 
 | Module | Path | Role |
 |---|---|---|
-| `api` | `changelens/api/` | Routes, dev-token auth, upload checks, problem+json errors, access log |
-| `domain` | `changelens/domain/` | SQLAlchemy models, tenant-scoped sessions and repositories |
+| `api` | `changelens/api/` | Routes, GUARD (`auth.py`), upload checks, problem+json errors, access log |
+| `auth` | `changelens/auth/` | Offline JWT verification and the refreshing Logto JWKS key holder (`jwks.py`) |
+| `domain` | `changelens/domain/` | SQLAlchemy models, tenant-scoped sessions and repositories; pre-tenant user and membership lookups (`identity.py`) |
+| migrations | `migrations/`, `alembic.ini`, `changelens/db.py` | Alembic revisions; baseline stamp and dev seed commands |
 | `storage` | `changelens/storage/` | S3 adapter; tenant-prefixed keys; in-memory store for unit tests |
 | `jobs` | `changelens/jobs/` | Postgres queue: ID-only payloads, idempotency keys, `SKIP LOCKED`, retries, leases |
 | `worker` | `changelens/worker/` | Runs `parse` and `compare` jobs under the cost ceiling |
@@ -41,20 +43,65 @@ python -m venv .venv
 
 Every dependency is pinned with hashes. `httpx` is a runtime dependency (the IONOS adapter); `requirements-test.txt` holds the test-only packages (pytest, reportlab).
 
-## 3. Run the API and the worker
+## 3. Migrate, seed and run the API and the worker
 
-Run each in its own terminal from `backend/`. Both create the schema on start.
+Alembic owns the schema (I-8 S1). The api and the worker never create or migrate tables on start.
+
+**A new or empty database**, from `backend/`:
 
 ```powershell
+.venv\Scripts\python -m alembic upgrade head
+```
+
+**A dev database built before I-8 S1** (by the old `create_all` on start) is adopted once, then migrated. `stamp-baseline` compares the tables with the baseline revision and stamps only if they match; it also creates a missing `account_onboarding` table and turns the old `uq_comparisons_request` index into its constraint, both as the old bootstrap would have. On any other difference it changes nothing and prints the differences.
+
+```powershell
+.venv\Scripts\python -m changelens.db stamp-baseline
+```
+
+```powershell
+.venv\Scripts\python -m alembic upgrade head
+```
+
+The identity revision deletes `account_onboarding` rows that have no user. Before I-8 S1 those rows were keyed on the dev tenant, so local onboarding progress resets once.
+
+**The dev user.** The dev token maps to the subject `dev:default`. GUARD needs a user and an active owner membership for it in the dev tenant. Create them once per database (idempotent; refused unless `CHANGELENS_ENV=local`):
+
+```powershell
+$env:CHANGELENS_ENV = 'local'
+```
+
+```powershell
+.venv\Scripts\python -m changelens.db seed-dev
+```
+
+**Run** each process in its own terminal from `backend/`:
+
+```powershell
+$env:CHANGELENS_ENV = 'local'
 $env:CHANGELENS_DEV_TOKEN = 'local-dev-token-change-me'   # at least 16 characters
 .venv\Scripts\python -m changelens.api --port 8000         # binds to 127.0.0.1 only
 .venv\Scripts\python -m changelens.api --port 8000 --lan   # also reachable from the home Wi-Fi (phone tests)
 ```
 
 ```powershell
+$env:CHANGELENS_ENV = 'local'
 $env:CHANGELENS_DEV_TOKEN = 'local-dev-token-change-me'
 .venv\Scripts\python -m changelens.worker
 ```
+
+Authentication settings. `dev` is the default mode, and `Settings.from_env` refuses it unless `CHANGELENS_ENV=local`. `logto` mode refuses to load without issuer, audience and an `https` JWKS URL, refuses a dev token, and the api refuses to start if the first JWKS fetch fails:
+
+| Variable | Meaning |
+|---|---|
+| `CHANGELENS_AUTH_MODE` | `dev` (default; local and tests only) or `logto` |
+| `CHANGELENS_ENV` | must be `local` for `dev` mode and for `seed-dev` |
+| `CHANGELENS_DEV_TOKEN` | `dev` mode only, at least 16 characters; must be unset in `logto` mode |
+| `CHANGELENS_LOGTO_ISSUER` | `logto` mode: the token issuer, `https://…/oidc` |
+| `CHANGELENS_LOGTO_AUDIENCE` | `logto` mode: the API resource indicator |
+| `CHANGELENS_LOGTO_JWKS_URL` | `logto` mode: Logto's JWKS URL, `https` only. Keys are fetched from here only (3 s timeout, 64 KiB cap); an unknown `kid` refreshes at most once per 60 s, and a failed refresh keeps the cached keys |
+
+Logto access tokens must live at most 900 s (`JwtPolicy`; set this on the API resource in Logto, D-8 C5) and be signed with RS256 (the verifier also accepts PS256 and ES256 keys, nothing else).
 
 Optional environment variables:
 
@@ -126,7 +173,7 @@ Limitations:
 - The Linux limits are written but have not been run here.
 - On Windows the interpreter starts before the job is applied, but before it receives the document.
 
-**Schema change:** `parsed_text` became `parsed_pages`. There are no migrations until I-8, so reset the dev database after pulling: `docker compose down -v; docker compose up -d --wait`. The integration tests rebuild their own schema.
+**Schema change:** `parsed_text` became `parsed_pages`. That change predates migrations, so a dev database from before it can't be stamped at the Alembic baseline (`stamp-baseline` reports the difference): reset it with `docker compose down -v; docker compose up -d --wait`, then follow §3. The integration tests rebuild their own schema with `alembic upgrade head`.
 
 ## 6. Tests
 
@@ -151,6 +198,10 @@ They cover:
 - AC-21: the ceiling stops a run as `partial` (some findings explained) or `failed` (none);
 - tenant isolation and `not_found`;
 - job idempotency, `SKIP LOCKED`, retries, permanent failure and crash recovery after the lease expires.
+- migrations (I-8 S1): `upgrade head` matches the models, the identity revision downgrades and upgrades, and a `create_all`-built database is adopted, stamped and upgraded (or refused when it differs);
+- GUARD in Postgres: a deleted user, an inactive membership or no membership is rejected on the next request; one active membership per user; onboarding rows and review actors carry the user ID.
+
+The unit tests cover the Logto path with keys generated in the test and the JWKS served through `httpx.MockTransport` (`tests/unit/test_guard_logto.py`).
 
 The constructed-dataset round trip reads the private data in place and is skipped when it is absent. It is not in CI. It reports counts and record IDs only:
 
@@ -302,6 +353,5 @@ Preview is read-only and creates no schema or bucket. `--apply --once` executes 
 ## What is placeholder or out of scope
 
 - Image (screenshot) parsing and its vision passes (I-1b); image regions in PDFs are only warned.
-- Real auth, memberships, RLS, allowance, spend cap and kill switch (I-8, I-14).
-- Alembic migrations: the schema is created with `create_all` on start, until I-8.
+- Sign-up and sign-in (`POST /session`, I-8 S2), RLS (S3), Google and Apple (S4), account deletion (S5), allowance, spend cap and kill switch (S6, I-14).
 - Images, notifications, sharing, full account/backup deletion and the remaining 03 §9.4 routes.

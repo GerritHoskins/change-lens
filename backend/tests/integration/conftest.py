@@ -1,7 +1,8 @@
 """Integration fixtures: the compose Postgres and MinIO, a separate test database and bucket.
 
 If the services are down, every integration test is skipped with the reason below. Start them
-with `docker compose up -d --wait` in backend/.
+with `docker compose up -d --wait` in backend/. The test schema is rebuilt with `alembic upgrade head`
+on every run, so every run exercises the migrations (I-8 S1).
 """
 from __future__ import annotations
 
@@ -16,10 +17,11 @@ from sqlalchemy import text
 
 from changelens.api.app import create_app
 from changelens.config import Settings
+from changelens.db import upgrade
 from changelens.domain import Database
 from changelens.storage import S3ObjectStore
 from changelens.worker import Worker
-from helpers import TOKEN_A, TOKEN_B, auth
+from helpers import DEV_TOKENS, SUBJECT_A, SUBJECT_B, TOKEN_A, TOKEN_B, auth
 
 PG = os.environ.get("CHANGELENS_TEST_PG", "postgresql://changelens:changelens@127.0.0.1:55432/changelens")
 S3 = os.environ.get("CHANGELENS_TEST_S3", "http://127.0.0.1:59000")
@@ -28,7 +30,7 @@ TENANT_A = uuid.UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
 TABLES = ("client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects, "
           "object_write_intents, object_purge_intents, comparison_cost_tombstones, project_deletions, "
-          "account_onboarding")
+          "account_onboarding, memberships, users")
 
 
 def pytest_collection_modifyitems(items):
@@ -50,25 +52,41 @@ def services():
         store.ensure_bucket()
     except Exception as exc:
         pytest.skip("MinIO not reachable at %s (%s): run `docker compose up -d --wait` in backend/" % (S3, type(exc).__name__))
-    db = Database(PG.replace("postgresql://", "postgresql+psycopg://").rsplit("/", 1)[0] + "/" + TEST_DB)
-    # No migrations yet (I-8): rebuild the disposable test schema so model changes always apply.
-    from changelens.domain.models import Base
-    Base.metadata.drop_all(db.engine)
-    db.create_schema()
-    return db, store
+    url = db_url()
+    reset_schema(url)
+    upgrade(url)
+    return Database(url), store
+
+
+def db_url(name: str = TEST_DB) -> str:
+    return PG.replace("postgresql://", "postgresql+psycopg://").rsplit("/", 1)[0] + "/" + name
+
+
+def reset_schema(url: str) -> None:
+    """Drop everything in the disposable test database, including Alembic's version table."""
+    with psycopg.connect(url.replace("postgresql+psycopg://", "postgresql://"), autocommit=True) as conn:
+        conn.execute("DROP SCHEMA public CASCADE")
+        conn.execute("CREATE SCHEMA public")
+
+
+def seed_users(db) -> dict:
+    """GUARD needs a user and an active owner membership behind each dev token."""
+    with db.identity_scope() as identities:
+        return {SUBJECT_A: identities.ensure_member(SUBJECT_A, TENANT_A).id,
+                SUBJECT_B: identities.ensure_member(SUBJECT_B, TENANT_B).id}
 
 
 def make_settings(db_url: str, **overrides) -> Settings:
     base = dict(database_url=db_url, s3_endpoint=S3, s3_access_key="changelens", s3_secret_key="changelens-dev-only",
-                s3_bucket="changelens-test", dev_tokens={TOKEN_A: TENANT_A, TOKEN_B: TENANT_B},
+                s3_bucket="changelens-test", dev_tokens=DEV_TOKENS,
                 cost_ceiling_eur=Decimal("1.50"), fake_llm_cost_eur=Decimal("0.01"))
     base.update(overrides)
     return Settings(**base)
 
 
 class Env:
-    def __init__(self, db, store, **overrides):
-        self.db, self.store = db, store
+    def __init__(self, db, store, users=None, **overrides):
+        self.db, self.store, self.users = db, store, users or {}
         self.settings = make_settings(db.engine.url.render_as_string(hide_password=False), **overrides)
         self.client = TestClient(create_app(self.settings, db, store), raise_server_exceptions=False)
         self.worker = Worker(self.settings, db, store, backoff_seconds=0)
@@ -101,9 +119,10 @@ def env_factory(services):
     db, store = services
     with db.system_session() as s:
         s.execute(text("TRUNCATE " + TABLES + " CASCADE"))
+    users = seed_users(db)
 
     def make(**overrides) -> Env:
-        return Env(db, store, **overrides)
+        return Env(db, store, users, **overrides)
     return make
 
 

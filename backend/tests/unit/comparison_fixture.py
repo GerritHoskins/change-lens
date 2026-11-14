@@ -19,7 +19,8 @@ from changelens.domain import comparison_lock_id, project_lock_id, used_at
 from changelens.domain.models import Comparison, ObjectWriteIntent, Project, SourceVersion
 from changelens.storage import MemoryObjectStore, original_key
 from changelens.worker import Worker
-from helpers import TOKEN_A, TOKEN_B, auth
+from helpers import DEV_TOKENS, SUBJECT_A, SUBJECT_B, TOKEN_A, auth
+from identity_fixture import SqliteIdentity
 
 
 class TransactionalDb:
@@ -186,8 +187,12 @@ class Environment:
         self.tenant, self.other_tenant = uuid.uuid4(), uuid.uuid4()
         self.db, self.store = TransactionalDb(), MemoryObjectStore()
         self.settings = Settings(database_url="unused", s3_endpoint="unused", s3_access_key="unused",
-            s3_secret_key="unused", s3_bucket="unused", dev_tokens={TOKEN_A: self.tenant, TOKEN_B: self.other_tenant},
+            s3_secret_key="unused", s3_bucket="unused", dev_tokens=DEV_TOKENS,
             limits=Limits(max_pdf_bytes=20_000, max_pdf_pages=2, max_text_bytes=1000, max_text_words=100))
+        self.identity = SqliteIdentity()
+        self.identity.seed(SUBJECT_A, self.tenant)
+        self.identity.seed(SUBJECT_B, self.other_tenant)
+        self.db.identity_scope = self.identity.identity_scope
         self.project_id = self.project()
         self.other_project = self.project()
         self.foreign_project = self.project(self.other_tenant)

@@ -1,6 +1,7 @@
 """GET / PUT /me/onboarding and the account deletion function (O-23), with no services.
 
-The routes and `TenantRepo` run unchanged over an in-memory SQLite stand-in for the one table.
+The routes, GUARD and `TenantRepo` run unchanged over an in-memory SQLite stand-in for the onboarding,
+user and membership tables. The account ID is the user ID (I-8 S1).
 Row locking and tenant isolation in Postgres are covered in tests/integration/test_onboarding_db.py.
 """
 from contextlib import contextmanager
@@ -8,16 +9,16 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from changelens.api.app import create_app
 from changelens.config import Settings
 from changelens.domain import TenantRepo
 from changelens.domain.models import AccountOnboarding
 from changelens.storage import MemoryObjectStore
-from helpers import TOKEN_A, TOKEN_B, auth
+from helpers import DEV_TOKENS, SUBJECT_A, SUBJECT_B, TOKEN_A, TOKEN_B, auth
+from identity_fixture import SqliteIdentity, sqlite_engine
 
 TENANT_A, TENANT_B = uuid.uuid4(), uuid.uuid4()
 NOT_STARTED = {"completed": False, "step": None}
@@ -25,23 +26,17 @@ COMPLETED = {"completed": True, "step": None}
 
 
 class OnboardingDb:
-    """`Database.tenant_scope` without Postgres: same repository, one table, no set_config."""
+    """`Database.tenant_scope` and `identity_scope` without Postgres: same repositories, three tables,
+    no set_config. Each dev token's user has an active owner membership in its tenant."""
 
     def __init__(self):
-        self.engine = create_engine("sqlite://", hide_parameters=True, poolclass=StaticPool,
-                                    connect_args={"check_same_thread": False})
-
-        # pysqlite's own transaction handling breaks SAVEPOINT; let SQLAlchemy emit BEGIN.
-        @event.listens_for(self.engine, "connect")
-        def _connect(dbapi_connection, _):
-            dbapi_connection.isolation_level = None
-
-        @event.listens_for(self.engine, "begin")
-        def _begin(conn):
-            conn.exec_driver_sql("BEGIN")
-
+        self.engine = sqlite_engine()
+        self.identity = SqliteIdentity(self.engine)
+        self.identity_scope = self.identity.identity_scope
         AccountOnboarding.__table__.create(self.engine)
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
+        self.user_a = self.identity.seed(SUBJECT_A, TENANT_A)
+        self.user_b = self.identity.seed(SUBJECT_B, TENANT_B)
 
     @contextmanager
     def tenant_scope(self, tenant_id):
@@ -57,7 +52,7 @@ class OnboardingDb:
 def env():
     settings = Settings(database_url="postgresql+psycopg://nobody@127.0.0.1:1/none", s3_endpoint="http://unused",
                         s3_access_key="x", s3_secret_key="x", s3_bucket="x",
-                        dev_tokens={TOKEN_A: TENANT_A, TOKEN_B: TENANT_B})
+                        dev_tokens=DEV_TOKENS)
     db = OnboardingDb()
     return TestClient(create_app(settings, db, MemoryObjectStore()), raise_server_exceptions=False), db
 
@@ -94,7 +89,7 @@ def test_step_writes_store_the_last_step_seen_including_going_back(env):
     assert put(client, {"step": 2}) == {"completed": False, "step": 2}  # idempotent
     assert get(client) == {"completed": False, "step": 2}
     [row] = db.rows()
-    assert row.account_id == row.tenant_id == TENANT_A  # account ID is the tenant ID until I-8
+    assert row.account_id == db.user_a and row.tenant_id == TENANT_A  # the account is the user (I-8 S1)
     assert row.onboarding_completed_at is None and row.updated_at is not None
 
 
@@ -136,7 +131,7 @@ def test_each_token_reads_and_writes_only_its_own_account(env):
     assert get(client, TOKEN_B) == NOT_STARTED
     put(client, {"completed": True}, TOKEN_B)
     assert get(client, TOKEN_A) == {"completed": False, "step": 4}
-    assert {row.account_id for row in db.rows()} == {TENANT_A, TENANT_B}
+    assert {row.account_id for row in db.rows()} == {db.user_a, db.user_b}
 
 
 @pytest.mark.parametrize("body", [
@@ -218,7 +213,7 @@ def test_repository_rejects_a_write_with_both_or_neither_field(env):
     with db.tenant_scope(TENANT_A) as repo:
         for kwargs in ({}, {"step": 2, "completed": True}):
             with pytest.raises(ValueError):
-                repo.record_onboarding(TENANT_A, **kwargs)
+                repo.record_onboarding(db.user_a, **kwargs)
     assert db.rows() == []
 
 
@@ -227,19 +222,20 @@ def test_account_deletion_removes_only_that_accounts_row(env):
     put(client, {"step": 3}, TOKEN_A)
     put(client, {"completed": True}, TOKEN_B)
     with db.tenant_scope(TENANT_A) as repo:
-        assert repo.delete_onboarding(TENANT_B) == 0  # another tenant's row is invisible
-        assert repo.delete_onboarding(TENANT_A) == 1
-        assert repo.delete_onboarding(TENANT_A) == 0  # idempotent
+        assert repo.delete_onboarding(db.user_b) == 0  # another tenant's row is invisible
+        assert repo.delete_onboarding(db.user_a) == 1
+        assert repo.delete_onboarding(db.user_a) == 0  # idempotent
     assert get(client, TOKEN_A) == NOT_STARTED
     assert get(client, TOKEN_B) == COMPLETED
-    assert [row.account_id for row in db.rows()] == [TENANT_B]
+    assert [row.account_id for row in db.rows()] == [db.user_b]
 
 
 def test_access_log_records_no_onboarding_values(env, caplog):
-    client, _ = env
+    client, db = env
     with caplog.at_level("INFO", logger="changelens"):
         put(client, {"step": 27})
         get(client)
     lines = [rec.getMessage() for rec in caplog.records if rec.name.startswith("changelens")]
     assert "PUT /me/onboarding 200" in lines and "GET /me/onboarding 200" in lines
-    assert not any("27" in line or str(TENANT_A) in line for line in lines)
+    assert not any("27" in line or str(TENANT_A) in line or str(db.user_a) in line or SUBJECT_A in line
+                   for line in lines)

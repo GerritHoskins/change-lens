@@ -2,7 +2,8 @@
 
 Binds to localhost only, unless `--lan` is given for a phone on the same trusted home network
 (owner decision 2026-10-31). Never use `--lan` on a public or shared network: the dev token is the
-only protection and traffic is plain HTTP.
+only protection and traffic is plain HTTP. The schema is not migrated on start: run
+`python -m alembic upgrade head` first (backend/README.md).
 """
 import argparse
 
@@ -26,7 +27,6 @@ def main() -> None:
     configure_logging()
     settings = Settings.from_env()
     app = create_app(settings)
-    app.state.db.create_schema()
     host = bind_host(args.lan)
     if args.lan:
         print("WARNING: the dev API is reachable from the local network (plain HTTP, dev token only).")
