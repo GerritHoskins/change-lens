@@ -1,9 +1,12 @@
 # Onboarding implementation handoff
 
 Prepared 2026-11-14 for the implementing agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `4a401b3`
-(working tree: `DESIGN.md` modified, `docs/onboarding/` and this file untracked). This is a
-baseline, not proof that the checkout hasn't changed since: check `git status` and HEAD first.
+`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `c0b0a02`
+(pushed; the onboarding docs, the O-23 and O-24 decisions and the DESIGN.md exceptions are all
+committed). The only untracked paths are tool folders (`.claude-flow/`, `app/.claude-flow/`,
+`.playwright-mcp/`) and one older critique snapshot: leave them alone. HEAD may be one commit
+ahead of `c0b0a02`: the commit that updated this handoff. This is a baseline, not proof
+that the checkout hasn't changed since: check `git status` and HEAD first.
 
 > **Owner authorisation: APPROVED.** A + B, Gerrit Hoskins, 14.11.2026. Recorded as O-24 in
 > [the decision log](06-decision-log.md).
@@ -124,8 +127,8 @@ ExcludeSemantics(...))`. Nothing inside may be focusable or announced as a butto
 **Import sheet.** A `CalmSheet` with four icon rows (`onbStartInputs`, `onbStartLimits`,
 `onbStartOnline`, `onbStartLanguage`) and Close. `onbStartLimits` needs `words`, `pages` and
 `megabytes`. No endpoint exposes the parse limits yet, so add one `ParseLimits` constant mirroring
-`backend/changelens/config.py:18-20` (15,000 words, 20 pages, 10 MB). Give it a comment naming that file and a
-backlog follow-up to serve the values from the API. Format `words` with the locale's thousands
+`backend/changelens/config.py:18-20` (15,000 words, 20 pages, 10 MB). Give it a comment naming that file. Serving
+the values from the API is a follow-up: name it in your §9 report, and don't edit the backlog yourself. Format `words` with the locale's thousands
 separator (`15,000` / `15.000`).
 
 ### B3. Navigation and system back
@@ -227,9 +230,11 @@ and edge-swipe on hardware as not done unless you ran them.
 ## 10. Receiving-agent prompt
 
 > Work in the current ChangeLens checkout on `m1-iphone`. Verify `git status` and HEAD against
-> `4a401b3`. Read `docs/onboarding-implementation-handoff.md`, then `docs/onboarding/direction.md`,
-> DESIGN.md and the canvas artboards it names. Build only the phases the authorisation line names
-> (A: definition sheets; B: onboarding screens with the Projects-menu replay). Reuse the existing Calm
+> `c0b0a02` (HEAD may be its direct child that updates this handoff; the tool folders are untracked). Read
+> `docs/onboarding-implementation-handoff.md`, then `docs/onboarding/direction.md`, DESIGN.md, the
+> O-23 and O-24 rows in `docs/06-decision-log.md`, and the canvas artboards the handoff names. Build
+> only the phases O-24 authorises (A: definition sheets; B: onboarding screens with the
+> Projects-menu replay). On iOS, steps 2–6 go back with the on-screen Back only (§B3). Reuse the existing Calm
 > widgets and the real `FindingTile`. Take copy only from `docs/onboarding/*.arb`. Don't wire first
 > launch, consent, Settings or sign-in. Don't add dependencies, store anything on the device, commit
 > or push. Write the §6 widget tests, run `flutter analyze` and `flutter test`, and return the §9
