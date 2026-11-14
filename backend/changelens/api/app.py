@@ -15,6 +15,7 @@ from changelens.api.comparisons import router as comparison_router
 from changelens.api.onboarding import router as onboarding_router
 from changelens.api.retention import router as retention_router
 from changelens.api.routes import router
+from changelens.api.session import router as session_router
 from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.config import Settings
@@ -125,6 +126,7 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     app.include_router(review_router)
     app.include_router(retention_router)
     app.include_router(onboarding_router)
+    app.include_router(session_router)
     app.add_middleware(BodyLimitMiddleware, max_bytes=max_body)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(NoStoreMiddleware)

@@ -25,7 +25,8 @@ def _unauthenticated() -> ApiError:
     return ApiError(401, "unauthenticated")
 
 
-def _subject(request: Request) -> str:
+def token_subject(request: Request) -> str:
+    """GUARD step 1, shared with `POST /session` (which runs no GUARD because the user may not exist)."""
     header = request.headers.get("authorization", "")
     scheme, _, token = header.partition(" ")
     token = token.strip()
@@ -48,7 +49,7 @@ def _subject(request: Request) -> str:
 
 
 def current_principal(request: Request) -> Principal:
-    subject = _subject(request)
+    subject = token_subject(request)
     with request.app.state.db.identity_scope() as identities:
         principal = identities.principal(subject)
     if principal is None:

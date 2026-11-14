@@ -224,7 +224,8 @@ def test_guard_rejects_every_identity_failure_alike_and_never_echoes_token_or_su
         r = call(client, token)
     assert_unauthenticated(r)
     text = r.text + json.dumps(dict(r.headers))
-    logs = "\n".join(rec.getMessage() for rec in caplog.records)
+    # Only changelens.* keeps its text past the production scrubber (logs.py); other loggers are dropped.
+    logs = "\n".join(rec.getMessage() for rec in caplog.records if rec.name.startswith("changelens"))
     for secret in (token, SUBJECT, token.split(".")[1]):
         assert secret not in text and secret not in logs
 
