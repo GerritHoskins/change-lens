@@ -98,6 +98,13 @@ class Database:
                 lists[row.list].append((row.tenant_id, row.item_id))
         return lists["project"], lists["deletion"], lists["purge"]
 
+    def account_deletion_candidates(self, now: datetime, limit: int) -> list[tuple[uuid.UUID, uuid.UUID]]:
+        """Due account-deletion receipts as (tenant ID, user ID) (I-8 S5)."""
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT tenant_id, user_id FROM account_deletion_candidates(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            return [(row.tenant_id, row.user_id) for row in rows]
+
     def assert_app_role(self) -> None:
         """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
         with self.engine.connect() as conn:

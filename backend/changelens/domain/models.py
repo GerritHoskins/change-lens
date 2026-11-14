@@ -233,16 +233,19 @@ class ClientApprovalRecord(Base):
 class User(Base):
     """One account, keyed by its Logto subject (I-8 S1). No `tenant_id`: a user exists before any tenant
     and is found by subject on every request (03 §6 pre-tenant lookup). No email: Logto holds it
-    (decision 5). Linked identities share one Logto `sub` (D-8 C4), so one subject per user."""
+    (decision 5). Linked identities share one Logto `sub` (D-8 C4), so one subject per user.
+    A deleted account's row is a tombstone (I-8 S5): only `id`, `created_at` and `deleted_at` remain, so
+    append-only references such as `review_events.actor` stay valid without personal data."""
     __tablename__ = "users"
     __table_args__ = (
         UniqueConstraint("idp_subject", name="uq_users_idp_subject"),
         CheckConstraint("idp_subject <> ''", name="ck_users_idp_subject"),
+        CheckConstraint("idp_subject IS NOT NULL OR deleted_at IS NOT NULL", name="ck_users_tombstone"),
     )
     id: Mapped[uuid.UUID] = _id()
-    idp_subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    idp_subject: Mapped[Optional[str]] = mapped_column(String(200))  # null only on a tombstone
     created_at: Mapped[datetime] = _now()
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # S5 defines the tombstone
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class Membership(Base):
@@ -276,3 +279,21 @@ class AccountOnboarding(Base):
     onboarding_step: Mapped[Optional[int]] = mapped_column(SmallInteger)  # last step reached, 1-based
     onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # set once
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AccountDeletion(Base):
+    """Account-deletion receipt (03a P8 DELETE_ACCOUNT; I-8 S5): IDs, status and timestamps only. Written in
+    the transaction that freezes the account; maintenance retries it until `complete`."""
+    __tablename__ = "account_deletions"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'complete')", name="ck_account_deletions_status"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_account_deletions_user"),
+                                               primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
+    requested_at: Mapped[datetime] = _now()
+    next_attempt_at: Mapped[datetime] = _now()
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    idp_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # Logto user gone
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

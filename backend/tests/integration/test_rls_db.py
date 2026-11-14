@@ -28,6 +28,10 @@ FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "queue_reclaim_expired": ["job_id", "tenant_id", "kind", "ids", "attempts", "max_attempts"],
     "pending_object_writes": ["tenant_id", "intent_id"],
     "maintenance_candidates": ["list", "tenant_id", "item_id"],
+    "account_freeze": ["account_freeze"],  # I-8 S5
+    "account_deletion_subject": ["account_deletion_subject"],
+    "account_tombstone": ["account_tombstone"],
+    "account_deletion_candidates": ["tenant_id", "user_id"],
 }
 
 
@@ -50,7 +54,7 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
     policies = {(t, cmd): (using, check) for t, cmd, using, check in env.sql(
         "SELECT tablename, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public'")}
     covered = tenant_tables(env)
-    assert len(covered) == 14
+    assert len(covered) == 15
     for name, (rls, forced, tenant) in tables.items():
         if not tenant:
             assert name in EXCEPTIONS, "%s has no tenant_id and is not an explicit exception" % name
@@ -96,7 +100,9 @@ def _fill_every_tenant_table(env):
             "evidence_text": "x", "stated_by": "y", "stated_at": "2026-10-30T09:00:00Z"}, token).status_code == 201
         doomed = env.project(token, name="Doomed")
         assert env.client.delete("/projects/" + doomed, headers=auth(token)).status_code == 204
-    for tenant in (TENANT_A, TENANT_B):  # rows no synthetic route path creates on its own
+    for subject, tenant in ((SUBJECT_A, TENANT_A), ("dev:tenant-b", TENANT_B)):  # rows no route here creates
+        env.sql("INSERT INTO account_deletions (user_id, tenant_id, status, attempts) VALUES (:u, :t, 'complete', 0) "
+                "RETURNING user_id", u=env.users[subject], t=tenant)
         env.sql("INSERT INTO comparison_cost_tombstones (id, tenant_id, cost_actual, cost_reservations, created_at) "
                 "VALUES (gen_random_uuid(), :t, 0, '{}', now()) RETURNING id", t=tenant)
         env.sql("INSERT INTO object_purge_intents (id, tenant_id, project_id, object_key, next_attempt_at, attempts) "
@@ -159,7 +165,7 @@ def test_an_unfiltered_orm_query_in_tenant_scope_returns_only_that_tenant(env):
 
 
 # 4. Every route ------------------------------------------------------------------------------------
-NO_RESOURCE_ID = {("POST", "/session"), ("GET", "/projects"), ("POST", "/projects"),
+NO_RESOURCE_ID = {("POST", "/session"), ("DELETE", "/me"), ("GET", "/projects"), ("POST", "/projects"),
                   ("GET", "/me/onboarding"), ("PUT", "/me/onboarding")}
 
 
@@ -278,7 +284,11 @@ def test_each_function_returns_only_its_listed_columns(env):
              "queue_claim": ("queue_claim()", {}),
              "queue_reclaim_expired": ("queue_reclaim_expired(300)", {}),
              "pending_object_writes": ("pending_object_writes(:n, 10)", {"n": now}),
-             "maintenance_candidates": ("maintenance_candidates(:n, 10)", {"n": now})}
+             "maintenance_candidates": ("maintenance_candidates(:n, 10)", {"n": now}),
+             "account_freeze": ("account_freeze(:u)", {"u": uuid.uuid4()}),
+             "account_deletion_subject": ("account_deletion_subject(:u)", {"u": uuid.uuid4()}),
+             "account_tombstone": ("account_tombstone(:u)", {"u": uuid.uuid4()}),
+             "account_deletion_candidates": ("account_deletion_candidates(:n, 10)", {"n": now})}
     for name, (call, params) in calls.items():
         columns, _ = _call(env, "SELECT * FROM " + call, **params)
         assert columns == FUNCTIONS[name], name
@@ -292,6 +302,7 @@ def test_each_function_returns_only_its_listed_columns(env):
     "queue_reclaim_expired(0)", "queue_reclaim_expired(86401)", "queue_reclaim_expired(NULL)",
     "pending_object_writes(now(), 0)", "pending_object_writes(now(), 1001)", "pending_object_writes(NULL, 5)",
     "maintenance_candidates(now(), 0)", "maintenance_candidates(now(), 1001)", "maintenance_candidates(NULL, 5)",
+    "account_deletion_candidates(now(), 0)", "account_deletion_candidates(NULL, 5)",
 ])
 def test_functions_reject_invalid_arguments(env, call):
     with pytest.raises(DBAPIError) as error:

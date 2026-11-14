@@ -4,6 +4,7 @@ import json
 import logging
 import time
 
+from changelens.auth.logto_management import idp_for
 from changelens.config import Settings
 from changelens.domain import Database
 from changelens.domain.retention import run_maintenance
@@ -30,11 +31,12 @@ def main(argv=None):
     db = Database(settings.database_url)
     # No schema bootstrap or bucket creation here: even preview must remain read-only.
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)
+    idp = idp_for(settings)
     try:
         db.assert_app_role()  # RLS must apply to this process (I-8 S3)
         while True:
             try:
-                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply)
+                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp)
                 print(json.dumps(summary, sort_keys=True), flush=True)
                 if args.once:
                     return 0

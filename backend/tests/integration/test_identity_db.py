@@ -22,7 +22,7 @@ from test_reviews import _compared, _findings, _post
 from conftest import PG, SUBJECT_A, TENANT_A, TENANT_B, TOKEN_A, auth, reset_schema, db_url
 
 SCRATCH_DB = "changelens_migrations_test"
-HEAD = "0003_rls"
+HEAD = "0004_account_deletion"
 OWNER_URL = db_url(SCRATCH_DB, OWNER_ROLE)
 
 
@@ -54,6 +54,7 @@ def build_legacy(engine) -> None:
     Base.metadata.create_all(engine)
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE account_onboarding DROP CONSTRAINT fk_account_onboarding_user"))
+        conn.execute(text("DROP TABLE account_deletions"))  # I-8 S5, after the baseline too
         conn.execute(text("DROP TABLE memberships"))
         conn.execute(text("DROP TABLE users"))
 

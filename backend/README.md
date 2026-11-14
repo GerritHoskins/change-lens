@@ -1,6 +1,6 @@
 # ChangeLens dev comparison API (I-22)
 
-A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Every route goes through GUARD (03a P0): a Logto access token (`logto` mode) or, locally, a dev token (`dev` mode) becomes a subject, and the subject must have a user and an active membership, from which the tenant comes. Sign-up (`POST /session`) and row-level security are later I-8 slices. **Never deploy this publicly.**
+A local development backend: a FastAPI `api` process, a `worker` process, a Postgres job queue and S3-compatible object storage (MinIO). Every route goes through GUARD (03a P0): a Logto access token (`logto` mode) or, locally, a dev token (`dev` mode) becomes a subject, and the subject must have a user and an active membership, from which the tenant comes. Sign-up is `POST /session` (I-8 S2); row-level security applies to everything the processes do (I-8 S3). **Never deploy this publicly.**
 
 The comparison runs the fact pipeline (`pipeline_version = "facts-4"`): parse (I-1), extract (I-2), align and compare (I-3, I-4), verify and report (I-5). By default the worker uses a fake llm that answers every schema deterministically (one fact per line) and costs a configurable amount per explanation; `CHANGELENS_LLM=ionos` uses the real model (§8). Use synthetic documents only.
 
@@ -9,7 +9,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | Module | Path | Role |
 |---|---|---|
 | `api` | `changelens/api/` | Routes, GUARD (`auth.py`), upload checks, problem+json errors, access log |
-| `auth` | `changelens/auth/` | Offline JWT verification and the refreshing Logto JWKS key holder (`jwks.py`) |
+| `auth` | `changelens/auth/` | Offline JWT verification, the refreshing Logto JWKS key holder (`jwks.py`) and the Logto Management client that deletes users (`logto_management.py`) |
 | `domain` | `changelens/domain/` | SQLAlchemy models, tenant-scoped sessions and repositories; pre-tenant user and membership lookups (`identity.py`) |
 | migrations | `migrations/`, `alembic.ini`, `changelens/db.py` | Alembic revisions; baseline stamp, role bootstrap and dev seed commands |
 | `storage` | `changelens/storage/` | S3 adapter; tenant-prefixed keys; in-memory store for unit tests |
@@ -123,6 +123,9 @@ Authentication settings. `dev` is the default mode, and `Settings.from_env` refu
 | `CHANGELENS_LOGTO_ISSUER` | `logto` mode: the token issuer, `https://…/oidc` |
 | `CHANGELENS_LOGTO_AUDIENCE` | `logto` mode: the API resource indicator |
 | `CHANGELENS_LOGTO_JWKS_URL` | `logto` mode: Logto's JWKS URL, `https` only. Keys are fetched from here only (3 s timeout, 64 KiB cap); an unknown `kid` refreshes at most once per 60 s, and a failed refresh keeps the cached keys |
+| `CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT` | `logto` mode, required: the Logto base URL, `https`, for deleting the Logto user on account deletion (I-8 S5) |
+| `CHANGELENS_LOGTO_M2M_APP_ID`, `CHANGELENS_LOGTO_M2M_APP_SECRET` | `logto` mode, required: a machine-to-machine app with the Logto Management API role. Set them for the api and the retention process |
+| `CHANGELENS_LOGTO_MANAGEMENT_RESOURCE` | optional; default `https://default.logto.app/api` (Logto OSS) |
 
 Logto access tokens must live at most 900 s (`JwtPolicy`; set this on the API resource in Logto, D-8 C5) and be signed with RS256 (the verifier also accepts PS256 and ES256 keys, nothing else).
 
@@ -226,8 +229,9 @@ They cover:
 - migrations (I-8 S1): `upgrade head` matches the models, the identity revision downgrades and upgrades, and a `create_all`-built database is adopted, stamped and upgraded (or refused when it differs);
 - GUARD in Postgres: a deleted user, an inactive membership or no membership is rejected on the next request; one active membership per user; onboarding rows and review actors carry the user ID.
 - row-level security (I-8 S3, `test_rls_db.py`): conftest bootstraps the roles, migrates as `changelens_owner` and runs the api, worker and retention as `changelens_app`, so the whole suite runs under RLS; only fixtures (`env.sql`, seeding, truncation) use an owner connection. The tests check that every table with `tenant_id` has a forced policy, direct SQL and an unfiltered query as the app role, every route in the OpenAPI schema across tenants, every job kind, and the functions' columns and argument checks.
+- account deletion (I-8 S5, `test_account_deletion_db.py`): `DELETE /me` removes the tenant's rows and objects and leaves a tombstone, locks the token out at once, resumes after a failure at the project, account-row or Logto step, and leaves the other tenant untouched.
 
-The unit tests cover the Logto path with keys generated in the test and the JWKS served through `httpx.MockTransport` (`tests/unit/test_guard_logto.py`).
+The unit tests cover the Logto path with keys generated in the test and the JWKS served through `httpx.MockTransport` (`tests/unit/test_guard_logto.py`), and the Logto Management client the same way (`tests/unit/test_logto_management.py`).
 
 The constructed-dataset round trip reads the private data in place and is skipped when it is absent. It is not in CI. It reports counts and record IDs only:
 
@@ -374,7 +378,9 @@ From `backend/`, preview one batch against the deliberately configured database:
 .venv\Scripts\python -m changelens.retention --once
 ```
 
-Preview is read-only and creates no schema or bucket. `--apply --once` executes one batch; `--apply --interval-seconds 60` runs continuously. Deploy and supervise this process independently of the comparison worker so a busy queue cannot starve cleanup. No existing user or production data was used for local lifecycle tests. Account/IdP deletion, Apple revocation, backups/PITR/snapshots and native erasure remain acceptance work; see the [data inventory](../docs/data-inventory.md).
+Preview is read-only and creates no schema or bucket. `--apply --once` executes one batch; `--apply --interval-seconds 60` runs continuously. Deploy and supervise this process independently of the comparison worker so a busy queue cannot starve cleanup. No existing user or production data was used for local lifecycle tests. Apple revocation (I-8 S4), backups/PITR/snapshots and native erasure remain acceptance work; see the [data inventory](../docs/data-inventory.md).
+
+`DELETE /me` (I-8 S5) deletes the signed-in account and, in v1, its whole tenant: it freezes the account (the same token is `unauthenticated` from the next request), deletes every project as above, the onboarding row and the Logto user, and leaves a tombstone user row with no subject. It returns `204` when all of that finished and `202` while a step is pending; `--apply` retries pending account deletions too. In `dev` mode there is no Logto user to delete.
 
 ## What is placeholder or out of scope
 

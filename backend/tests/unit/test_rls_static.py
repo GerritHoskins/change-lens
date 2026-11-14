@@ -12,19 +12,20 @@ from changelens.db import APP_ROLE, DEV_PASSWORDS, OWNER_ROLE, role_passwords
 from changelens.domain.models import Base
 from changelens.domain.retention import RETENTION
 
-MIGRATION = Path(__file__).resolve().parents[2] / "migrations" / "versions" / "0003_rls.py"
+VERSIONS = Path(__file__).resolve().parents[2] / "migrations" / "versions"
 
 
-def _migration():
-    spec = importlib.util.spec_from_file_location("rls_migration", MIGRATION)
+def _migration(name="0003_rls"):
+    spec = importlib.util.spec_from_file_location("rls_" + name, VERSIONS / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-def test_the_migration_covers_every_model_with_tenant_id():
+def test_the_migrations_cover_every_model_with_tenant_id():
     with_tenant = {t.name for t in Base.metadata.tables.values() if "tenant_id" in t.c}
-    assert set(_migration().TENANT_TABLES) == with_tenant
+    covered = set(_migration().TENANT_TABLES) | set(_migration("0004_account_deletion").TENANT_TABLES)
+    assert covered == with_tenant
     assert {t.name for t in Base.metadata.tables.values()} - with_tenant == {"users"}
 
 

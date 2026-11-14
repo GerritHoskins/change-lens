@@ -389,6 +389,9 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens with I-27), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
+  # As built (I-8 S5), sole owner in v1, each step resumable: freeze (receipt, deleted_at, membership inactive)
+  # → Apple revoke (S4) → DELETE_PROJECT for every project → onboarding row → delete the Logto user (404 = done)
+  # → tombstone (subject cleared) and membership deleted. 204 when all done, 202 while pending; maintenance retries.
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,
