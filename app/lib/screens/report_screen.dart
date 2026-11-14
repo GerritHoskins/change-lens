@@ -8,6 +8,7 @@ import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
+import 'definition_sheets.dart';
 import 'evidence_screen.dart';
 import 'finding_screen.dart';
 import 'report_widgets.dart';
@@ -109,10 +110,15 @@ class _ReportScreenState extends State<ReportScreen> {
                     Expanded(child: Text('${l.groupNeedsReview} · ${needsReview.length}',
                       style: Theme.of(context).textTheme.titleSmall)),
                   ])),
-                TextButton(onPressed: _allDifferences,
-                  style: TextButton.styleFrom(alignment: AlignmentDirectional.centerStart,
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-                  child: Text(l.selectedSummary(r.otherDifferences))),
+                Row(children: [
+                  Expanded(child: TextButton(onPressed: _allDifferences,
+                    style: TextButton.styleFrom(alignment: AlignmentDirectional.centerStart,
+                      padding: const EdgeInsets.symmetric(vertical: 12)),
+                    child: Text(l.selectedSummary(r.otherDifferences)))),
+                  CalmInfoButton(key: const Key('info-summary'), term: l.defSummaryTitle,
+                    sheet: (_) => SummaryDefinitionSheet(otherDifferences: r.otherDifferences,
+                      onShowAll: _allDifferences)),
+                ]),
                 SectionHeader(l.groupPrioritised),
                 if (!r.inGroup('prioritised').any((f) => topic == null || f.topic == topic))
                   Text(topic == null ? l.noPrioritised : l.noTopicChanges),

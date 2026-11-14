@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../design/calm_theme.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 
@@ -81,13 +82,15 @@ String? reviewLabel(AppLocalizations l, Review? r) => switch (r?.action) {
 /// One quoted passage, labelled with its side; tap to open it in the document.
 class QuoteCard extends StatelessWidget {
   const QuoteCard({super.key, required this.evidence, this.onTap,
-    this.versionLabel, this.evidenceLabel});
+    this.versionLabel, this.evidenceLabel, this.evidenceInfo});
 
   final Evidence evidence;
   final VoidCallback? onTap;
   final String? versionLabel;
   /// A localized observation supplied by the device's evidence resolver, never inferred here.
   final String? evidenceLabel;
+  /// Shown beside [evidenceLabel] only: explains how the passage was found.
+  final Widget? evidenceInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +115,10 @@ class QuoteCard extends StatelessWidget {
               Text(source, style: type.labelLarge?.copyWith(color: colors.muted)),
               if (evidenceLabel != null) Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(evidenceLabel!, style: type.bodySmall?.copyWith(color: colors.muted))),
+                child: Row(children: [
+                  Expanded(child: Text(evidenceLabel!, style: type.bodySmall?.copyWith(color: colors.muted))),
+                  ?evidenceInfo,
+                ])),
               const SizedBox(height: 12),
               Text(evidence.quote, style: type.bodyLarge),
               if (onTap != null) Padding(
@@ -121,7 +127,7 @@ class QuoteCard extends StatelessWidget {
                   Expanded(child: Text(l.showInDocument, style: type.labelLarge?.copyWith(
                     decoration: TextDecoration.underline))),
                   const SizedBox(width: 8),
-                  const Icon(Icons.open_in_new, size: 18),
+                  const Icon(CalmIcons.openExternal, size: 18),
                 ])),
             ]),
           ),
@@ -181,7 +187,7 @@ class FindingTile extends StatelessWidget {
                 Expanded(child: Text(reviewed ?? l.notReviewed,
                   style: type.labelLarge?.copyWith(color: foreground))),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: foreground),
+                Icon(CalmIcons.chevronRight, color: foreground),
               ])),
               if (f.clientApprovalRecorded) Padding(
                 padding: const EdgeInsets.only(top: 10),

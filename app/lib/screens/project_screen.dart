@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_controls.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
@@ -118,39 +120,20 @@ class _ProjectScreenState extends State<ProjectScreen> {
   Future<(String, String?)?> _askLabel({required bool paste}) {
     final l = AppLocalizations.of(context);
     final label = TextEditingController(), text = TextEditingController();
-    return showDialog<(String, String?)>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(paste ? l.importPaste : l.importPdf),
-        content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-                key: const Key('label'),
-                controller: label,
-                maxLength: 100,
-                decoration: InputDecoration(labelText: l.versionLabel, hintText: l.versionLabelHint)),
-            if (paste)
-              TextField(
-                  key: const Key('pasted'),
-                  controller: text,
-                  minLines: 4,
-                  maxLines: 10,
-                  decoration: InputDecoration(hintText: l.pasteHint, border: const OutlineInputBorder())),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-          FilledButton(
-            key: const Key('confirm-import'),
-            onPressed: () {
-              if (label.text.trim().isEmpty || (paste && text.text.trim().isEmpty)) return;
-              Navigator.pop(context, (label.text.trim(), paste ? text.text : null));
-            },
-            child: Text(l.upload),
-          ),
-        ],
-      ),
-    );
+    return showCalmSheet<(String, String?)>(context, builder: (context) => CalmSheet(
+      title: paste ? l.importPaste : l.importPdf,
+      action: l.upload, actionKey: const Key('confirm-import'),
+      onAction: () {
+        if (label.text.trim().isEmpty || (paste && text.text.trim().isEmpty)) return;
+        Navigator.pop(context, (label.text.trim(), paste ? text.text : null));
+      },
+      children: [
+        TextField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
+          decoration: InputDecoration(labelText: l.versionLabel, hintText: l.versionLabelHint)),
+        if (paste) TextField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
+          decoration: InputDecoration(hintText: l.pasteHint)),
+      ],
+    ));
   }
 
   Future<void> _import({required bool paste}) async {
@@ -190,12 +173,14 @@ class _ProjectScreenState extends State<ProjectScreen> {
       canPop: !_deleting,
       child: Scaffold(
       appBar: AppBar(actions: [
-        if (!_deleteStarted) PopupMenuButton<String>(
+        if (!_deleteStarted) Padding(padding: const EdgeInsetsDirectional.only(end: 12), child: PopupMenuButton<String>(
           key: const Key('project-menu'),
           enabled: !importing,
+          icon: Icon(Theme.of(context).platform == TargetPlatform.iOS ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (_) => _confirmDelete(),
-          itemBuilder: (_) => [PopupMenuItem(value: 'delete', child: Text(l.deleteProject))],
-        ),
+          itemBuilder: (_) => [PopupMenuItem(value: 'delete', child: Text(l.deleteProject,
+            style: text.labelLarge?.copyWith(color: Theme.of(context).colorScheme.error)))],
+        )),
       ]),
       body: _deleteStarted ? Center(child: Padding(
         padding: const EdgeInsets.all(24),
@@ -223,20 +208,20 @@ class _ProjectScreenState extends State<ProjectScreen> {
                 builder: (_) => CompareScreen(project: widget.project, versions: versions)));
               if (mounted) await _load();
             },
-            icon: const Icon(Icons.compare_arrows),
+            icon: const Icon(CalmIcons.compare),
             label: Text(l.compareBriefs),
           ),
           const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton.icon(
+            TextButton.icon(
                 key: const Key('paste'),
                 onPressed: importing ? null : () => _import(paste: true),
-                icon: const Icon(Icons.content_paste),
+                icon: const Icon(CalmIcons.paste),
                 label: Text(l.importPaste)),
-            OutlinedButton.icon(
+            TextButton.icon(
                 key: const Key('pick-pdf'),
                 onPressed: importing ? null : () => _import(paste: false),
-                icon: const Icon(Icons.upload_file),
+                icon: const Icon(CalmIcons.pickPdf),
                 label: Text(l.importPdf)),
           ]),
           if (importing) Padding(padding: const EdgeInsets.only(top: 12),
@@ -264,7 +249,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       color: c.status == 'failed' ? Theme.of(context).colorScheme.error
                         : c.status == 'partial' ? colors.warning : colors.muted))),
                     const SizedBox(width: 12),
-                    Icon(Icons.chevron_right, color: colors.muted),
+                    Icon(CalmIcons.chevronRight, color: colors.muted),
                   ]),
                 ])),
             )),
@@ -280,7 +265,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
               decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Padding(padding: const EdgeInsets.only(top: 2),
-                  child: Icon(v.kind == 'pdf' ? Icons.picture_as_pdf_outlined : Icons.notes, color: colors.muted)),
+                  child: Icon(v.kind == 'pdf' ? CalmIcons.document : CalmIcons.text, color: colors.muted)),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(v.label, style: text.titleMedium),

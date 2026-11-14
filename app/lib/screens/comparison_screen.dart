@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
@@ -138,7 +139,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 24),
               child: FilledButton.icon(
-                icon: const Icon(Icons.article_outlined),
+                icon: const Icon(CalmIcons.document),
                 label: Text(l.openReport),
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => ReportScreen(comparisonId: c.id, versions: versions, scope: c.scope))),
@@ -148,7 +149,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             const SizedBox(height: 24),
             Text(l.comparisonReturnHint, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            TextButton(onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
               child: Text(l.returnToProjects)),
           ],
         ]),
