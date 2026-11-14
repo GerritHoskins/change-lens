@@ -127,9 +127,8 @@ void main() {
     print('No-scroll check, overflow in px: ${over.isEmpty ? 'none' : over}; '
       'least spare room: ${[for (final e in tightest) '${e.key} ${e.value.toStringAsFixed(0)} px']}');
     expect(measured, hasLength(2 * 2 * (steps + 1)));
-    // Reported, not compensated (handoff §6.2: don't shrink type): iOS's 17 px body makes these two
-    // German steps scroll. Android DE step 2, with 16 px body, has room to spare.
-    const reported = {'iOS de firstRun step 2': 46.0, 'iOS de firstRun step 5': 12.0};
+    // Design round 4 shortened the German copy on steps 2 and 5, so no step may scroll any more.
+    const reported = <String, double>{};
     for (final e in over.entries) {
       expect(reported[e.key], isNotNull, reason: '${e.key} scrolls by ${e.value} px at 390×844, 1.0');
       expect(e.value, lessThanOrEqualTo(reported[e.key]!), reason: '${e.key} grew');
