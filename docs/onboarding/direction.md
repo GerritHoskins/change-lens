@@ -236,3 +236,34 @@ roughly 25 px more room on German iOS (≈ +50 px):
 
 The trade-off: step 2 would no longer repeat the compare screen's wording word for word. Take this if the
 test still reports less than 24 px for iOS DE step 2.
+
+## 11. Round 5 (2026-11-14): the 24 px margin
+
+The app measurement after round 4 (`c33bee7`): no step scrolls, but the tightest spare room is 13 px. That's
+step 3 on iOS in EN and DE, and step 5 on iOS in DE, against the 24 px target. Each needs one line fewer at the
+iOS body (17 px, 24.65 px line height).
+
+Round 4's replica estimate for step 5 DE (≈ +37 px) was about one line too optimistic, the same kind of
+offset as step 2. So this round doesn't estimate spare room. It changes line counts and checks the slack
+on the last line, so that Flutter's slightly different line breaking can't add the line back.
+
+| Key | Locale | Before | After |
+|---|---|---|---|
+| `onbEvidenceBody` | EN | Each finding quotes the passage from both versions. “Show in document” opens the source, and on a PDF page the passage is highlighted. Quotes are checked against the source before they're shown. | Each finding quotes both versions. “Show in document” opens the source, with the passage highlighted on PDF pages. Quotes are checked against the source first. |
+| `onbEvidenceBody` | DE | Jeder Befund zitiert die Textstelle aus beiden Versionen. „Im Dokument anzeigen“ öffnet die Quelle, und auf einer PDF-Seite ist die Stelle markiert. Zitate werden vor der Anzeige mit der Quelle abgeglichen. | Jeder Befund zitiert beide Versionen. „Im Dokument anzeigen“ öffnet die Quelle, bei PDFs mit markierter Stelle. Zitate werden vorher mit der Quelle abgeglichen. |
+| `onbReviewApproval` | DE | Gibt der Kunde etwas frei, dokumentiere es getrennt in seinen Worten, etwa als eingefügte E-Mail. ChangeLens überprüft das nicht. | Gibt der Kunde etwas frei, dokumentiere es getrennt, etwa als eingefügte E-Mail. |
+
+| Key | Lines at 350 px, iOS 17 px (Chrome, bundled Roboto) | Last line after |
+|---|---|---|
+| EN `onbEvidenceBody` | 5 → 4 | 281 of 350 px |
+| DE `onbEvidenceBody` | 5 → 4 | 265 of 350 px |
+| DE `onbReviewApproval` | 3 → 2 | 282 of 350 px |
+
+Android (16 px) drops the same line in each case. The expected result is +24.65 px on each tight step,
+so about 37 px of spare room.
+
+Why the meaning is unchanged:
+- "Each finding quotes both versions" keeps brief §2 idea 3. "Quotes are checked against the source first"
+  is brief §4.
+- On step 5, German drops "ChangeLens überprüft das nicht", because the label right below says it verbatim:
+  „Kundenfreigabe dokumentiert (von ChangeLens nicht überprüft)“. English step 5 is unchanged, since it had room.
