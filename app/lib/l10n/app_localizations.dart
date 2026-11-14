@@ -1253,13 +1253,13 @@ abstract class AppLocalizations {
   /// No description provided for @onbContextScope.
   ///
   /// In en, this message translates to:
-  /// **'Then say what the newer version is. That decides how missing items are reported:'**
+  /// **'Then say what the newer version is:'**
   String get onbContextScope;
 
   /// No description provided for @onbContextNote.
   ///
   /// In en, this message translates to:
-  /// **'Something missing from the newer version is never reported as cancelled.'**
+  /// **'Missing items are never reported as cancelled.'**
   String get onbContextNote;
 
   /// No description provided for @onbEvidenceTitle.
@@ -1457,19 +1457,19 @@ abstract class AppLocalizations {
   /// No description provided for @onbScopeLineComplete.
   ///
   /// In en, this message translates to:
-  /// **'Complete replacement: what\'s missing is reported as “Not in the replacement”.'**
+  /// **'Complete replacement: what\'s missing counts as “Not in the replacement”.'**
   String get onbScopeLineComplete;
 
   /// No description provided for @onbScopeLinePartial.
   ///
   /// In en, this message translates to:
-  /// **'Partial update: what it doesn\'t mention is “Not addressed”.'**
+  /// **'Partial update: what it doesn\'t mention counts as “Not addressed”.'**
   String get onbScopeLinePartial;
 
   /// No description provided for @onbScopeLineUnknown.
   ///
   /// In en, this message translates to:
-  /// **'Not sure: missing items go to “Needs your review”.'**
+  /// **'Not sure: what\'s missing goes to “Needs your review”.'**
   String get onbScopeLineUnknown;
 
   /// No description provided for @onbContextAlt.

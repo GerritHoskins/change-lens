@@ -692,12 +692,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onbContextTitle => 'You set the order and the scope';
 
   @override
-  String get onbContextScope =>
-      'Then say what the newer version is. That decides how missing items are reported:';
+  String get onbContextScope => 'Then say what the newer version is:';
 
   @override
-  String get onbContextNote =>
-      'Something missing from the newer version is never reported as cancelled.';
+  String get onbContextNote => 'Missing items are never reported as cancelled.';
 
   @override
   String get onbEvidenceTitle => 'Every change shows its source';
@@ -823,15 +821,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onbScopeLineComplete =>
-      'Complete replacement: what\'s missing is reported as “Not in the replacement”.';
+      'Complete replacement: what\'s missing counts as “Not in the replacement”.';
 
   @override
   String get onbScopeLinePartial =>
-      'Partial update: what it doesn\'t mention is “Not addressed”.';
+      'Partial update: what it doesn\'t mention counts as “Not addressed”.';
 
   @override
   String get onbScopeLineUnknown =>
-      'Not sure: missing items go to “Needs your review”.';
+      'Not sure: what\'s missing goes to “Needs your review”.';
 
   @override
   String get onbContextAlt =>

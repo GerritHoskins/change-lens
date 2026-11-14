@@ -181,3 +181,58 @@ Applied handoff §10.1 in order. The flow, the step count and the sign-in layout
 
 Claims re-checked against brief §1–§6. Nothing from §7 appears. Step 6 doesn't say that Start opens a
 comparison. A new `/impeccable critique` wasn't run: Impeccable isn't available in this session.
+
+## 10. Round 4 (2026-11-14): German overflow on iOS
+
+The implemented app (`6a3791a`) scrolled on German steps 2 (+46 px) and 5 (+12 px) on iOS, where body
+text is 17 px with a 24.65 px line height. This round is copy only: same steps, type, spacing and layout.
+
+| Key | Locale | Before | After |
+|---|---|---|---|
+| `onbContextScope` | EN | Then say what the newer version is. That decides how missing items are reported: | Then say what the newer version is: |
+| `onbScopeLineComplete` | EN | Complete replacement: what's missing is reported as “Not in the replacement”. | Complete replacement: what's missing counts as “Not in the replacement”. |
+| `onbScopeLinePartial` | EN | Partial update: what it doesn't mention is “Not addressed”. | Partial update: what it doesn't mention counts as “Not addressed”. |
+| `onbScopeLineUnknown` | EN | Not sure: missing items go to “Needs your review”. | Not sure: what's missing goes to “Needs your review”. |
+| `onbContextNote` | EN | Something missing from the newer version is never reported as cancelled. | Missing items are never reported as cancelled. |
+| `onbContextScope` | DE | Gib dann an, was die neuere Version ist. Das bestimmt, wie fehlende Punkte gemeldet werden: | Gib dann an, was die neuere Version ist: |
+| `onbScopeLineComplete` | DE | Vollständiger Ersatz: Fehlendes wird als „In der Ersatzversion nicht enthalten“ gemeldet. | Vollständiger Ersatz: Fehlendes gilt als „In der Ersatzversion nicht enthalten“. |
+| `onbScopeLineUnknown` | DE | Nicht sicher: Fehlende Punkte landen unter „Von dir zu prüfen“. | Nicht sicher: Fehlendes landet unter „Von dir zu prüfen“. |
+| `onbContextNote` | DE | Was in der neueren Version fehlt, wird nie als gestrichen gemeldet. | Fehlendes gilt nie als gestrichen. |
+| `onbReviewBody` | DE | Bestätige, korrigiere oder verwirf jeden Befund. Damit hältst du fest, dass du ihn geprüft hast, mehr nicht. | Bestätige, korrigiere oder verwirf jeden Befund. Das heißt nur: Du hast ihn geprüft. |
+| `onbReviewApproval` | DE | Wenn der Kunde etwas freigibt, dokumentiere das getrennt in seinen Worten, zum Beispiel mit einer eingefügten E-Mail. ChangeLens überprüft das nicht. | Gibt der Kunde etwas frei, dokumentiere es getrennt in seinen Worten, etwa als eingefügte E-Mail. ChangeLens überprüft das nicht. |
+
+Why these cuts:
+- On step 2, the three scope lines now share one pattern: "Fehlendes gilt als …" / "what's missing counts as …".
+  The quoted app labels are unchanged, word for word. `onbContextScope` loses its second sentence, because each
+  line now says what missing items count as.
+- English only follows where the parallel wording is also clearer, and to gain the margin that EN iOS step 2
+  needed (it had 4 px to spare).
+- `confirmIntro` (the compare screen's text) and the app strings inside the step 5 example are untouched.
+
+**Measurement.** Flutter can't run in either environment: the SDK isn't installed, and its downloads are blocked
+by the network allowlist. So I measured a replica of steps 2 and 5, built from `onboarding_screen.dart` and
+`calm_theme.dart` metrics, in headless Chrome with the bundled Roboto:
+- Viewport: 643 px (844 − 47 − 48 − 106).
+- Spare: viewport − column − 24, as in `onboarding_test.dart`.
+
+I calibrated it against the four app values the test reports. On step 5 the replica matches the app within 2 px.
+On step 2 it is one line more generous than the app (offset 29 px on iOS, 21 px on Android), most likely because
+Flutter wraps one line differently. The estimates below subtract those offsets.
+
+| Step | Platform | EN before → after | DE before → after |
+|---|---|---|---|
+| 2 | iOS (17 px) | +4 → ≈ +29 | −46 → ≈ +25 |
+| 2 | Android (16 px) | ≈ +26 → ≈ +49 | +3 → ≈ +48 |
+| 5 | iOS (17 px) | ≈ +62 → ≈ +62 (unchanged) | −12 → ≈ +37 |
+| 5 | Android (16 px) | ≈ +74 (unchanged) | ≈ +27 → ≈ +74 |
+
+German step 2 on iOS is the tight one: about 25 px against the 24 px target, inside the estimate's error. The
+implementing agent's `onboarding_test.dart` run is the real check.
+
+**Owner option (not applied): a new key `onbContextBody`.** It replaces `confirmIntro` on step 2 only and gives
+roughly 25 px more room on German iOS (≈ +50 px):
+- EN: "You set the order. ChangeLens never guesses it from upload time or file names."
+- DE: "Die Reihenfolge legst du fest. ChangeLens rät sie nie aus Upload-Zeit oder Dateinamen."
+
+The trade-off: step 2 would no longer repeat the compare screen's wording word for word. Take this if the
+test still reports less than 24 px for iOS DE step 2.

@@ -695,12 +695,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onbContextTitle => 'Du legst Reihenfolge und Umfang fest';
 
   @override
-  String get onbContextScope =>
-      'Gib dann an, was die neuere Version ist. Das bestimmt, wie fehlende Punkte gemeldet werden:';
+  String get onbContextScope => 'Gib dann an, was die neuere Version ist:';
 
   @override
-  String get onbContextNote =>
-      'Was in der neueren Version fehlt, wird nie als gestrichen gemeldet.';
+  String get onbContextNote => 'Fehlendes gilt nie als gestrichen.';
 
   @override
   String get onbEvidenceTitle => 'Jede Änderung zeigt ihre Quelle';
@@ -714,11 +712,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbReviewBody =>
-      'Bestätige, korrigiere oder verwirf jeden Befund. Damit hältst du fest, dass du ihn geprüft hast, mehr nicht.';
+      'Bestätige, korrigiere oder verwirf jeden Befund. Das heißt nur: Du hast ihn geprüft.';
 
   @override
   String get onbReviewApproval =>
-      'Wenn der Kunde etwas freigibt, dokumentiere das getrennt in seinen Worten, zum Beispiel mit einer eingefügten E-Mail. ChangeLens überprüft das nicht.';
+      'Gibt der Kunde etwas frei, dokumentiere es getrennt in seinen Worten, etwa als eingefügte E-Mail. ChangeLens überprüft das nicht.';
 
   @override
   String get onbStartTitle => 'Bereit für deinen ersten Vergleich';
@@ -827,7 +825,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbScopeLineComplete =>
-      'Vollständiger Ersatz: Fehlendes wird als „In der Ersatzversion nicht enthalten“ gemeldet.';
+      'Vollständiger Ersatz: Fehlendes gilt als „In der Ersatzversion nicht enthalten“.';
 
   @override
   String get onbScopeLinePartial =>
@@ -835,7 +833,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbScopeLineUnknown =>
-      'Nicht sicher: Fehlende Punkte landen unter „Von dir zu prüfen“.';
+      'Nicht sicher: Fehlendes landet unter „Von dir zu prüfen“.';
 
   @override
   String get onbContextAlt =>
