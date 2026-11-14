@@ -228,8 +228,9 @@ def maintenance_snapshot(db, *, now=None, limit=100):
     return db.maintenance_candidates(now or utcnow(), limit)
 
 
-def run_maintenance(db, store, *, now=None, limit=100, execute=False) -> dict:
-    """Independent maintenance entry point. Default is a content-free dry run."""
+def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None) -> dict:
+    """Independent maintenance entry point. Default is a content-free dry run. `idp` deletes Logto users
+    for pending account deletions (I-8 S5); without it that step stays pending."""
     now = now or utcnow()
     projects, deletions, purges = maintenance_snapshot(db, now=now, limit=limit)
     result = {"execute": execute, "candidate_projects": len(projects), "pending_project_deletions": len(deletions),
@@ -248,4 +249,7 @@ def run_maintenance(db, store, *, now=None, limit=100, execute=False) -> dict:
     result["completed_object_purges"] = sum(process_object_purge(db, store, tenant, identifier, now=now)
                                             for tenant, identifier in purges)
     result["resolved_uploads"] = reconcile_pending_writes(db, store, now=now, limit=limit)
+    from changelens.domain.accounts import run_account_deletions  # accounts imports this module
+    result["completed_account_deletions"], result["pending_account_deletions"] = run_account_deletions(
+        db, store, idp, now=now, limit=limit)
     return result

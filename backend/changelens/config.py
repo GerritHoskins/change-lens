@@ -75,6 +75,11 @@ class Settings:
     logto_issuer: Optional[str] = None
     logto_audience: Optional[str] = None  # the API resource indicator
     logto_jwks_url: Optional[str] = None
+    # Logto Management API (I-8 S5): a machine-to-machine app that may delete users (account deletion).
+    logto_management_endpoint: Optional[str] = None  # the Logto base URL, https
+    logto_m2m_app_id: Optional[str] = None
+    logto_m2m_app_secret: Optional[str] = field(default=None, repr=False)
+    logto_management_resource: str = "https://default.logto.app/api"
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
 
@@ -93,6 +98,10 @@ class Settings:
                 raise ValueError("the Logto JWKS URL must be https")
             if self.dev_tokens:
                 raise ValueError("dev tokens are refused in logto mode")
+        management = self.logto_management_endpoint
+        if management is not None and (not management.startswith("https://") or management != management.strip()
+                                       or not (self.logto_m2m_app_id and self.logto_m2m_app_secret)):
+            raise ValueError("Logto management needs an https endpoint, app ID and secret")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -112,7 +121,15 @@ class Settings:
                 raise RuntimeError("CHANGELENS_DEV_TOKEN must not be set in logto mode")
             auth.update(logto_issuer=env.get("CHANGELENS_LOGTO_ISSUER"),
                         logto_audience=env.get("CHANGELENS_LOGTO_AUDIENCE"),
-                        logto_jwks_url=env.get("CHANGELENS_LOGTO_JWKS_URL"))
+                        logto_jwks_url=env.get("CHANGELENS_LOGTO_JWKS_URL"),
+                        logto_management_endpoint=env.get("CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT"),
+                        logto_m2m_app_id=env.get("CHANGELENS_LOGTO_M2M_APP_ID"),
+                        logto_m2m_app_secret=env.get("CHANGELENS_LOGTO_M2M_APP_SECRET"))
+            if env.get("CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"):
+                auth["logto_management_resource"] = env["CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"]
+            # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
+            if not auth["logto_management_endpoint"]:
+                raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
         else:
             raise RuntimeError("CHANGELENS_AUTH_MODE must be dev or logto")
         try:
