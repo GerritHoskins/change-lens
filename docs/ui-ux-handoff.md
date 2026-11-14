@@ -154,7 +154,7 @@ composition/components are design work for the next agent, not approved mockups.
 
 | Journey/surface | Required outcome and states |
 | --- | --- |
-| First use/auth | Explain value through the comparison task; product sign-in, not exposed dev-token setup. Design signed-out/loading/cancel/error/expired-session and link_required states against I-18; keep dev settings development-only when auth ships |
+| First use/auth | Order on first launch: sign-in first, then onboarding, then Projects (owner, 2026-11-13; 02 §1 step 1). Onboarding explains value through the comparison task; product sign-in, not exposed dev-token setup. Design signed-out/loading/cancel/error/expired-session and link_required states against I-18; keep dev settings development-only when auth ships |
 | Projects | One obvious Compare two briefs entry; create/open project; empty/loading/error/refresh; reading/processing comparisons recoverable from list |
 | Compare | Two explicit earlier/newer slots, each existing version or new import; project plus complete/partial/unknown scope; no default scope/chronology; duplicate prevention; explicit swap must preserve deliberate user choice |
 | Import | Label/paste/PDF now; gated image/camera/share-sheet later. Cancel, unsupported type, oversize/no text, upload progress, rejection, partial parse, retry with in-memory draft, interrupted handoff |
