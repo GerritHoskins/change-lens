@@ -129,6 +129,14 @@ quotes use the 16-pixel `space-inset`. Radii follow the tokens:
 and pills for buttons and chips. Text/icon buttons have a 48-pixel minimum target;
 the main action is a 60-pixel pill.
 
+**Documented exceptions to one main action (designs only, 2026-11-14).** Two first-launch
+screens have no black main pill. (1) Sign-in shows Sign in with Apple, Google and email as three
+buttons of the same size and weight, because App Review 4.8 requires an *equivalent* option. Each
+provider button follows its owner's rules (Apple: white-outline on light, white on dark; Google:
+light or dark theme), and email is an outlined ink pill. (2) The analytics consent screen
+(D-18 tier B) shows Allow and Don't allow as equal outlined pills, because refusing must be as easy as
+accepting. Neither screen is implemented. See `docs/onboarding/direction.md`.
+
 ## Motion and platform behavior
 
 Evidence enters over 180 ms with a small horizontal translation. A successful
