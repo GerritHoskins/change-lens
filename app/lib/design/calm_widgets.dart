@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'calm_controls.dart';
 import 'calm_icons.dart';
 import 'calm_theme.dart';
+
+/// Opens a definition sheet in context: a 48px info disc labelled "About {term}".
+class CalmInfoButton extends StatelessWidget {
+  const CalmInfoButton({super.key, required this.term, required this.sheet});
+  final String term;
+  final WidgetBuilder sheet;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = AppLocalizations.of(context).defInfo(term);
+    // The label is announced once, as the button's label; the tooltip is visual only.
+    return Tooltip(message: label, excludeFromSemantics: true, child: IconButton(
+      icon: Icon(CalmIcons.info, semanticLabel: label),
+      onPressed: () => showCalmSheet<void>(context, builder: sheet),
+    ));
+  }
+}
 
 class CalmCard extends StatelessWidget {
   const CalmCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(18)});

@@ -313,6 +313,8 @@ void main() {
     await services.load();
     await tester.pumpWidget(ChangeLensApp(services: services));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('projects-menu')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('base-url')), 'http://dev.test');

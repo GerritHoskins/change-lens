@@ -670,4 +670,214 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get saving => 'Wird gespeichert…';
+
+  @override
+  String get onbSkip => 'Überspringen';
+
+  @override
+  String get onbNext => 'Weiter';
+
+  @override
+  String onbStep(int current, int total) {
+    return 'Schritt $current von $total';
+  }
+
+  @override
+  String get onbExample => 'Beispiel';
+
+  @override
+  String get onbDone => 'Fertig';
+
+  @override
+  String get onbReplayEntry => 'So funktioniert ChangeLens';
+
+  @override
+  String get onbContextTitle => 'Du legst Reihenfolge und Umfang fest';
+
+  @override
+  String get onbContextScope =>
+      'Gib dann an, was die neuere Version ist. Das bestimmt, wie fehlende Punkte gemeldet werden:';
+
+  @override
+  String get onbContextNote =>
+      'Was in der neueren Version fehlt, wird nie als gestrichen gemeldet.';
+
+  @override
+  String get onbEvidenceTitle => 'Jede Änderung zeigt ihre Quelle';
+
+  @override
+  String get onbEvidenceBody =>
+      'Jeder Befund zitiert die Textstelle aus beiden Versionen. „Im Dokument anzeigen“ öffnet die Quelle, und auf einer PDF-Seite ist die Stelle markiert. Zitate werden vor der Anzeige mit der Quelle abgeglichen.';
+
+  @override
+  String get onbReviewTitle => 'Deine Prüfung ist keine Kundenfreigabe';
+
+  @override
+  String get onbReviewBody =>
+      'Bestätige, korrigiere oder verwirf jeden Befund. Damit hältst du fest, dass du ihn geprüft hast, mehr nicht.';
+
+  @override
+  String get onbReviewApproval =>
+      'Wenn der Kunde etwas freigibt, dokumentiere das getrennt in seinen Worten, zum Beispiel mit einer eingefügten E-Mail. ChangeLens überprüft das nicht.';
+
+  @override
+  String get onbStartTitle => 'Bereit für deinen ersten Vergleich';
+
+  @override
+  String get onbStartInputs =>
+      'Eingefügten Text oder ein PDF mit auswählbarem Text. Gescannte PDFs können nicht gelesen werden.';
+
+  @override
+  String onbStartLimits(int words, int pages, int megabytes) {
+    final intl.NumberFormat wordsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String wordsString = wordsNumberFormat.format(words);
+
+    return 'Bis etwa $wordsString Wörter pro Version. PDFs bis $pages Seiten und $megabytes MB.';
+  }
+
+  @override
+  String get onbStartOnline =>
+      'Eine Internetverbindung. Dokumente werden nicht auf diesem Gerät gespeichert.';
+
+  @override
+  String get onbStartLanguage =>
+      'Vergleiche wurden bisher nur mit englischen Briefings getestet.';
+
+  @override
+  String defInfo(String term) {
+    return 'Mehr zu $term';
+  }
+
+  @override
+  String get defScopeComplete =>
+      'Was darin fehlt, wird als „In der Ersatzversion nicht enthalten“ gemeldet. Das heißt nie, dass eine Verpflichtung gestrichen ist.';
+
+  @override
+  String get defScopePartial =>
+      'Was sie nicht erwähnt, wird als „Nicht angesprochen“ gemeldet: weder entfernt noch bestätigt.';
+
+  @override
+  String get defScopeUnknown =>
+      'Fehlende Punkte werden als „Unklar“ markiert und landen unter „Von dir zu prüfen“.';
+
+  @override
+  String get defChangeTypesTitle => 'Änderungsarten';
+
+  @override
+  String get defAdded => 'Neu in der neueren Version.';
+
+  @override
+  String get defChanged =>
+      'In beiden Versionen unterschiedlich. Beide Werte werden angezeigt.';
+
+  @override
+  String get defRemoved =>
+      'Fehlt in einem vollständigen Ersatz. Das heißt nicht, dass es gestrichen ist.';
+
+  @override
+  String get defNotAddressed =>
+      'Eine teilweise Aktualisierung erwähnt es nicht. Es ist weder entfernt noch bestätigt.';
+
+  @override
+  String get defUncertain =>
+      'ChangeLens kann es nicht sicher erkennen. Prüfe es selbst.';
+
+  @override
+  String get defReworded => 'Gleiche Bedeutung, andere Formulierung.';
+
+  @override
+  String get defEvidenceTitle => 'Wie eine Textstelle gefunden wurde';
+
+  @override
+  String get defModePdf => 'Die Textstelle ist auf der PDF-Seite markiert.';
+
+  @override
+  String get defModeFallback =>
+      'Die Markierung konnte nicht auf der Seite platziert werden, daher wird der ausgelesene Text gezeigt. Prüfe das Zitat, bevor du bestätigst.';
+
+  @override
+  String get defModeText =>
+      'Diese Version hat keine PDF-Seite, daher wird nur der Text gezeigt.';
+
+  @override
+  String get defSummaryTitle => 'Ausgewählte Zusammenfassung';
+
+  @override
+  String get defSummaryBody =>
+      'Der Bericht zeigt eine Auswahl der Änderungen. Er ist keine vollständige Liste: „Alle Unterschiede“ zeigt alles Weitere, auch reine Darstellungsänderungen und Text, den kein Befund erklärt.';
+
+  @override
+  String get close => 'Schließen';
+
+  @override
+  String get onbIntroTitle => 'Vergleiche zwei Versionen eines Briefings';
+
+  @override
+  String get onbIntroBody =>
+      'ChangeLens liest die frühere und die neuere Version und zeigt die gefundenen Änderungen, jede mit der Textstelle, aus der sie stammt.';
+
+  @override
+  String get onbIntroGoal =>
+      'Bemerke eine geänderte Anforderung, bevor du das Falsche lieferst.';
+
+  @override
+  String get onbIntroAlt =>
+      'Illustration: Aus einem früheren und einem neueren Briefing wird eine Liste der Änderungen.';
+
+  @override
+  String get onbScopeLineComplete =>
+      'Vollständiger Ersatz: Fehlendes wird als „In der Ersatzversion nicht enthalten“ gemeldet.';
+
+  @override
+  String get onbScopeLinePartial =>
+      'Teilweise Aktualisierung: Nicht Erwähntes gilt als „Nicht angesprochen“.';
+
+  @override
+  String get onbScopeLineUnknown =>
+      'Nicht sicher: Fehlende Punkte landen unter „Von dir zu prüfen“.';
+
+  @override
+  String get onbContextAlt =>
+      'Illustration: eine frühere Version über einer neueren Version, die sich tauschen lassen.';
+
+  @override
+  String get onbUncertainTitle => 'Wenn ChangeLens es nicht sicher erkennt';
+
+  @override
+  String get onbUncertainBody =>
+      'Der Befund landet unter „Von dir zu prüfen“ und bekommt das ?-Zeichen. Ein Themenfilter blendet ihn nie aus.';
+
+  @override
+  String get onbUncertainSummary =>
+      'Der Bericht ist eine Auswahl. „Alle Unterschiede“ zeigt alles Weitere, auch reine Darstellungsänderungen.';
+
+  @override
+  String get onbReviewAlt =>
+      'Beispiel: ein von dir bestätigter Befund, ohne dokumentierte Kundenfreigabe.';
+
+  @override
+  String get onbStartLine =>
+      'Füge Text ein oder wähle ein PDF mit auswählbarem Text. Du musst online sein.';
+
+  @override
+  String get onbImportLink => 'Was kann ich importieren?';
+
+  @override
+  String get onbStart => 'Starten';
+
+  @override
+  String get importSheetTitle => 'Was kann ich importieren?';
+
+  @override
+  String onbReviewApprovalLabel(String label) {
+    return 'Sie erscheint dann als „$label“.';
+  }
+
+  @override
+  String get onbStartTitleReplay => 'Bevor du vergleichst';
+
+  @override
+  String get onbStartNext =>
+      'Als Nächstes: Lege ein Projekt an und vergleiche zwei Briefings.';
 }
