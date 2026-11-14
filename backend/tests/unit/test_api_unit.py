@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from changelens.api import uploads
 from changelens.api.app import create_app
 from changelens.api.errors import ApiError
+from changelens.api.limits import MemoryCounters
 from changelens.config import Limits, Settings
 from changelens.domain import Database
 from changelens.domain.models import Comparison
@@ -31,6 +32,7 @@ def client_store():
     identity = SqliteIdentity()
     identity.seed(SUBJECT_A, uuid.uuid4())
     db.identity_scope = identity.identity_scope
+    db.rate_limit_hit = MemoryCounters()  # the rate-limit counters (I-8 S6) live in memory too
     app = create_app(settings, db, store)
     return TestClient(app, raise_server_exceptions=False), store
 

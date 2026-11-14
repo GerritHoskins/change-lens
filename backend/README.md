@@ -126,6 +126,7 @@ Authentication settings. `dev` is the default mode, and `Settings.from_env` refu
 | `CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT` | `logto` mode, required: the Logto base URL, `https`, for deleting the Logto user on account deletion (I-8 S5) |
 | `CHANGELENS_LOGTO_M2M_APP_ID`, `CHANGELENS_LOGTO_M2M_APP_SECRET` | `logto` mode, required: a machine-to-machine app with the Logto Management API role. Set them for the api and the retention process |
 | `CHANGELENS_LOGTO_MANAGEMENT_RESOURCE` | optional; default `https://default.logto.app/api` (Logto OSS) |
+| `CHANGELENS_RATE_LIMIT_KEY` | `logto` mode, required, at least 32 characters: the HMAC key for the rate-limit counters (I-8 S6). `dev` mode uses a dev-only default |
 
 Logto access tokens must live at most 900 s (`JwtPolicy`; set this on the API resource in Logto, D-8 C5) and be signed with RS256 (the verifier also accepts PS256 and ES256 keys, nothing else).
 
@@ -142,6 +143,12 @@ Optional environment variables:
 | `CHANGELENS_S3_BUCKET` | `changelens-dev` |
 | `CHANGELENS_COST_CEILING_EUR` | `1.50` per comparison |
 | `CHANGELENS_FAKE_LLM_COST_EUR` | `0.01` per fake llm explanation (its other answers are free) |
+| `CHANGELENS_TENANT_SPEND_CAP_EUR` | `5` per tenant per UTC month; reached → new comparisons get `429 spend_cap_reached` and running ones stop before the next paid stage (I-8 S6) |
+| `CHANGELENS_GLOBAL_SPEND_CAP_EUR` | `50` across all tenants per UTC month (the kill switch); logged once per month per process as `global_spend_cap_reached` |
+| `CHANGELENS_RATE_LIMIT_ACCOUNT_PER_MINUTE` | `60` authenticated requests per account |
+| `CHANGELENS_RATE_LIMIT_IP_PER_MINUTE` | `20` failed authentications and `POST /session` calls per IP |
+| `CHANGELENS_SIGNUPS_PER_IP_PER_DAY` | `5` new accounts per IP per UTC day |
+| `CHANGELENS_TRUSTED_PROXIES` | empty; comma-separated proxy IPs whose `X-Forwarded-For` is believed (the right-most entry that isn't a trusted proxy is the client) |
 
 ## 4. Example curl sequence (Git Bash)
 

@@ -15,6 +15,7 @@ import uuid
 from fastapi import Depends, Request
 
 from changelens.api.errors import ApiError
+from changelens.api.limits import limit_account, limit_ip
 from changelens.auth.jwt_verifier import AccessTokenRejected
 from changelens.domain.identity import Principal
 
@@ -49,11 +50,16 @@ def token_subject(request: Request) -> str:
 
 
 def current_principal(request: Request) -> Principal:
-    subject = token_subject(request)
-    with request.app.state.db.identity_scope() as identities:
-        principal = identities.principal(subject)
-    if principal is None:
-        raise _unauthenticated()
+    try:
+        subject = token_subject(request)
+        with request.app.state.db.identity_scope() as identities:
+            principal = identities.principal(subject)
+        if principal is None:
+            raise _unauthenticated()
+    except ApiError:
+        limit_ip(request)  # failing authentication counts against the IP (I-8 S6)
+        raise
+    limit_account(request, principal.user_id)
     return principal
 
 

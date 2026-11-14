@@ -1,5 +1,6 @@
-"""SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19), except `users`:
-the one pre-tenant table, read only through `domain.identity` (I-8 overview, decision 4).
+"""SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19), except `users`
+(the one pre-tenant table, read only through `domain.identity`; I-8 overview, decision 4) and
+`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6).
 
 The schema is owned by Alembic (`backend/migrations/`); a model change needs a revision.
 """
@@ -297,3 +298,12 @@ class AccountDeletion(Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     idp_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # Logto user gone
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class RateLimitCounter(Base):
+    """Fixed-window request counts (I-8 S6). `key_hash` is an HMAC of the account or IP, never the raw value.
+    No `tenant_id`: reached only through the `rate_limit_hit` and `rate_limit_prune` functions."""
+    __tablename__ = "rate_limit_counters"
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    hits: Mapped[int] = mapped_column(Integer, nullable=False)

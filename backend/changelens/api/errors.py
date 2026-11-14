@@ -16,6 +16,8 @@ TITLES = {
     "scope_not_confirmed": "Order and scope not confirmed",
     "not_found": "Not found",
     "unauthenticated": "Authentication required",
+    "spend_cap_reached": "Monthly spend cap reached",
+    "rate_limited": "Too many requests",
     # Codes added by I-22 for cases 03 §9.4 does not list (see 06, I-22 row):
     "invalid_request": "Request is malformed",
     "method_not_allowed": "Method not allowed",
@@ -24,9 +26,9 @@ TITLES = {
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, detail: str = ""):
+    def __init__(self, status: int, code: str, detail: str = "", headers=None):
         super().__init__(code)
-        self.status, self.code, self.detail = status, code, detail
+        self.status, self.code, self.detail, self.headers = status, code, detail, headers
 
 
 def problem(status: int, code: str, detail: str = "", headers=None) -> JSONResponse:
@@ -48,8 +50,10 @@ def not_found() -> ApiError:
 def install(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError):
-        headers = {"WWW-Authenticate": "Bearer"} if exc.code == "unauthenticated" else None
-        return problem(exc.status, exc.code, exc.detail, headers)
+        headers = dict(exc.headers or {})
+        if exc.code == "unauthenticated":
+            headers["WWW-Authenticate"] = "Bearer"
+        return problem(exc.status, exc.code, exc.detail, headers or None)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError):

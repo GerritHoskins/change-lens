@@ -14,18 +14,21 @@ from fastapi import APIRouter, Body, Request
 
 from changelens.api.auth import token_subject
 from changelens.api.errors import ApiError
+from changelens.api.limits import limit_ip, limit_signup
 from changelens.api.onboarding import _state
 
 router = APIRouter()
 
 
 def _before_first_sign_in(request: Request):
-    """Runs only when a new account is about to be created. S6 puts the sign-up cap per IP here."""
-    return None
+    """Runs only when a new account is about to be created: the sign-up cap per IP (I-8 S6).
+    Returning users never reach it."""
+    limit_signup(request)
 
 
 @router.post("/session")
 def create_session(request: Request, body: Optional[dict] = Body(default=None)):
+    limit_ip(request)
     if body:
         raise ApiError(422, "invalid_request", "send no body or {}")
     subject = token_subject(request)

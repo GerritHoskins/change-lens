@@ -38,7 +38,7 @@ TENANT_A = uuid.UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
 TABLES = ("client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects, "
           "object_write_intents, object_purge_intents, comparison_cost_tombstones, project_deletions, "
-          "account_onboarding, account_deletions, memberships, users")
+          "account_onboarding, account_deletions, memberships, users, rate_limit_counters")
 
 
 def pytest_collection_modifyitems(items):
@@ -92,7 +92,9 @@ def seed_users(owner) -> dict:
 def make_settings(db_url: str, **overrides) -> Settings:
     base = dict(database_url=db_url, s3_endpoint=S3, s3_access_key="changelens", s3_secret_key="changelens-dev-only",
                 s3_bucket="changelens-test", dev_tokens=DEV_TOKENS,
-                cost_ceiling_eur=Decimal("1.50"), fake_llm_cost_eur=Decimal("0.01"))
+                cost_ceiling_eur=Decimal("1.50"), fake_llm_cost_eur=Decimal("0.01"),
+                # The suites send far more than the real limits; test_limits_db.py sets those (I-8 S6).
+                rate_limit_account_per_minute=100_000, rate_limit_ip_per_minute=100_000, signups_per_ip_per_day=100_000)
     base.update(overrides)
     return Settings(**base)
 

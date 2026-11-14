@@ -170,7 +170,8 @@ API_CREATE_COMPARISON(project, earlier, later, scope, idempotency_key): # GUARD 
   E, L ← for each slot: the existing version, or IMPORT(upload or paste) per P2, in one transaction with c
   if E = L or either is rejected: reject(scope_not_confirmed)                 [AC-14]
   if allowance_remaining(tenant) < 1: reject(allowance_exhausted)             # early check; nothing charged  [AC-21]
-  if month_spend(tenant) ≥ tenant_spend_cap or global_kill_switch_on(): reject(spend_cap_reached)  # counts failed runs too (SA-4)  [AC-21]
+  if month_spend(tenant) ≥ tenant_spend_cap or month_spend(all) ≥ global_spend_cap: reject(spend_cap_reached)  # UTC month; failed runs, deleted projects count (SA-4)  [AC-21]
+  # As built (I-8 S6): GUARD first counts the request per account (429 rate_limited); the worker rechecks both caps before each paid stage
   status ← queued if E and L are parsed else waiting_for_versions
   c ← Comparison(E, L, scope_snapshot=scope, status, idempotency_key)
   if status = queued: jobs.enqueue(compare, ids={tenant, c.id})            [AC-23]

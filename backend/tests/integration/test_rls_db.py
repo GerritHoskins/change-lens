@@ -20,7 +20,7 @@ from helpers import SUBJECT_A, TOKEN_A, TOKEN_B, auth
 from helpers import EARLIER_LINES, LATER_LINES
 from test_reviews import _compared, _findings, _post
 
-EXCEPTIONS = {"users", "alembic_version"}  # no tenant_id: users only through the functions
+EXCEPTIONS = {"users", "alembic_version", "rate_limit_counters"}  # no tenant_id: only through the functions
 FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "session_lookup": ["user_id", "tenant_id", "member_role"],
     "session_bootstrap": ["outcome", "user_id", "tenant_id", "member_role"],
@@ -32,6 +32,9 @@ FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "account_deletion_subject": ["account_deletion_subject"],
     "account_tombstone": ["account_tombstone"],
     "account_deletion_candidates": ["tenant_id", "user_id"],
+    "rate_limit_hit": ["rate_limit_hit"],  # I-8 S6
+    "rate_limit_prune": ["rate_limit_prune"],
+    "global_spend_since": ["global_spend_since"],
 }
 
 
@@ -64,7 +67,8 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
         using, check = policies[(name, "ALL")]
         expected = "(tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)"
         assert using == expected and check == expected, name
-    assert tables["users"][:2] == (True, True)  # RLS on, no policy: nothing visible without the functions
+    for name in ("users", "rate_limit_counters"):  # RLS on, no policy: nothing visible without the functions
+        assert tables[name][:2] == (True, True), name
     assert not [p for p in policies if p[0] in EXCEPTIONS]
 
 
@@ -288,7 +292,10 @@ def test_each_function_returns_only_its_listed_columns(env):
              "account_freeze": ("account_freeze(:u)", {"u": uuid.uuid4()}),
              "account_deletion_subject": ("account_deletion_subject(:u)", {"u": uuid.uuid4()}),
              "account_tombstone": ("account_tombstone(:u)", {"u": uuid.uuid4()}),
-             "account_deletion_candidates": ("account_deletion_candidates(:n, 10)", {"n": now})}
+             "account_deletion_candidates": ("account_deletion_candidates(:n, 10)", {"n": now}),
+             "rate_limit_hit": ("rate_limit_hit(:k, date_trunc('minute', now()))", {"k": "0" * 64}),
+             "rate_limit_prune": ("rate_limit_prune()", {}),
+             "global_spend_since": ("global_spend_since(:n)", {"n": now})}
     for name, (call, params) in calls.items():
         columns, _ = _call(env, "SELECT * FROM " + call, **params)
         assert columns == FUNCTIONS[name], name
@@ -303,6 +310,9 @@ def test_each_function_returns_only_its_listed_columns(env):
     "pending_object_writes(now(), 0)", "pending_object_writes(now(), 1001)", "pending_object_writes(NULL, 5)",
     "maintenance_candidates(now(), 0)", "maintenance_candidates(now(), 1001)", "maintenance_candidates(NULL, 5)",
     "account_deletion_candidates(now(), 0)", "account_deletion_candidates(NULL, 5)",
+    "rate_limit_hit('not-a-hash', now())", "rate_limit_hit(repeat('a', 64), now() - interval '3 days')",
+    "rate_limit_hit(repeat('a', 64), now() + interval '1 hour')", "rate_limit_hit(NULL, now())",
+    "global_spend_since(NULL)",
 ])
 def test_functions_reject_invalid_arguments(env, call):
     with pytest.raises(DBAPIError) as error:
