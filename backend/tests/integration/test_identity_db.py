@@ -1,7 +1,8 @@
 """Migrations and GUARD in Postgres (I-8 S1, §8 items 1, 3 and 5).
 
-Migration tests use their own scratch database, rebuilt per test; GUARD tests use the shared test
-database that conftest builds with `upgrade head`.
+Migration tests use their own scratch database, rebuilt per test, with the roles bootstrapped and
+migrations run as the owner role (I-8 S3); GUARD tests use the shared test database that conftest
+builds with `upgrade head`.
 """
 import uuid
 
@@ -14,12 +15,15 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 
-from changelens.db import BASELINE, alembic_config, baseline_diffs, stamp_baseline, upgrade
+from changelens.db import (BASELINE, DEV_PASSWORDS, OWNER_ROLE, alembic_config, baseline_diffs, bootstrap_roles,
+                           stamp_baseline, upgrade)
 from changelens.domain.models import Base
 from test_reviews import _compared, _findings, _post
 from conftest import PG, SUBJECT_A, TENANT_A, TENANT_B, TOKEN_A, auth, reset_schema, db_url
 
 SCRATCH_DB = "changelens_migrations_test"
+HEAD = "0003_rls"
+OWNER_URL = db_url(SCRATCH_DB, OWNER_ROLE)
 
 
 @pytest.fixture()
@@ -29,6 +33,7 @@ def scratch(services):
             conn.execute("CREATE DATABASE " + SCRATCH_DB)
     url = db_url(SCRATCH_DB)
     reset_schema(url)
+    bootstrap_roles(url, DEV_PASSWORDS)
     engine = create_engine(url, poolclass=NullPool, hide_parameters=True)
     yield url, engine
     engine.dispose()
@@ -55,22 +60,25 @@ def build_legacy(engine) -> None:
 
 def test_upgrade_head_on_an_empty_database_matches_the_models(scratch):
     url, engine = scratch
-    upgrade(url)
-    assert revision(engine) == "0002_identity"
+    upgrade(OWNER_URL)
+    assert revision(engine) == HEAD
     assert model_diffs(engine) == []
 
 
-def test_the_identity_revision_downgrades_and_upgrades_again(scratch):
+def test_the_identity_and_rls_revisions_downgrade_and_upgrade_again(scratch):
     url, engine = scratch
-    upgrade(url)
+    upgrade(OWNER_URL)
     with engine.begin() as conn:
         command.downgrade(alembic_config(conn), BASELINE)
     assert revision(engine) == BASELINE
     tables = set(inspect(engine).get_table_names())
     assert "users" not in tables and "memberships" not in tables and "account_onboarding" in tables
     assert inspect(engine).get_foreign_keys("account_onboarding") == []
-    upgrade(url)
-    assert revision(engine) == "0002_identity" and model_diffs(engine) == []
+    with engine.connect() as conn:  # 0003's policies and functions are gone too
+        assert conn.execute(text("SELECT count(*) FROM pg_policies WHERE schemaname = 'public'")).scalar_one() == 0
+        assert conn.execute(text("SELECT count(*) FROM pg_proc WHERE proname = 'session_lookup'")).scalar_one() == 0
+    upgrade(OWNER_URL)
+    assert revision(engine) == HEAD and model_diffs(engine) == []
 
 
 def test_a_create_all_database_is_stamped_at_the_baseline_and_upgrades_cleanly(scratch):
@@ -83,8 +91,9 @@ def test_a_create_all_database_is_stamped_at_the_baseline_and_upgrades_cleanly(s
                           "VALUES (:t, :t, 3, now())"), {"t": TENANT_A})
     assert stamp_baseline(url) == ([], [])
     assert revision(engine) == BASELINE
-    upgrade(url)
-    assert revision(engine) == "0002_identity" and model_diffs(engine) == []
+    assert len(bootstrap_roles(url, DEV_PASSWORDS)) == 14  # the stamped tables move to the owner role
+    upgrade(OWNER_URL)
+    assert revision(engine) == HEAD and model_diffs(engine) == []
     with engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM projects")).scalar_one() == 1  # data kept
         assert conn.execute(text("SELECT count(*) FROM account_onboarding")).scalar_one() == 0  # no user: deleted
@@ -108,8 +117,18 @@ def test_legacy_states_create_schema_left_behind_are_adopted_then_stamped(scratc
     diffs, adopted = stamp_baseline(url)
     assert diffs == [] and adopted == ["created table account_onboarding",
                                        "promoted index uq_comparisons_request to a constraint"]
-    upgrade(url)
-    assert revision(engine) == "0002_identity" and model_diffs(engine) == []
+    bootstrap_roles(url, DEV_PASSWORDS)
+    upgrade(OWNER_URL)
+    assert revision(engine) == HEAD and model_diffs(engine) == []
+
+
+def test_migrations_refuse_any_role_but_the_owner(scratch):
+    url, engine = scratch
+    upgrade(OWNER_URL, "0002_identity")
+    with pytest.raises(Exception) as error:
+        upgrade(url)  # the compose superuser
+    assert "changelens_owner" in str(error.value)
+    assert revision(engine) == "0002_identity"
 
 
 def test_a_database_that_differs_from_the_baseline_is_not_stamped(scratch):
@@ -133,8 +152,8 @@ def _user(env, subject=SUBJECT_A):
 
 
 def _execute(env, statement, **params):
-    with env.db.system_session() as s:
-        s.execute(text(statement), params)
+    with env.owner.begin() as conn:
+        conn.execute(text(statement), params)
 
 
 def test_a_user_has_at_most_one_active_membership(env):

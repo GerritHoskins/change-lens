@@ -49,24 +49,23 @@ def test_worker_ignores_ids_from_another_tenant(env):
 
 def test_enqueue_is_idempotent_per_tenant(env):
     vid = uuid.uuid4()
-    with env.db.system_session() as s:
-        assert jobs.enqueue(s, TENANT_A, "parse", {"version_id": vid}, 3) is True
-        assert jobs.enqueue(s, TENANT_A, "parse", {"version_id": vid}, 3) is False
-        assert jobs.enqueue(s, TENANT_B, "parse", {"version_id": vid}, 3) is True
+    for tenant, new in ((TENANT_A, True), (TENANT_A, False), (TENANT_B, True)):
+        with env.db.tenant_scope(tenant) as repo:
+            assert jobs.enqueue(repo.s, tenant, "parse", {"version_id": vid}, 3) is new
     assert env.sql("SELECT count(*) FROM jobs")[0][0] == 2
 
 
 def test_skip_locked_hands_out_each_job_once(env):
-    with env.db.system_session() as s:
+    with env.db.tenant_scope(TENANT_A) as repo:
         for _ in range(2):
-            jobs.enqueue(s, TENANT_A, "parse", {"version_id": uuid.uuid4()}, 3)
-    with env.db.engine.connect() as c1, env.db.engine.connect() as c2:
+            jobs.enqueue(repo.s, TENANT_A, "parse", {"version_id": uuid.uuid4()}, 3)
+    with env.db.engine.connect() as c1, env.db.engine.connect() as c2:  # the app role, no tenant set
         t1, t2 = c1.begin(), c2.begin()
-        claim = "SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1"
+        claim = "SELECT job_id FROM queue_claim()"
         first = c1.execute(text(claim)).scalar()
         second = c2.execute(text(claim)).scalar()
         assert first and second and first != second
-        assert c1.execute(text(claim.replace("LIMIT 1", "OFFSET 1 LIMIT 1"))).scalar() is None
+        assert c1.execute(text(claim)).scalar() is None
         t1.rollback(), t2.rollback()
 
 
@@ -99,8 +98,7 @@ def test_permanent_failure_marks_job_and_version(env, monkeypatch):
 def test_crashed_worker_job_is_reclaimed_after_lease(env):
     pid, a, b = _parsed_pair(env)
     cid = env.compare(pid, a, b).json()["id"]
-    with env.db.system_session() as s:
-        crashed = jobs.claim(s)  # a worker takes the job and dies without finishing
+    crashed = env.db.claim_job()  # a worker takes the job and dies without finishing
     assert crashed.kind == "compare"
     assert env.worker.run_until_idle() == 0  # still leased: nobody else may take it
     env.sql("UPDATE jobs SET locked_at = now() - interval '1 hour' WHERE id = :id RETURNING id", id=crashed.id)

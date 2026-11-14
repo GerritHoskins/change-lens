@@ -65,25 +65,24 @@ def enqueue(session: Session, tenant_id: uuid.UUID, kind: str, ids: Mapping[str,
     return session.execute(stmt).first() is not None
 
 
+_COLUMNS = "job_id, tenant_id, kind, ids, attempts, max_attempts"
+
+
 def reclaim_expired(session: Session, lease_seconds: int) -> list[ClaimedJob]:
-    """Requeue `running` jobs past their lease; return the ones that just failed for good."""
-    rows = session.execute(text(
-        "UPDATE jobs SET status = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'queued' END, "
-        "locked_at = NULL, last_error = 'lease_expired', run_after = now() "
-        "WHERE status = 'running' AND locked_at < now() - make_interval(secs => :lease) "
-        "RETURNING id, tenant_id, kind, payload, attempts, max_attempts, status"), {"lease": lease_seconds})
-    return [_claimed(r) for r in rows if r.status == "failed"]
+    """Requeue `running` jobs past their lease; return the ones that just failed for good.
+    Pre-tenant: the `queue_reclaim_expired` function (migration 0003, I-8 S3)."""
+    rows = session.execute(text("SELECT " + _COLUMNS + " FROM queue_reclaim_expired(:lease)"),
+                           {"lease": lease_seconds})
+    return [_claimed(r) for r in rows]
 
 
 def claim(session: Session) -> Optional[ClaimedJob]:
-    row = session.execute(text(
-        "UPDATE jobs SET status = 'running', attempts = attempts + 1, locked_at = now() "
-        "WHERE id = (SELECT id FROM jobs WHERE status = 'queued' AND run_after <= now() "
-        "            ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) "
-        "RETURNING id, tenant_id, kind, payload, attempts, max_attempts")).one_or_none()
+    """The oldest ready job, via `queue_claim` (`FOR UPDATE SKIP LOCKED` inside the function)."""
+    row = session.execute(text("SELECT " + _COLUMNS + " FROM queue_claim()")).one_or_none()
     return _claimed(row) if row else None
 
 
+# complete and retry_or_fail run under tenant_scope with the job's tenant (RLS applies).
 def complete(session: Session, job_id: uuid.UUID) -> None:
     session.execute(text("UPDATE jobs SET status = 'done', locked_at = NULL WHERE id = :id"), {"id": job_id})
 
@@ -100,5 +99,5 @@ def retry_or_fail(session: Session, job: ClaimedJob, error_name: str, backoff_se
 
 
 def _claimed(row) -> ClaimedJob:
-    ids = {k: uuid.UUID(v) for k, v in row.payload["ids"].items()}
-    return ClaimedJob(row.id, row.tenant_id, row.kind, ids, row.attempts, row.max_attempts)
+    ids = {k: uuid.UUID(v) for k, v in row.ids.items()}
+    return ClaimedJob(row.job_id, row.tenant_id, row.kind, ids, row.attempts, row.max_attempts)

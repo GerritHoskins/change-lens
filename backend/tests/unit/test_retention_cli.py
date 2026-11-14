@@ -10,7 +10,7 @@ from changelens.retention import __main__ as cli
 def test_one_pass_is_read_only_unless_explicitly_applied(monkeypatch, capsys, apply):
     calls = []
     engine = SimpleNamespace(dispose=lambda: calls.append("dispose"))
-    db = SimpleNamespace(engine=engine, _intent_engine=engine)
+    db = SimpleNamespace(engine=engine, _intent_engine=engine, assert_app_role=lambda: calls.append("role"))
     settings = SimpleNamespace(database_url="synthetic", s3_endpoint="synthetic", s3_access_key="synthetic",
                                s3_secret_key="synthetic", s3_bucket="synthetic")
     monkeypatch.setattr(cli.Settings, "from_env", lambda: settings)
@@ -25,7 +25,7 @@ def test_one_pass_is_read_only_unless_explicitly_applied(monkeypatch, capsys, ap
 
     monkeypatch.setattr(cli, "run_maintenance", maintain)
     assert cli.main(["--once", "--limit", "7"] + (["--apply"] if apply else [])) == 0
-    assert calls == [{"limit": 7, "execute": apply}, "dispose", "dispose"]
+    assert calls == ["role", {"limit": 7, "execute": apply}, "dispose", "dispose"]
     assert '"candidate_projects": 3' in capsys.readouterr().out
 
 

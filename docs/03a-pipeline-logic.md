@@ -12,13 +12,15 @@ Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` n
 GUARD(request):
   claims ← verify_jwt(request.token, idp_keys)              # signature, expiry, audience
   if claims invalid or session revoked at IdP: reject(unauthenticated)        [AC-26]
+  # As built (I-8 S3): steps u and m are one call, session_lookup(subject), a SECURITY DEFINER function
+  # that returns (user, tenant, role) only for a live user with an active membership.
   u ← user_by_subject(claims.subject)
   # Checked on every request: a deleted user keeps valid cached tokens until they expire (D-8 side finding).
   if u is none or u.deleted_at is set: reject(unauthenticated)                [AC-26]
   m ← active_membership(u)                                   # tenant comes from here, never from the request body
   if m is none or m.status ≠ active: reject(unauthenticated)                   [AC-19, AC-26]
   tenant ← m.tenant
-  db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)               [AC-19]
+  db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)  # enforced by forced RLS policies (I-8 S3) [AC-19]
   # Every repository query runs under row-level security.
   # A row from another tenant is invisible, so lookups return nothing → reject(not_found).  [AC-19]
 ```

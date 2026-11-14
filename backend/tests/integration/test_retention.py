@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from changelens.db import upgrade
+from changelens.db import OWNER_ROLE, upgrade
 from changelens.domain import DbFactCache, used_at
 from changelens.domain.budget import DbCostMeter
 from changelens.domain.models import ObjectWriteIntent
@@ -16,7 +16,7 @@ from changelens.domain.retention import (
 )
 from changelens.metering import CeilingReached
 from changelens.pipeline.types import VerifyResult
-from conftest import TENANT_A, TOKEN_A, TOKEN_B, auth
+from conftest import TENANT_A, TEST_DB, TOKEN_A, TOKEN_B, auth, db_url
 
 
 def pair(env, *, run=True):
@@ -248,6 +248,6 @@ def test_repeated_migration_and_clock_rollback_do_not_extend_or_shorten_observed
     old = datetime.now(timezone.utc)-timedelta(days=4)
     age(env, project, old)
     before = clocks(env, project)
-    upgrade(env.db.engine.url.render_as_string(hide_password=False))
+    upgrade(db_url(TEST_DB, OWNER_ROLE))
     assert clocks(env, project) == before
     assert used_at(old, old-timedelta(days=1)) == old

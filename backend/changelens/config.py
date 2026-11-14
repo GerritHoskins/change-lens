@@ -13,11 +13,28 @@ from typing import Optional
 DEV_TENANT_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 DEV_SUBJECT = "dev:default"
 AUTH_MODES = ("dev", "logto")
-DEFAULT_DATABASE_URL = "postgresql+psycopg://changelens:changelens@127.0.0.1:55432/changelens"
+# Local dev defaults (I-8 S3). The running processes connect as the app role, which row-level security
+# applies to; migrations connect as the owner role; `bootstrap-roles` connects as the compose superuser.
+# Deployed configs set all three URLs and both role passwords in the environment.
+DEFAULT_DATABASE_URL = "postgresql+psycopg://changelens_app:changelens-app-dev-only@127.0.0.1:55432/changelens"
+DEFAULT_MIGRATION_DATABASE_URL = ("postgresql+psycopg://changelens_owner:changelens-owner-dev-only"
+                                  "@127.0.0.1:55432/changelens")
+DEFAULT_ADMIN_DATABASE_URL = "postgresql+psycopg://changelens:changelens@127.0.0.1:55432/changelens"
 
 
 def database_url_from_env() -> str:
+    """The app role's URL, for the api, worker and retention processes."""
     return os.environ.get("CHANGELENS_DATABASE_URL", DEFAULT_DATABASE_URL)
+
+
+def migration_database_url_from_env() -> str:
+    """The owner role's URL, for Alembic and `changelens.db seed-dev` only; never a running process."""
+    return os.environ.get("CHANGELENS_MIGRATION_DATABASE_URL", DEFAULT_MIGRATION_DATABASE_URL)
+
+
+def admin_database_url_from_env() -> str:
+    """A superuser URL for `changelens.db bootstrap-roles` and `stamp-baseline` only."""
+    return os.environ.get("CHANGELENS_ADMIN_DATABASE_URL", DEFAULT_ADMIN_DATABASE_URL)
 
 
 @dataclass(frozen=True)
@@ -58,6 +75,8 @@ class Settings:
     logto_issuer: Optional[str] = None
     logto_audience: Optional[str] = None  # the API resource indicator
     logto_jwks_url: Optional[str] = None
+    # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
+    migration_database_url: Optional[str] = field(default=None, repr=False)
 
     def __post_init__(self):
         if self.auth_mode not in AUTH_MODES:
@@ -99,6 +118,7 @@ class Settings:
         try:
             return cls(
                 database_url=database_url_from_env(),
+                migration_database_url=migration_database_url_from_env(),
                 s3_endpoint=env.get("CHANGELENS_S3_ENDPOINT", "http://127.0.0.1:59000"),
                 s3_access_key=env.get("CHANGELENS_S3_ACCESS_KEY", "changelens"),
                 # Defaults match backend/docker-compose.yml (local dev only).

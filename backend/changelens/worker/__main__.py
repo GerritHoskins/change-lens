@@ -12,6 +12,7 @@ def main() -> None:
     configure_logging()
     settings = Settings.from_env()
     db = Database(settings.database_url)
+    db.assert_app_role()
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)
     store.ensure_bucket()
     llm = None

@@ -38,15 +38,13 @@ class Worker:
     # Queue loop -----------------------------------------------------------------------------
     def run_once(self) -> bool:
         """Process at most one job. Returns False when the queue had nothing ready."""
-        with self.db.system_session() as s:
-            dead_jobs = jobs.reclaim_expired(s, self.settings.job_lease_seconds)
+        dead_jobs = self.db.reclaim_expired_jobs(self.settings.job_lease_seconds)
         # Never hold queue row locks while taking a project lifecycle lock: retention
         # takes the project lock before deleting the corresponding queue rows.
         for dead in dead_jobs:
             log.warning("job %s (%s) failed: lease expired after %d attempts", dead.id, dead.kind, dead.attempts)
             self._on_final_failure(dead)
-        with self.db.system_session() as s:
-            job = jobs.claim(s)
+        job = self.db.claim_job()
         if job is None:
             self.reconcile_uploads(limit=1)
             return False
@@ -59,15 +57,15 @@ class Worker:
             else:
                 raise ValueError("unknown job kind")
         except Exception as exc:  # retried with backoff; only the class name is recorded
-            with self.db.system_session() as s:
-                final = jobs.retry_or_fail(s, job, type(exc).__name__, self.backoff_seconds)
+            with self.db.tenant_scope(job.tenant_id) as repo:
+                final = jobs.retry_or_fail(repo.s, job, type(exc).__name__, self.backoff_seconds)
             log.warning("job %s (%s) attempt %d failed: %s%s", job.id, job.kind, job.attempts,
                         type(exc).__name__, "; giving up" if final else "; will retry")
             if final:
                 self._on_final_failure(job)
             return True
-        with self.db.system_session() as s:
-            jobs.complete(s, job.id)
+        with self.db.tenant_scope(job.tenant_id) as repo:
+            jobs.complete(repo.s, job.id)
         log.info("job %s (%s) done", job.id, job.kind)
         return True
 
