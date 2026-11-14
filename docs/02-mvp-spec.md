@@ -4,7 +4,7 @@ Plan section: §13.2. Tags: [E] established, [A] assumption, [U] unverified, [O]
 
 ## 1. User flow
 
-1. **Project.** The user signs in to the iOS or Android app (email one-time code, Google, or Sign in with Apple), then creates a project for a client engagement or opens an existing one.
+1. **Sign-in, onboarding, project.** On first launch, sign-in is the very first screen, before onboarding or any other content: the user signs in to the iOS or Android app (email one-time code, Google, or Sign in with Apple) [O, owner 2026-11-13]. After the first successful sign-in the app shows onboarding once, then the projects list. A returning user with a valid session goes straight to the projects list; an expired session returns to sign-in, not to onboarding. The user then creates a project for a client engagement or opens an existing one.
 2. **Earlier version.** In the iOS or Android app, the user imports it by pasting text, picking a PDF, taking or choosing a screenshot, or sharing it into ChangeLens from another app. They give it a label (for example "Brief v1, 3 Oct").
 3. **Newer input.** The user imports the revised brief or a partial update.
 4. **Compare screen** (the only place processing starts; no defaults inferred; O-15). The user reaches it from the projects list ("Compare two briefs") or from the project timeline ("Compare v2 → v3", which fills both slots). On one screen they:
