@@ -14,6 +14,7 @@ import uuid
 import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Iterator, Optional
 
 from sqlalchemy import create_engine, delete, func, or_, select, text
@@ -104,6 +105,15 @@ class Database:
             rows = s.execute(text("SELECT tenant_id, user_id FROM account_deletion_candidates(:now, :limit)"),
                              {"now": now, "limit": limit})
             return [(row.tenant_id, row.user_id) for row in rows]
+
+    def rate_limit_hit(self, key_hash: str, window_start: datetime) -> int:
+        """Count one request in a fixed window; returns the window's count (I-8 S6). Commits at once."""
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT rate_limit_hit(:k, :w)"), {"k": key_hash, "w": window_start}).scalar_one()
+
+    def rate_limit_prune(self) -> int:
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT rate_limit_prune()")).scalar_one()
 
     def assert_app_role(self) -> None:
         """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
@@ -352,6 +362,16 @@ class TenantRepo:
             row.updated_at = now
             self.s.flush()
         return row
+
+    def month_spend(self, since: datetime) -> Decimal:
+        """This tenant's spend since `since`: actual costs plus open reservations, tombstones included."""
+        from changelens.domain.spend import tenant_spend
+        return tenant_spend(self.s, self.tenant_id, since)
+
+    def global_month_spend(self, since: datetime) -> Decimal:
+        """All tenants' spend since `since`, for the kill switch: one number, no rows (I-8 S6)."""
+        from changelens.domain.spend import global_spend
+        return global_spend(self.s, since)
 
     def delete_onboarding(self, account_id: uuid.UUID) -> int:
         """For 03a P8 DELETE_ACCOUNT (and DELETE_TENANT per member); no route until I-8.

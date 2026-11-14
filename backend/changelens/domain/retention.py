@@ -61,7 +61,8 @@ def _remove_comparisons(repo, rows):
     for comparison in rows:
         # The comparison row is already locked. Settlement either precedes this snapshot
         # or sees its tombstone in a subsequent READ COMMITTED statement after deletion.
-        repo.add(ComparisonCostTombstone(id=comparison.id,
+        # created_at is the comparison's, so monthly spend (I-8 S6) counts it in the month it was made.
+        repo.add(ComparisonCostTombstone(id=comparison.id, created_at=comparison.created_at,
             cost_actual=comparison.cost_actual or Decimal("0"),
             cost_reservations=dict(comparison.cost_reservations)))
         finding_ids = select(Finding.id).where(Finding.tenant_id == repo.tenant_id,
@@ -249,6 +250,7 @@ def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None) 
     result["completed_object_purges"] = sum(process_object_purge(db, store, tenant, identifier, now=now)
                                             for tenant, identifier in purges)
     result["resolved_uploads"] = reconcile_pending_writes(db, store, now=now, limit=limit)
+    result["pruned_rate_limit_windows"] = db.rate_limit_prune()  # hashed counters older than 3 days
     from changelens.domain.accounts import run_account_deletions  # accounts imports this module
     result["completed_account_deletions"], result["pending_account_deletions"] = run_account_deletions(
         db, store, idp, now=now, limit=limit)

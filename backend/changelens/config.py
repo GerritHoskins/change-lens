@@ -80,6 +80,14 @@ class Settings:
     logto_m2m_app_id: Optional[str] = None
     logto_m2m_app_secret: Optional[str] = field(default=None, repr=False)
     logto_management_resource: str = "https://default.logto.app/api"
+    # Cost and abuse limits (I-8 S6; 06, 2026-11-13). Changeable through the environment, no release.
+    tenant_monthly_spend_cap_eur: Decimal = Decimal("5")
+    global_monthly_spend_cap_eur: Decimal = Decimal("50")  # the kill switch for new work
+    rate_limit_account_per_minute: int = 60
+    rate_limit_ip_per_minute: int = 20  # requests failing authentication, and POST /session
+    signups_per_ip_per_day: int = 5
+    trusted_proxies: tuple = ()  # proxy addresses whose X-Forwarded-For is believed
+    rate_limit_key: str = field(default="changelens-dev-only-rate-limit-key-0000", repr=False)  # HMAC key
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
 
@@ -98,6 +106,15 @@ class Settings:
                 raise ValueError("the Logto JWKS URL must be https")
             if self.dev_tokens:
                 raise ValueError("dev tokens are refused in logto mode")
+        for cap in (self.tenant_monthly_spend_cap_eur, self.global_monthly_spend_cap_eur):
+            if not isinstance(cap, Decimal) or not cap.is_finite() or cap < 0:
+                raise ValueError("spend caps must be non-negative amounts")
+        for limit in (self.rate_limit_account_per_minute, self.rate_limit_ip_per_minute, self.signups_per_ip_per_day):
+            if not isinstance(limit, int) or limit < 1:
+                raise ValueError("rate limits must be positive integers")
+        if len(self.rate_limit_key) < 32:
+            raise ValueError("the rate-limit key needs at least 32 characters")
+        object.__setattr__(self, "trusted_proxies", tuple(_ip(p) for p in self.trusted_proxies))
         management = self.logto_management_endpoint
         if management is not None and (not management.startswith("https://") or management != management.strip()
                                        or not (self.logto_m2m_app_id and self.logto_m2m_app_secret)):
@@ -127,6 +144,10 @@ class Settings:
                         logto_m2m_app_secret=env.get("CHANGELENS_LOGTO_M2M_APP_SECRET"))
             if env.get("CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"):
                 auth["logto_management_resource"] = env["CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"]
+            # A deployment keys its rate-limit counters with its own secret (I-8 S6).
+            if len(env.get("CHANGELENS_RATE_LIMIT_KEY", "")) < 32:
+                raise RuntimeError("logto mode needs CHANGELENS_RATE_LIMIT_KEY (at least 32 characters)")
+            auth["rate_limit_key"] = env["CHANGELENS_RATE_LIMIT_KEY"]
             # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
             if not auth["logto_management_endpoint"]:
                 raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
@@ -146,7 +167,18 @@ class Settings:
                 llm_provider=env.get("CHANGELENS_LLM", "fake"),
                 llm_model=env.get("CHANGELENS_LLM_MODEL", "Qwen/Qwen3.5-397B-A17B"),
                 ionos_env_file=env.get("CHANGELENS_IONOS_ENV_FILE"),
+                tenant_monthly_spend_cap_eur=Decimal(env.get("CHANGELENS_TENANT_SPEND_CAP_EUR", "5")),
+                global_monthly_spend_cap_eur=Decimal(env.get("CHANGELENS_GLOBAL_SPEND_CAP_EUR", "50")),
+                rate_limit_account_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_ACCOUNT_PER_MINUTE", "60")),
+                rate_limit_ip_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_IP_PER_MINUTE", "20")),
+                signups_per_ip_per_day=int(env.get("CHANGELENS_SIGNUPS_PER_IP_PER_DAY", "5")),
+                trusted_proxies=tuple(p.strip() for p in env.get("CHANGELENS_TRUSTED_PROXIES", "").split(",") if p.strip()),
                 **auth,
             )
-        except ValueError as exc:
+        except (ValueError, ArithmeticError) as exc:
             raise RuntimeError(str(exc)) from None
+
+
+def _ip(value) -> str:
+    import ipaddress  # stdlib parsing only; no network access
+    return str(ipaddress.ip_address(str(value).strip()))

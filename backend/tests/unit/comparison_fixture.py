@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from threading import RLock
 from types import SimpleNamespace
 import uuid
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
@@ -72,6 +73,12 @@ class TenantRepo:
         self.intents, self.db = intents, db
         self.intents_dirty, self.product_dirty = False, False
         self.held_locks = set()
+
+    def month_spend(self, since):
+        return Decimal("0")  # spend caps (I-8 S6) are covered by the integration tests
+
+    def global_month_spend(self, since):
+        return Decimal("0")
 
     def _get(self, collection, identifier):
         row = self.state[collection].get(identifier)

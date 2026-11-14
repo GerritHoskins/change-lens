@@ -146,9 +146,12 @@ class Worker:
             sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
             ceiling, scope = c.cost_ceiling, c.scope_snapshot
         config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
-        meter = DbCostMeter(self.db, tenant_id, comparison_id)
+        meter = DbCostMeter(self.db, tenant_id, comparison_id, self.settings)
         out = run_comparison([(sha, doc, DbFactCache(self.db, tenant_id, vid)) for vid, sha, doc in sides],
                              scope, self.llm, ceiling, config_id, meter=meter)
+        if meter.spend_cap is not None:  # a monthly cap stopped the run before a paid stage (I-8 S6)
+            log.warning("comparison %s stopped: %s spend cap reached", comparison_id, meter.spend_cap)
+            out.status, out.warnings = "failed", out.warnings + [{"code": "spend_cap_reached"}]
         if any(w.get("code") == "cost_ceiling" for w in out.warnings):
             log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, out.calls)
         self._finish(tenant_id, comparison_id, out.checked, out.status, out.warnings)
