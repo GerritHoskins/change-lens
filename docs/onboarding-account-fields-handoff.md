@@ -1,11 +1,12 @@
 # Onboarding account fields: backend handoff
 
 Prepared 2026-11-14 for the backend agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `c33bee7` (onboarding implemented, round-4 copy applied).
-This is a baseline, not proof that the checkout hasn't changed since: check `git status` and
-HEAD first. Untracked tool folders (`.claude-flow/`, `app/.claude-flow/`, `.playwright-mcp/`) and
-one older critique snapshot aren't yours: leave them alone. HEAD may be one commit ahead of
-`c33bee7`: the commit that added this handoff.
+`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `9e7037c`
+(onboarding implemented, round-5 copy applied, 24 px margin asserted; no backend change since
+`c33bee7`). This is a baseline, not proof that the checkout hasn't changed since: check
+`git status` and HEAD first. Untracked tool folders (`.claude-flow/`, `app/.claude-flow/`,
+`.playwright-mcp/`) and one older critique snapshot aren't yours: leave them alone. HEAD may be
+one commit ahead of `9e7037c`: the commit that updated this handoff.
 
 ## 1. Goal
 
@@ -175,7 +176,7 @@ is running in `backend/`.
 ## 10. Receiving-agent prompt
 
 > Work in the current ChangeLens checkout on `m1-iphone`. Verify `git status` and HEAD against
-> `c33bee7` (HEAD may be its child that adds this handoff). Read `docs/onboarding-account-fields-handoff.md`, then the O-23 row in
+> `9e7037c` (HEAD may be its child that updates this handoff). Read `docs/onboarding-account-fields-handoff.md`, then the O-23 row in
 > `docs/06-decision-log.md`, 03 §5 and §9.4, 03a P0, P1 and P8, and `backend/changelens/api/`
 > and `domain/`. Build the `account_onboarding` table and `GET` / `PUT /me/onboarding` as the
 > handoff specifies, under the existing dev-token auth, with the account ID equal to the tenant
