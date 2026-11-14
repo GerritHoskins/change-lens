@@ -54,7 +54,7 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError):
         # Field locations only; FastAPI's default body would echo the submitted input.
-        fields = sorted({".".join(str(p) for p in e.get("loc", ())) for e in exc.errors()})
+        fields = sorted({_location(e) for e in exc.errors()})
         return problem(422, "invalid_request", "invalid fields: " + ", ".join(fields))
 
     @app.exception_handler(StarletteHTTPException)
@@ -69,6 +69,14 @@ def install(app: FastAPI) -> None:
     async def _unhandled(request: Request, exc: Exception):
         log.error("unhandled error on %s %s: %s", request.method, _route(request), type(exc).__name__)
         return problem(500, "internal_error")
+
+
+def _location(error: dict) -> str:
+    """An unknown key's location is the client's own key name, so it is never echoed."""
+    loc = tuple(error.get("loc", ()))
+    if error.get("type") == "extra_forbidden" and loc:
+        loc = loc[:-1] + ("<unknown field>",)
+    return ".".join(str(p) for p in loc)
 
 
 def _route(request: Request) -> str:
