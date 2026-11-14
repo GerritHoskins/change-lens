@@ -1,9 +1,11 @@
 """Database access. Sessions for document data are always tenant-scoped (03 §9.1 `domain`).
 
-`tenant_scope()` opens a transaction, sets `app.tenant_id` with SET LOCAL semantics (so RLS can be
-switched on in I-8 without changing callers) and returns a repository whose every query filters on
-that tenant. `system_session()` exists only for the queue's pre-tenant dequeue (03 §6), and
-`identity_scope()` only for GUARD's user and membership lookups. The schema is owned by Alembic
+`tenant_scope()` opens a transaction, sets `app.tenant_id` with SET LOCAL semantics and returns a
+repository whose every query filters on that tenant. Postgres enforces the same boundary below it:
+the processes connect as `changelens_app`, and forced row-level security on every tenant table matches
+only rows of the tenant in `app.tenant_id` (I-8 S3, 03 §6). With no tenant set nothing matches, so
+pre-tenant work (GUARD's identity lookups, queue claims, maintenance scans) calls the narrow
+`SECURITY DEFINER` functions of migration 0003, which return IDs only. The schema is owned by Alembic
 (`backend/migrations/`); nothing here creates or alters tables.
 """
 from __future__ import annotations
@@ -62,15 +64,48 @@ class Database:
             yield TenantRepo(s, tenant_id)
 
     @contextmanager
-    def identity_scope(self) -> Iterator[IdentityRepo]:
-        """Pre-tenant user and membership lookups for GUARD (03a P0); no tenant is set."""
-        with self._sessions() as s, s.begin():
-            yield IdentityRepo(s)
-
-    @contextmanager
-    def system_session(self) -> Iterator[Session]:
+    def _pre_tenant(self) -> Iterator[Session]:
+        """A transaction with no tenant set: RLS hides every tenant row, so only the functions work."""
         with self._sessions() as s, s.begin():
             yield s
+
+    @contextmanager
+    def identity_scope(self) -> Iterator[IdentityRepo]:
+        """Pre-tenant user and membership lookups for GUARD (03a P0); no tenant is set."""
+        with self._pre_tenant() as s:
+            yield IdentityRepo(s)
+
+    def claim_job(self):
+        """The next ready job (IDs only), marked running; None when the queue is empty."""
+        from changelens import jobs  # jobs imports the models only
+        with self._pre_tenant() as s:
+            return jobs.claim(s)
+
+    def reclaim_expired_jobs(self, lease_seconds: int):
+        """Requeue jobs past their lease; returns the ones that just failed for good."""
+        from changelens import jobs
+        with self._pre_tenant() as s:
+            return jobs.reclaim_expired(s, lease_seconds)
+
+    def maintenance_candidates(self, now: datetime, limit: int):
+        """Retention's three pre-tenant lists of (tenant ID, ID): projects with aged resources, due project
+        deletions and due object purges."""
+        lists = {"project": [], "deletion": [], "purge": []}
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT list, tenant_id, item_id FROM maintenance_candidates(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            for row in rows:
+                lists[row.list].append((row.tenant_id, row.item_id))
+        return lists["project"], lists["deletion"], lists["purge"]
+
+    def assert_app_role(self) -> None:
+        """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
+        with self.engine.connect() as conn:
+            unsafe = conn.execute(text("SELECT rolsuper OR rolbypassrls FROM pg_roles "
+                                       "WHERE rolname = current_user")).scalar_one()
+        if unsafe:
+            raise RuntimeError("CHANGELENS_DATABASE_URL must use the app role (changelens_app): "
+                               "this role bypasses row-level security")
 
     @contextmanager
     def write_intent_scope(self, tenant_id: uuid.UUID) -> Iterator["TenantRepo"]:
@@ -83,11 +118,10 @@ class Database:
     def pending_object_writes(self, now: datetime, limit: int) -> list[tuple[uuid.UUID, uuid.UUID]]:
         # Like queue dequeue, this pre-tenant scan returns IDs only. All subsequent access
         # and cleanup rechecks happen in tenant_scope under the upload's advisory lock.
-        with self.system_session() as s:
-            q = (select(ObjectWriteIntent.tenant_id, ObjectWriteIntent.id)
-                 .where(ObjectWriteIntent.next_attempt_at <= now)
-                 .order_by(ObjectWriteIntent.next_attempt_at, ObjectWriteIntent.created_at).limit(limit))
-            return list(s.execute(q).tuples())
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT tenant_id, intent_id FROM pending_object_writes(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            return [(row.tenant_id, row.intent_id) for row in rows]
 
 
 class DbFactCache:

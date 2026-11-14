@@ -222,24 +222,10 @@ def process_project_deletion(db, store, tenant_id, project_id, *, now=None) -> b
 
 
 def maintenance_snapshot(db, *, now=None, limit=100):
-    now = now or utcnow()
-    cutoff = now - RETENTION
-    with db.system_session() as session:
-        aged_comparison = exists(select(Comparison.id).where(Comparison.project_id == Project.id,
-            Comparison.tenant_id == Project.tenant_id, Comparison.last_used_at <= cutoff))
-        live_reference = exists(select(Comparison.id).where(
-            Comparison.tenant_id == SourceVersion.tenant_id, Comparison.last_used_at > cutoff,
-            or_(Comparison.earlier_id == SourceVersion.id, Comparison.later_id == SourceVersion.id))).correlate(SourceVersion)
-        aged_source = exists(select(SourceVersion.id).where(SourceVersion.project_id == Project.id,
-            SourceVersion.tenant_id == Project.tenant_id, SourceVersion.last_used_at <= cutoff, ~live_reference))
-        projects = list(session.execute(select(Project.tenant_id, Project.id).where(
-            Project.deleted_at.is_(None), or_(aged_comparison, aged_source)).order_by(Project.id).limit(limit)).tuples())
-        deletions = list(session.execute(select(ProjectDeletion.tenant_id, ProjectDeletion.project_id).where(
-            ProjectDeletion.status == "pending", ProjectDeletion.next_attempt_at <= now)
-            .order_by(ProjectDeletion.next_attempt_at).limit(limit)).tuples())
-        purges = list(session.execute(select(ObjectPurgeIntent.tenant_id, ObjectPurgeIntent.id).where(
-            ObjectPurgeIntent.next_attempt_at <= now).order_by(ObjectPurgeIntent.next_attempt_at).limit(limit)).tuples())
-    return projects, deletions, purges
+    """Pre-tenant candidates as (tenant ID, ID) lists, from the `maintenance_candidates` function
+    (migration 0003, I-8 S3), which applies the same RETENTION window. Everything after runs in
+    tenant_scope."""
+    return db.maintenance_candidates(now or utcnow(), limit)
 
 
 def run_maintenance(db, store, *, now=None, limit=100, execute=False) -> dict:

@@ -11,7 +11,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `api` | `changelens/api/` | Routes, GUARD (`auth.py`), upload checks, problem+json errors, access log |
 | `auth` | `changelens/auth/` | Offline JWT verification and the refreshing Logto JWKS key holder (`jwks.py`) |
 | `domain` | `changelens/domain/` | SQLAlchemy models, tenant-scoped sessions and repositories; pre-tenant user and membership lookups (`identity.py`) |
-| migrations | `migrations/`, `alembic.ini`, `changelens/db.py` | Alembic revisions; baseline stamp and dev seed commands |
+| migrations | `migrations/`, `alembic.ini`, `changelens/db.py` | Alembic revisions; baseline stamp, role bootstrap and dev seed commands |
 | `storage` | `changelens/storage/` | S3 adapter; tenant-prefixed keys; in-memory store for unit tests |
 | `jobs` | `changelens/jobs/` | Postgres queue: ID-only payloads, idempotency keys, `SKIP LOCKED`, retries, leases |
 | `worker` | `changelens/worker/` | Runs `parse` and `compare` jobs under the cost ceiling |
@@ -47,7 +47,22 @@ Every dependency is pinned with hashes. `httpx` is a runtime dependency (the ION
 
 Alembic owns the schema (I-8 S1). The api and the worker never create or migrate tables on start.
 
+**Roles (I-8 S3).** Three connections, each with its own URL:
+- `CHANGELENS_ADMIN_DATABASE_URL`, a superuser (default: the compose `changelens` user). Only `bootstrap-roles` and `stamp-baseline` use it.
+- `CHANGELENS_MIGRATION_DATABASE_URL`, the owner role `changelens_owner` (default: its dev password). Alembic and `seed-dev` use it. It owns the tables and functions and bypasses RLS.
+- `CHANGELENS_DATABASE_URL`, the app role `changelens_app`. The api, worker and retention use it, and refuse to start as a role that bypasses RLS. Forced row-level security applies to it on every tenant table.
+
+`bootstrap-roles` creates or updates both roles, grants the schema rights and hands every existing table and function to the owner. It is idempotent; run it once per database, before `alembic upgrade head`. The passwords come from `CHANGELENS_OWNER_DB_PASSWORD` and `CHANGELENS_APP_DB_PASSWORD` (at least 16 characters); with `CHANGELENS_ENV=local` and those unset it uses the dev-only defaults that match the default URLs. The compose file doesn't create the roles itself: Postgres runs init scripts only on an empty volume, and this also has to work on existing dev databases.
+
 **A new or empty database**, from `backend/`:
+
+```powershell
+$env:CHANGELENS_ENV = 'local'
+```
+
+```powershell
+.venv\Scripts\python -m changelens.db bootstrap-roles
+```
 
 ```powershell
 .venv\Scripts\python -m alembic upgrade head
@@ -57,6 +72,14 @@ Alembic owns the schema (I-8 S1). The api and the worker never create or migrate
 
 ```powershell
 .venv\Scripts\python -m changelens.db stamp-baseline
+```
+
+```powershell
+$env:CHANGELENS_ENV = 'local'
+```
+
+```powershell
+.venv\Scripts\python -m changelens.db bootstrap-roles
 ```
 
 ```powershell
@@ -107,7 +130,9 @@ Optional environment variables:
 
 | Variable | Default |
 |---|---|
-| `CHANGELENS_DATABASE_URL` | `postgresql+psycopg://changelens:changelens@127.0.0.1:55432/changelens` |
+| `CHANGELENS_DATABASE_URL` | the app role: `postgresql+psycopg://changelens_app:<dev password>@127.0.0.1:55432/changelens` |
+| `CHANGELENS_MIGRATION_DATABASE_URL` | the owner role, same host and database (migrations and `seed-dev` only) |
+| `CHANGELENS_ADMIN_DATABASE_URL` | the compose superuser (`bootstrap-roles`, `stamp-baseline`) |
 | `CHANGELENS_S3_ENDPOINT` | `http://127.0.0.1:59000` |
 | `CHANGELENS_S3_ACCESS_KEY` | `changelens` |
 | `CHANGELENS_S3_SECRET_KEY` | the compose dev value |
@@ -200,6 +225,7 @@ They cover:
 - job idempotency, `SKIP LOCKED`, retries, permanent failure and crash recovery after the lease expires.
 - migrations (I-8 S1): `upgrade head` matches the models, the identity revision downgrades and upgrades, and a `create_all`-built database is adopted, stamped and upgraded (or refused when it differs);
 - GUARD in Postgres: a deleted user, an inactive membership or no membership is rejected on the next request; one active membership per user; onboarding rows and review actors carry the user ID.
+- row-level security (I-8 S3, `test_rls_db.py`): conftest bootstraps the roles, migrates as `changelens_owner` and runs the api, worker and retention as `changelens_app`, so the whole suite runs under RLS; only fixtures (`env.sql`, seeding, truncation) use an owner connection. The tests check that every table with `tenant_id` has a forced policy, direct SQL and an unfiltered query as the app role, every route in the OpenAPI schema across tenants, every job kind, and the functions' columns and argument checks.
 
 The unit tests cover the Logto path with keys generated in the test and the JWKS served through `httpx.MockTransport` (`tests/unit/test_guard_logto.py`).
 

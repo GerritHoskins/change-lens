@@ -27,6 +27,7 @@ def main() -> None:
     configure_logging()
     settings = Settings.from_env()
     app = create_app(settings)
+    app.state.db.assert_app_role()
     host = bind_host(args.lan)
     if args.lan:
         print("WARNING: the dev API is reachable from the local network (plain HTTP, dev token only).")
