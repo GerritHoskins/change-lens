@@ -9,6 +9,7 @@ import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'comparison_screen.dart';
+import 'definition_sheets.dart';
 
 class CompareScreen extends StatefulWidget {
   const CompareScreen({super.key, this.project, this.versions = const []});
@@ -194,7 +195,11 @@ class _CompareScreenState extends State<CompareScreen> {
         _slot(false),
         if (!distinct) Padding(padding: const EdgeInsets.only(top: 12), child: CalmWarning(text: l.sameVersion)),
         const SizedBox(height: 28),
-        Semantics(header: true, child: Text(l.scopeQuestion, style: text.titleLarge)),
+        Row(children: [
+          Expanded(child: Semantics(header: true, child: Text(l.scopeQuestion, style: text.titleLarge))),
+          CalmInfoButton(key: const Key('info-scope'), term: l.scopeQuestion,
+            sheet: (_) => const ScopeDefinitionSheet()),
+        ]),
         const SizedBox(height: 12),
         RadioGroup<Scope>(groupValue: scope,
           onChanged: (s) { if (!locked) setState(() => scope = s); },

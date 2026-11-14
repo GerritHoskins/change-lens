@@ -44,7 +44,7 @@ List<Widget> _spaced(List<Widget> children, double gap) => [
 /// main button with a text Cancel under it, pinned above the keyboard.
 class CalmSheet extends StatelessWidget {
   const CalmSheet({super.key, required this.title, this.lead, required this.children,
-    this.action, this.actionKey, this.onAction});
+    this.action, this.actionKey, this.onAction, this.dismissLabel});
 
   final String title;
   final String? lead;
@@ -53,6 +53,8 @@ class CalmSheet extends StatelessWidget {
   final String? action;
   final Key? actionKey;
   final VoidCallback? onAction;
+  /// The text button under the content: Cancel for decisions, Close for read-only sheets.
+  final String? dismissLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +76,7 @@ class CalmSheet extends StatelessWidget {
           SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (action != null) FilledButton(key: actionKey, onPressed: onAction, child: Text(action!)),
-              TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
+              TextButton(onPressed: () => Navigator.pop(context), child: Text(dismissLabel ?? l.cancel)),
             ]))),
         ])),
     );
