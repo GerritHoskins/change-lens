@@ -53,6 +53,21 @@ def test_validation_errors_do_not_echo_input(client_store):
     assert "MARKER" not in r.text
 
 
+@pytest.mark.parametrize("extra", [
+    {"MARKER-KEY-123": "MARKER-VALUE-123"},
+    {"evidence_mode": {"before": "text_only", "after": "text_only", "MARKER-KEY-123": 1}},
+])
+def test_unknown_keys_are_not_echoed_in_validation_errors(client_store, extra):
+    # The location of an extra_forbidden error is the client's own key name.
+    client, _ = client_store
+    body = {"action": "confirmed", "evidence_mode": {"before": "text_only", "after": "text_only"},
+            "page_opened": False, **extra}
+    r = client.post("/findings/%s/reviews" % uuid.uuid4(), json=body, headers=auth(TOKEN_A))
+    _is_problem(r, 422, "invalid_request")
+    assert "MARKER" not in r.text
+    assert "<unknown field>" in r.json()["detail"]
+
+
 def test_unknown_route_and_method(client_store):
     client, _ = client_store
     _is_problem(client.get("/nope"), 404, "not_found")

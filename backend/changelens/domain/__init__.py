@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from changelens.domain.models import (
-    Base, ClientApprovalRecord, Comparison, ComparisonCostTombstone, FactCacheEntry, Finding,
+    AccountOnboarding, Base, ClientApprovalRecord, Comparison, ComparisonCostTombstone, FactCacheEntry, Finding,
     ObjectWriteIntent, Project, ReviewEvent, SourceVersion,
 )
 
@@ -318,6 +318,47 @@ class TenantRepo:
                     self.add(FactCacheEntry(source_version_id=version_id, cache_key=key, result=result))
             except IntegrityError:
                 pass
+
+    def onboarding(self, account_id: uuid.UUID, lock: bool = False) -> Optional[AccountOnboarding]:
+        """Onboarding state (O-23). No row means not started; reads never create one."""
+        q = (select(AccountOnboarding).where(AccountOnboarding.account_id == account_id,
+                                             AccountOnboarding.tenant_id == self.tenant_id)
+             .execution_options(populate_existing=True))
+        if lock:
+            q = q.with_for_update()
+        return self.s.scalars(q).one_or_none()
+
+    def record_onboarding(self, account_id: uuid.UUID, *, step: Optional[int] = None, completed: bool = False,
+                          now: Optional[datetime] = None) -> Optional[AccountOnboarding]:
+        """Last step write wins; completion is set once by the server clock and never cleared.
+        The row lock serialises a step write against a completion, so the step can't reopen it."""
+        if (step is None) != completed:
+            raise ValueError("exactly one of step or completed")
+        now = now or datetime.now(timezone.utc)
+        row = self.onboarding(account_id, lock=True)
+        if row is None:  # the first write creates the row
+            try:
+                with self.s.begin_nested():  # savepoint: a lost first-write race rolls back only this insert
+                    row = self.add(AccountOnboarding(account_id=account_id, updated_at=now))
+            except IntegrityError:
+                row = self.onboarding(account_id, lock=True)  # the winner has committed; lock its row
+                if row is None:
+                    return None
+        if row.onboarding_completed_at is None:
+            if completed:
+                row.onboarding_completed_at, row.onboarding_step = now, None
+            else:
+                row.onboarding_step = step
+            row.updated_at = now
+            self.s.flush()
+        return row
+
+    def delete_onboarding(self, account_id: uuid.UUID) -> int:
+        """For 03a P8 DELETE_ACCOUNT (and DELETE_TENANT per member); no route until I-8.
+        Project deletion and retention never call this: it is account data, not project data."""
+        result = self.s.execute(delete(AccountOnboarding).where(AccountOnboarding.account_id == account_id,
+                                                                AccountOnboarding.tenant_id == self.tenant_id))
+        return result.rowcount
 
     def replace_findings(self, comparison_id: uuid.UUID, findings: list[Finding]) -> None:
         """Retries never duplicate findings (03 §7): the old set is replaced in the same transaction."""
