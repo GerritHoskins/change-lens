@@ -7,7 +7,8 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
-    BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func,
+    BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text,
+    UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -223,3 +224,18 @@ class ClientApprovalRecord(Base):
     stated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     recorded_by: Mapped[str] = mapped_column(String(80), nullable=False)
     created_at: Mapped[datetime] = _now()
+
+
+class AccountOnboarding(Base):
+    """Onboarding state of one account (O-23). Identifiers, a step number and timestamps only (AC-23).
+    `account_id` is the tenant ID until I-8 (one tenant per account in v1); I-8 adds the FK to users.id."""
+    __tablename__ = "account_onboarding"
+    __table_args__ = (
+        CheckConstraint("onboarding_step IS NULL OR onboarding_step BETWEEN 1 AND 32", name="ck_onboarding_step"),
+        CheckConstraint("onboarding_completed_at IS NULL OR onboarding_step IS NULL", name="ck_onboarding_done"),
+    )
+    account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    onboarding_step: Mapped[Optional[int]] = mapped_column(SmallInteger)  # last step reached, 1-based
+    onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # set once
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

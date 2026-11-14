@@ -58,6 +58,7 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   if apple_refresh and user: user.apple_refresh_token_enc ← apple_refresh   # only once a user row exists (AR-2)  [AC-22]
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
+  an active session's response carries onboarding ← {completed, step} of the account, read in the same transaction  # O-23; no row → {false, null}
 
 PARK(apple_refresh, subject):                                # whenever P1 returns without a user row (AR-5)
   if apple_refresh: store it encrypted in apple_token_park under subject, expiring in 1 h
@@ -368,6 +369,7 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            succeeds (AR-1: first,
            while the row still holds it); then replace the user row with a tombstone ID (apple_refresh_token_enc ← null),
            delete the IdP user and all linked identities, delete device tokens (with I-27)  [AC-22, AC-26]
+           delete the account's onboarding row (O-23); it must not survive under the tombstone ID  [AC-22]
   owner deleting their account while other members remain: the app requires a choice, either
            transfer ownership to a named member first, or delete the whole team after explicit confirmation
   tenant (sole owner leaving, team deletion, or contract end): DELETE_PROJECT for every project,

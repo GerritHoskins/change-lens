@@ -116,6 +116,7 @@ The six logical records from handoff §8, plus supporting records for review, sh
 | SharedReport | id, comparison_id, token_hash, snapshot_json, included_finding_ids, expires_at, revoked_at, view_log | Snapshot never edited; set to null on revocation or expiry (03a P7); revocation state mutable |
 | User | id, idp_subjects[], email, apple_refresh_token_enc (encrypted with a key from the secret store; only for Apple sign-in), deleted_at | Deleted users become a tombstone ID, so `actor_id` and `recorded_by` in append-only records stay valid without personal data (03a P8) |
 | Membership | user_id, tenant_id, role (owner / member), status (active / inactive) | Status and role only; GUARD requires `active` (03a P0) |
+| AccountOnboarding | account_id, onboarding_step, onboarding_completed_at, updated_at | Step mutable; completion set once. Belongs to `User` once I-8 exists (`account_id` → `users.id`); until then the account ID is the dev-token tenant ID (O-23) |
 | Invite | id, tenant_id, email, expires_at, consumed_at | Consumed once |
 | Device (with I-27, after v1) | id, user_id, push_token, platform | Deleted on logout, removal and account deletion |
 
@@ -264,10 +265,11 @@ Every route except `/s/{token}` needs a bearer JWT. The tenant comes from the us
 | `GET /comparisons/{id}/shares`, `DELETE /shares/{id}` | List and revoke | AC-17 |
 | `GET /s/{token}` | Read-only share page (HTML) | Headers per §6; rate-limited |
 | `POST /devices`, `DELETE /devices/{id}` | Register or remove a push token (after v1, I-27) | — |
-| `POST /session` | Bootstrap after IdP sign-in: runs 03a P1; a second call carries `invite_choice` (join / own) | The only route outside GUARD; sets no tenant; returns session status, `link_required` or the invite's team name and owner (R1) |
+| `POST /session` | Bootstrap after IdP sign-in: runs 03a P1; a second call carries `invite_choice` (join / own) | The only route outside GUARD; sets no tenant; returns session status, `link_required` or the invite's team name and owner (R1). An active session's response also carries `onboarding: {completed, step}`, read in the same transaction (O-23) |
 | `DELETE /me`, `DELETE /team` | Delete own account; delete the whole team (owner) | In-app account deletion (Apple 5.1.1(v)); cascades through 03a P8 incl. the IdP user |
 | `POST /team/invites`, `DELETE /team/members/{id}`, `POST /team/owner` | Invite a member; remove a member; transfer ownership | Owner (or operator for the owner) only; removal deactivates the membership, revokes IdP sessions, device tokens and the member's shares (03a P1) |
 | `GET /me/usage` | Allowance used and remaining | — |
+| `GET /me/onboarding`, `PUT /me/onboarding` | Read or write the account's onboarding state (O-23): `{"completed": bool, "step": int or null}`. `PUT` takes exactly one of `{"step": n}` (1–32) or `{"completed": true}` and returns the same object | No row reads as not started. Completion is set once and wins over any step write; later writes return the completed state. Other bodies get `invalid_request`. The Projects-menu replay never calls these |
 
 Errors use problem+json with stable codes: `limit_exceeded`, `unsupported_type`, `allowance_exhausted`, `spend_cap_reached`, `scope_not_confirmed`, `not_found`, `unauthenticated`, `unsupported_method`, `link_required`. Resources in another tenant return `not_found`, never `forbidden`, so their existence isn't revealed (AC-19).
 
