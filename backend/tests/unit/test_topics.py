@@ -9,6 +9,7 @@ import pytest
 
 from changelens.api import reviews
 from changelens.config import Limits
+from changelens.domain.identity import Principal
 from changelens.domain.models import Finding, ReviewEvent
 from changelens.llm import FakeLlm, MeteredLlm
 from changelens.llm.schemas import FACT_LIST, SchemaError, validate
@@ -171,7 +172,7 @@ def correction(category):
 
 def test_correction_changes_only_new_revision_topic_and_counts_current_findings(review_env):
     original, repo, request = review_env
-    result = reviews.review(original.id, correction("budget"), request, uuid.uuid4())
+    result = reviews.review(original.id, correction("budget"), request, Principal(uuid.uuid4(), uuid.uuid4(), "owner"))
     updated = result["finding"]
     assert updated["topic"] == "budget" and updated["group"] == "needs_review"
     assert original.category == "other_material" and original.review_group == "needs_review"
@@ -187,7 +188,7 @@ def test_correction_changes_only_new_revision_topic_and_counts_current_findings(
 
 def test_legacy_approval_correction_is_canonical_and_does_not_record_client_approval(review_env):
     original, repo, request = review_env
-    result = reviews.review(original.id, correction("approval"), request, uuid.uuid4())
+    result = reviews.review(original.id, correction("approval"), request, Principal(uuid.uuid4(), uuid.uuid4(), "owner"))
     assert result["finding"]["category"] == result["finding"]["topic"] == "approval_wording"
     assert result["finding"]["client_approval_recorded"] is False
     historical = Finding(id=uuid.uuid4(), category="approval", evidence=[], change_type="added", revision=1,

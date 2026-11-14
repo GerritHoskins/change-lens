@@ -99,7 +99,7 @@ Alignment uses content keys (fact type + normalised subject), not position. Sect
 
 ## 5. Data model
 
-The six logical records from handoff §8, plus supporting records for review, sharing and accounts. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19):
+The six logical records from handoff §8, plus supporting records for review, sharing and accounts. **Every table has a `tenant_id` column**, omitted from the field lists below for brevity, and every query is scoped by it (AC-19). The one exception is `User`: a user exists before any tenant and is found by subject on every request, so it is pre-tenant and read only through the narrow identity lookups (§6 Tenant isolation; I-8 S1):
 - Postgres row-level security applies to the API *and* the worker. The worker runs under a tenant-scoped role per job, not a role that bypasses RLS.
 - Job idempotency keys and fact caches include `tenant_id`.
 - Content-hash (`sha256`) deduplication across tenants is forbidden.
@@ -114,9 +114,9 @@ The six logical records from handoff §8, plus supporting records for review, sh
 | ReviewEvent | id, finding_id, actor_id, action (confirmed / corrected / dismissed / note), evidence_mode_before and evidence_mode_after (pdf_highlight / text_fallback / text_only), page_opened, at | Append-only |
 | ClientApprovalRecord | id, finding_id, evidence_text_or_object, stated_by, stated_at, recorded_by | Append-only, separate from review (AC-12) |
 | SharedReport | id, comparison_id, token_hash, snapshot_json, included_finding_ids, expires_at, revoked_at, view_log | Snapshot never edited; set to null on revocation or expiry (03a P7); revocation state mutable |
-| User | id, idp_subjects[], email, apple_refresh_token_enc (encrypted with a key from the secret store; only for Apple sign-in), deleted_at | Deleted users become a tombstone ID, so `actor_id` and `recorded_by` in append-only records stay valid without personal data (03a P8) |
-| Membership | user_id, tenant_id, role (owner / member), status (active / inactive) | Status and role only; GUARD requires `active` (03a P0) |
-| AccountOnboarding | account_id, onboarding_step, onboarding_completed_at, updated_at | Step mutable; completion set once. Belongs to `User` once I-8 exists (`account_id` → `users.id`); until then the account ID is the dev-token tenant ID (O-23) |
+| User | id, idp_subject (one Logto subject: a linked Google identity signs in as the same Logto user, D-8 C4), created_at, deleted_at; no `tenant_id` (pre-tenant, see above); no email until S4 decides whether `link_required` needs one; apple_refresh_token_enc added by S4 (encrypted with a key from the secret store; only for Apple sign-in) | Deleted users become a tombstone ID, so `actor_id` and `recorded_by` in append-only records stay valid without personal data (03a P8; S5 defines the tombstone) |
+| Membership | user_id, tenant_id, role (owner / member), status (active / inactive), created_at | Status and role only; GUARD requires `active` (03a P0). At most one active membership per user (v1 has one tenant per account; partial unique index) |
+| AccountOnboarding | account_id, onboarding_step, onboarding_completed_at, updated_at | Step mutable; completion set once. Belongs to `User`: `account_id` is a foreign key to `users.id` (I-8 S1, O-23) |
 | Invite | id, tenant_id, email, expires_at, consumed_at | Consumed once |
 | Device (with I-27, after v1) | id, user_id, push_token, platform | Deleted on logout, removal and account deletion |
 

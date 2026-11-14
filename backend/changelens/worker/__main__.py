@@ -1,4 +1,4 @@
-"""Run the dev worker: `python -m changelens.worker`."""
+"""Run the dev worker: `python -m changelens.worker`. Migrate first: `python -m alembic upgrade head`."""
 from pathlib import Path
 
 from changelens.config import Settings
@@ -12,7 +12,6 @@ def main() -> None:
     configure_logging()
     settings = Settings.from_env()
     db = Database(settings.database_url)
-    db.create_schema()
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)
     store.ensure_bucket()
     llm = None

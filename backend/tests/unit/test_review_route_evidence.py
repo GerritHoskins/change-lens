@@ -8,6 +8,7 @@ import pytest
 
 from changelens.api.errors import ApiError
 from changelens.api.reviews import ReviewIn, review
+from changelens.domain.identity import Principal
 from changelens.domain.models import Finding, ReviewEvent
 
 
@@ -80,7 +81,7 @@ def test_invalid_observation_cannot_append_a_correction_or_review(sides, kinds, 
     body = ReviewIn(action="corrected", correction={"category": "budget"},
                     evidence_mode={"before": before, "after": after}, page_opened=False)
     with pytest.raises(ApiError) as error:
-        review(repo.original.id, body, repo.request(), repo.tenant_id)
+        review(repo.original.id, body, repo.request(), Principal(uuid.uuid4(), repo.tenant_id, "owner"))
     assert error.value.status == 422
     assert repo.writes == [] and repo.events == []
     assert repo.original.category == "other_material" and len(repo.rows) == 1
@@ -95,7 +96,7 @@ def test_valid_device_observations_round_trip_without_recording_approval(sides, 
     repo = ReviewRepository(sides, kinds)
     modes = {"before": before, "after": after}
     body = ReviewIn(action="confirmed", evidence_mode=modes, page_opened=opened)
-    result = review(repo.original.id, body, repo.request(), repo.tenant_id)
+    result = review(repo.original.id, body, repo.request(), Principal(uuid.uuid4(), repo.tenant_id, "owner"))
     assert len(repo.writes) == len(repo.events) == 1 and len(repo.rows) == 1
     assert result["review"]["evidence_mode"] == modes
     assert result["review"]["page_opened"] is opened
@@ -109,5 +110,5 @@ def test_missing_tenant_resolved_source_cannot_append_a_review():
     body = ReviewIn(action="confirmed", evidence_mode={"before": "text_only", "after": "text_only"},
                     page_opened=False)
     with pytest.raises(ApiError) as error:
-        review(repo.original.id, body, repo.request(), repo.tenant_id)
+        review(repo.original.id, body, repo.request(), Principal(uuid.uuid4(), repo.tenant_id, "owner"))
     assert error.value.status == 404 and repo.writes == []
