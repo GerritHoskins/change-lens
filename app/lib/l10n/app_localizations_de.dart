@@ -705,7 +705,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbEvidenceBody =>
-      'Jeder Befund zitiert die Textstelle aus beiden Versionen. „Im Dokument anzeigen“ öffnet die Quelle, und auf einer PDF-Seite ist die Stelle markiert. Zitate werden vor der Anzeige mit der Quelle abgeglichen.';
+      'Jeder Befund zitiert beide Versionen. „Im Dokument anzeigen“ öffnet die Quelle, bei PDFs mit markierter Stelle. Zitate werden vorher mit der Quelle abgeglichen.';
 
   @override
   String get onbReviewTitle => 'Deine Prüfung ist keine Kundenfreigabe';
@@ -716,7 +716,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbReviewApproval =>
-      'Gibt der Kunde etwas frei, dokumentiere es getrennt in seinen Worten, etwa als eingefügte E-Mail. ChangeLens überprüft das nicht.';
+      'Gibt der Kunde etwas frei, dokumentiere es getrennt, etwa als eingefügte E-Mail.';
 
   @override
   String get onbStartTitle => 'Bereit für deinen ersten Vergleich';
