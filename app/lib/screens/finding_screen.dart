@@ -12,6 +12,7 @@ import '../design/calm_icons.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
+import 'definition_sheets.dart';
 import 'evidence_screen.dart';
 import 'evidence_resolution.dart';
 import 'report_widgets.dart';
@@ -230,8 +231,12 @@ class _FindingScreenState extends State<FindingScreen> {
         child: ListView(key: ValueKey(id), padding: const EdgeInsets.fromLTRB(20, 8, 20, 28), children: [
           CalmPageHeader(title: topicLabel(l, f.topic), subtitle: reportIndex < 0 ? null :
             l.findingPosition(reportIndex + 1, widget.report.findings.length)),
-          Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
-              style: Theme.of(context).textTheme.titleMedium),
+          Row(children: [
+            Expanded(child: Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
+              style: Theme.of(context).textTheme.titleMedium)),
+            CalmInfoButton(key: const Key('info-change-types'), term: l.defChangeTypesTitle,
+              sheet: (_) => const ChangeTypeDefinitionSheet()),
+          ]),
           if (f.explanation != null) Padding(padding: const EdgeInsets.only(top: 12),
             child: Text(f.explanation!, style: Theme.of(context).textTheme.titleLarge)),
           if (f.group == 'needs_review') Padding(padding: const EdgeInsets.only(top: 16),
@@ -251,6 +256,8 @@ class _FindingScreenState extends State<FindingScreen> {
                 'text_only' => l.evidenceModeText,
                 _ => null,
               },
+              evidenceInfo: CalmInfoButton(key: ValueKey('info-evidence-${e.side}'), term: l.defEvidenceTitle,
+                sheet: (_) => const EvidenceDefinitionSheet()),
               onTap: _version(e) == null || !presentations.containsKey(e)
                   ? null
                   : () => Navigator.of(context).push(

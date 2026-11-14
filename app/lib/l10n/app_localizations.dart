@@ -1207,6 +1207,342 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saving…'**
   String get saving;
+
+  /// No description provided for @onbSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onbSkip;
+
+  /// No description provided for @onbNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onbNext;
+
+  /// No description provided for @onbStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String onbStep(int current, int total);
+
+  /// No description provided for @onbExample.
+  ///
+  /// In en, this message translates to:
+  /// **'Example'**
+  String get onbExample;
+
+  /// No description provided for @onbDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get onbDone;
+
+  /// No description provided for @onbReplayEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'How ChangeLens works'**
+  String get onbReplayEntry;
+
+  /// No description provided for @onbContextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You set the order and the scope'**
+  String get onbContextTitle;
+
+  /// No description provided for @onbContextScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Then say what the newer version is. That decides how missing items are reported:'**
+  String get onbContextScope;
+
+  /// No description provided for @onbContextNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Something missing from the newer version is never reported as cancelled.'**
+  String get onbContextNote;
+
+  /// No description provided for @onbEvidenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every change shows its source'**
+  String get onbEvidenceTitle;
+
+  /// No description provided for @onbEvidenceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Each finding quotes the passage from both versions. “Show in document” opens the source, and on a PDF page the passage is highlighted. Quotes are checked against the source before they\'re shown.'**
+  String get onbEvidenceBody;
+
+  /// No description provided for @onbReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your review isn\'t client approval'**
+  String get onbReviewTitle;
+
+  /// No description provided for @onbReviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm, correct or dismiss each finding. That records that you checked it, nothing more.'**
+  String get onbReviewBody;
+
+  /// No description provided for @onbReviewApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'If the client approves something, record it separately in their words, for example a pasted e-mail. ChangeLens doesn\'t verify it.'**
+  String get onbReviewApproval;
+
+  /// No description provided for @onbStartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for your first comparison'**
+  String get onbStartTitle;
+
+  /// No description provided for @onbStartInputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasted text, or a PDF with selectable text. Scanned PDFs can\'t be read.'**
+  String get onbStartInputs;
+
+  /// Values come from the server's parse limits, never hard-coded in the string.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to about {words} words per version. PDFs up to {pages} pages and {megabytes} MB.'**
+  String onbStartLimits(int words, int pages, int megabytes);
+
+  /// No description provided for @onbStartOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'An internet connection. Documents aren\'t stored on this device.'**
+  String get onbStartOnline;
+
+  /// No description provided for @onbStartLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'So far, comparisons have been tested on English briefs only.'**
+  String get onbStartLanguage;
+
+  /// Semantics label and tooltip of the info button that opens a definition sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'About {term}'**
+  String defInfo(String term);
+
+  /// No description provided for @defScopeComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Items missing from it are reported as “Not in the replacement”. That never means an obligation is cancelled.'**
+  String get defScopeComplete;
+
+  /// No description provided for @defScopePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Items it doesn\'t mention are reported as “Not addressed”: neither removed nor reconfirmed.'**
+  String get defScopePartial;
+
+  /// No description provided for @defScopeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing items are marked “Uncertain” and go to “Needs your review”.'**
+  String get defScopeUnknown;
+
+  /// No description provided for @defChangeTypesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change types'**
+  String get defChangeTypesTitle;
+
+  /// No description provided for @defAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'New in the newer version.'**
+  String get defAdded;
+
+  /// No description provided for @defChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Different in the two versions. Both values are shown.'**
+  String get defChanged;
+
+  /// No description provided for @defRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing from a complete replacement. This doesn\'t mean it is cancelled.'**
+  String get defRemoved;
+
+  /// No description provided for @defNotAddressed.
+  ///
+  /// In en, this message translates to:
+  /// **'A partial update didn\'t mention it. It is neither removed nor reconfirmed.'**
+  String get defNotAddressed;
+
+  /// No description provided for @defUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens can\'t tell. Check it yourself.'**
+  String get defUncertain;
+
+  /// No description provided for @defReworded.
+  ///
+  /// In en, this message translates to:
+  /// **'Same meaning, different wording.'**
+  String get defReworded;
+
+  /// No description provided for @defEvidenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How a passage was found'**
+  String get defEvidenceTitle;
+
+  /// No description provided for @defModePdf.
+  ///
+  /// In en, this message translates to:
+  /// **'The passage is highlighted on the PDF page.'**
+  String get defModePdf;
+
+  /// No description provided for @defModeFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'The highlight couldn\'t be placed on the page, so the parsed text is shown. Check the quote before you confirm.'**
+  String get defModeFallback;
+
+  /// No description provided for @defModeText.
+  ///
+  /// In en, this message translates to:
+  /// **'This version has no PDF page, so only the text is shown.'**
+  String get defModeText;
+
+  /// No description provided for @defSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected summary'**
+  String get defSummaryTitle;
+
+  /// No description provided for @defSummaryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The report shows a selection of changes. It isn\'t a complete list: “All differences” shows everything else, including presentation-only edits and text no finding explains.'**
+  String get defSummaryBody;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @onbIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare two versions of a brief'**
+  String get onbIntroTitle;
+
+  /// No description provided for @onbIntroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens reads the earlier and the newer version and shows the changes it finds, each with the passage it comes from.'**
+  String get onbIntroBody;
+
+  /// No description provided for @onbIntroGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Catch a changed requirement before you deliver the wrong thing.'**
+  String get onbIntroGoal;
+
+  /// No description provided for @onbIntroAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Illustration: an earlier and a newer brief become one list of changes.'**
+  String get onbIntroAlt;
+
+  /// No description provided for @onbScopeLineComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete replacement: what\'s missing is reported as “Not in the replacement”.'**
+  String get onbScopeLineComplete;
+
+  /// No description provided for @onbScopeLinePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial update: what it doesn\'t mention is “Not addressed”.'**
+  String get onbScopeLinePartial;
+
+  /// No description provided for @onbScopeLineUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure: missing items go to “Needs your review”.'**
+  String get onbScopeLineUnknown;
+
+  /// No description provided for @onbContextAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Illustration: an earlier version above a newer version, which can be swapped.'**
+  String get onbContextAlt;
+
+  /// No description provided for @onbUncertainTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When ChangeLens can\'t tell'**
+  String get onbUncertainTitle;
+
+  /// No description provided for @onbUncertainBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The finding goes to “Needs your review” and gets the ? mark. A topic filter never hides it.'**
+  String get onbUncertainBody;
+
+  /// No description provided for @onbUncertainSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'The report is a selection. “All differences” shows everything else, including presentation-only edits.'**
+  String get onbUncertainSummary;
+
+  /// No description provided for @onbReviewAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Example: a finding confirmed by you, with no client approval recorded.'**
+  String get onbReviewAlt;
+
+  /// No description provided for @onbStartLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste text or pick a PDF with selectable text. You need to be online.'**
+  String get onbStartLine;
+
+  /// No description provided for @onbImportLink.
+  ///
+  /// In en, this message translates to:
+  /// **'What can I import?'**
+  String get onbImportLink;
+
+  /// No description provided for @onbStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get onbStart;
+
+  /// No description provided for @importSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What can I import?'**
+  String get importSheetTitle;
+
+  /// label is approvalRecorded, inserted verbatim.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s then shown as “{label}”.'**
+  String onbReviewApprovalLabel(String label);
+
+  /// Title of step 6 when onboarding is replayed from Projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you compare'**
+  String get onbStartTitleReplay;
+
+  /// Start leads to consent, then Projects, whose main action is Compare two briefs. Must not imply that Start opens a comparison.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: create a project and compare two briefs.'**
+  String get onbStartNext;
 }
 
 class _AppLocalizationsDelegate
