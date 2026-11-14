@@ -12,6 +12,9 @@ import '../services.dart';
 import 'project_screen.dart';
 import 'compare_screen.dart';
 import 'comparison_screen.dart';
+import 'onboarding_screen.dart';
+
+enum _ProjectsMenu { howItWorks, devSettings }
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -101,11 +104,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final text = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text(l.appTitle), actions: [
-        IconButton(
-            key: const Key('settings'),
-            tooltip: l.devSettings,
-            icon: const Icon(CalmIcons.settings),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevSettingsScreen()))),
+        PopupMenuButton<_ProjectsMenu>(
+          key: const Key('projects-menu'),
+          icon: Icon(const {TargetPlatform.iOS, TargetPlatform.macOS}.contains(Theme.of(context).platform)
+            ? CalmIcons.moreIOS : CalmIcons.more),
+          onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
+            _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
+            _ProjectsMenu.devSettings => const DevSettingsScreen(),
+          })),
+          itemBuilder: (_) => [
+            PopupMenuItem(key: const Key('how-it-works'), value: _ProjectsMenu.howItWorks,
+              child: Text(l.onbReplayEntry)),
+            PopupMenuItem(key: const Key('settings'), value: _ProjectsMenu.devSettings,
+              child: Text(l.devSettings)),
+          ]),
+        const SizedBox(width: 8),
       ]),
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))

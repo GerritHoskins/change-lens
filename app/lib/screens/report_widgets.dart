@@ -82,13 +82,15 @@ String? reviewLabel(AppLocalizations l, Review? r) => switch (r?.action) {
 /// One quoted passage, labelled with its side; tap to open it in the document.
 class QuoteCard extends StatelessWidget {
   const QuoteCard({super.key, required this.evidence, this.onTap,
-    this.versionLabel, this.evidenceLabel});
+    this.versionLabel, this.evidenceLabel, this.evidenceInfo});
 
   final Evidence evidence;
   final VoidCallback? onTap;
   final String? versionLabel;
   /// A localized observation supplied by the device's evidence resolver, never inferred here.
   final String? evidenceLabel;
+  /// Shown beside [evidenceLabel] only: explains how the passage was found.
+  final Widget? evidenceInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +115,10 @@ class QuoteCard extends StatelessWidget {
               Text(source, style: type.labelLarge?.copyWith(color: colors.muted)),
               if (evidenceLabel != null) Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(evidenceLabel!, style: type.bodySmall?.copyWith(color: colors.muted))),
+                child: Row(children: [
+                  Expanded(child: Text(evidenceLabel!, style: type.bodySmall?.copyWith(color: colors.muted))),
+                  ?evidenceInfo,
+                ])),
               const SizedBox(height: 12),
               Text(evidence.quote, style: type.bodyLarge),
               if (onTap != null) Padding(

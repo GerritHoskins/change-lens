@@ -12,8 +12,12 @@ abstract final class CalmIcons {
   static const IconData calendar = LucideIcons500.calendar;
   static const IconData chevronDown = LucideIcons500.chevronDown;
   static const IconData chevronRight = LucideIcons500.chevronRight;
+  static const IconData close = LucideIcons500.x;
   static const IconData compare = LucideIcons500.arrowRightLeft;
   static const IconData document = LucideIcons500.fileText;
+  static const IconData info = LucideIcons500.info;
+  static const IconData language = LucideIcons500.languages;
+  static const IconData limits = LucideIcons500.ruler;
   static const IconData more = LucideIcons500.ellipsisVertical;
   static const IconData moreIOS = LucideIcons500.ellipsis;
   static const IconData openExternal = LucideIcons500.externalLink;
@@ -22,4 +26,5 @@ abstract final class CalmIcons {
   static const IconData settings = LucideIcons500.settings;
   static const IconData swap = LucideIcons500.arrowUpDown;
   static const IconData text = LucideIcons500.text;
+  static const IconData online = LucideIcons500.wifi;
 }
