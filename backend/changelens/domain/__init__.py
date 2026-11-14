@@ -1,8 +1,12 @@
 """Database access. Sessions for document data are always tenant-scoped (03 §9.1 `domain`).
 
-`tenant_scope()` opens a transaction, sets `app.tenant_id` with SET LOCAL semantics (so RLS can be
-switched on in I-8 without changing callers) and returns a repository whose every query filters on
-that tenant. `system_session()` exists only for the queue's pre-tenant dequeue (03 §6).
+`tenant_scope()` opens a transaction, sets `app.tenant_id` with SET LOCAL semantics and returns a
+repository whose every query filters on that tenant. Postgres enforces the same boundary below it:
+the processes connect as `changelens_app`, and forced row-level security on every tenant table matches
+only rows of the tenant in `app.tenant_id` (I-8 S3, 03 §6). With no tenant set nothing matches, so
+pre-tenant work (GUARD's identity lookups, queue claims, maintenance scans) calls the narrow
+`SECURITY DEFINER` functions of migration 0003, which return IDs only. The schema is owned by Alembic
+(`backend/migrations/`); nothing here creates or alters tables.
 """
 from __future__ import annotations
 
@@ -10,6 +14,7 @@ import uuid
 import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Iterator, Optional
 
 from sqlalchemy import create_engine, delete, func, or_, select, text
@@ -17,8 +22,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from changelens.domain.identity import IdentityRepo
 from changelens.domain.models import (
-    AccountOnboarding, Base, ClientApprovalRecord, Comparison, ComparisonCostTombstone, FactCacheEntry, Finding,
+    AccountOnboarding, ClientApprovalRecord, Comparison, ComparisonCostTombstone, FactCacheEntry, Finding,
     ObjectWriteIntent, Project, ReviewEvent, SourceVersion,
 )
 
@@ -39,48 +45,6 @@ def used_at(previous: Optional[datetime], now: datetime) -> datetime:
     return max(previous, now) if previous is not None else now
 
 
-DEV_COLUMNS = [  # I-5
-    # Legacy rows have no observed use timestamp. Give null/untracked rows one initial
-    # 30-day grace from bootstrap; subsequent bootstraps must never reset an existing clock.
-    "ALTER TABLE source_versions ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ",
-    "UPDATE source_versions SET last_used_at = CURRENT_TIMESTAMP WHERE last_used_at IS NULL",
-    "ALTER TABLE source_versions ALTER COLUMN last_used_at SET DEFAULT CURRENT_TIMESTAMP",
-    "ALTER TABLE source_versions ALTER COLUMN last_used_at SET NOT NULL",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ",
-    "UPDATE comparisons SET last_used_at = CURRENT_TIMESTAMP WHERE last_used_at IS NULL",
-    "ALTER TABLE comparisons ALTER COLUMN last_used_at SET DEFAULT CURRENT_TIMESTAMP",
-    "ALTER TABLE comparisons ALTER COLUMN last_used_at SET NOT NULL",
-    "ALTER TABLE object_write_intents ADD COLUMN IF NOT EXISTS write_acknowledged BOOLEAN NOT NULL DEFAULT false",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS unexplained JSONB NOT NULL DEFAULT '[]'",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS presentation_only JSONB NOT NULL DEFAULT '[]'",
-    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS note VARCHAR(40)",
-    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS review_group VARCHAR(20) NOT NULL DEFAULT 'other'",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS cost_reservations JSONB NOT NULL DEFAULT '{}'",
-    "ALTER TABLE comparisons ALTER COLUMN cost_actual TYPE NUMERIC(20, 10)",
-    "ALTER TABLE comparisons ALTER COLUMN status TYPE VARCHAR(24)",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)",
-    "ALTER TABLE comparisons ADD COLUMN IF NOT EXISTS request_fingerprint VARCHAR(64)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS uq_comparisons_request ON comparisons (tenant_id, idempotency_key)",
-    "ALTER TABLE review_events ADD COLUMN IF NOT EXISTS evidence_mode_before VARCHAR(20)",
-    "ALTER TABLE review_events ADD COLUMN IF NOT EXISTS evidence_mode_after VARCHAR(20)",
-    "ALTER TABLE review_events ADD COLUMN IF NOT EXISTS page_opened BOOLEAN",
-    """DO $$ BEGIN
-         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_review_evidence_before'
-                        AND conrelid = 'review_events'::regclass) THEN
-           ALTER TABLE review_events ADD CONSTRAINT ck_review_evidence_before CHECK
-             (evidence_mode_before IS NULL OR evidence_mode_before IN ('pdf_highlight', 'text_fallback', 'text_only'));
-         END IF;
-       END $$""",
-    """DO $$ BEGIN
-         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_review_evidence_after'
-                        AND conrelid = 'review_events'::regclass) THEN
-           ALTER TABLE review_events ADD CONSTRAINT ck_review_evidence_after CHECK
-             (evidence_mode_after IS NULL OR evidence_mode_after IN ('pdf_highlight', 'text_fallback', 'text_only'));
-         END IF;
-       END $$""",
-]
-
-
 class Database:
     def __init__(self, url: str):
         # echo stays off: SQL parameters can carry document text (AC-23).
@@ -92,14 +56,6 @@ class Database:
         self._intent_engine = create_engine(url, echo=False, hide_parameters=True, poolclass=NullPool)
         self._intent_sessions = sessionmaker(self._intent_engine, expire_on_commit=False)
 
-    def create_schema(self) -> None:
-        """Dev schema bootstrap (no Alembic until I-8; see 06, I-22 row). Columns added after a
-        table first existed are added in place, so an existing dev database keeps working."""
-        Base.metadata.create_all(self.engine)
-        with self.engine.begin() as conn:
-            for stmt in DEV_COLUMNS:
-                conn.execute(text(stmt))
-
     @contextmanager
     def tenant_scope(self, tenant_id: uuid.UUID) -> Iterator["TenantRepo"]:
         if not isinstance(tenant_id, uuid.UUID):
@@ -109,9 +65,64 @@ class Database:
             yield TenantRepo(s, tenant_id)
 
     @contextmanager
-    def system_session(self) -> Iterator[Session]:
+    def _pre_tenant(self) -> Iterator[Session]:
+        """A transaction with no tenant set: RLS hides every tenant row, so only the functions work."""
         with self._sessions() as s, s.begin():
             yield s
+
+    @contextmanager
+    def identity_scope(self) -> Iterator[IdentityRepo]:
+        """Pre-tenant user and membership lookups for GUARD (03a P0); no tenant is set."""
+        with self._pre_tenant() as s:
+            yield IdentityRepo(s)
+
+    def claim_job(self):
+        """The next ready job (IDs only), marked running; None when the queue is empty."""
+        from changelens import jobs  # jobs imports the models only
+        with self._pre_tenant() as s:
+            return jobs.claim(s)
+
+    def reclaim_expired_jobs(self, lease_seconds: int):
+        """Requeue jobs past their lease; returns the ones that just failed for good."""
+        from changelens import jobs
+        with self._pre_tenant() as s:
+            return jobs.reclaim_expired(s, lease_seconds)
+
+    def maintenance_candidates(self, now: datetime, limit: int):
+        """Retention's three pre-tenant lists of (tenant ID, ID): projects with aged resources, due project
+        deletions and due object purges."""
+        lists = {"project": [], "deletion": [], "purge": []}
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT list, tenant_id, item_id FROM maintenance_candidates(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            for row in rows:
+                lists[row.list].append((row.tenant_id, row.item_id))
+        return lists["project"], lists["deletion"], lists["purge"]
+
+    def account_deletion_candidates(self, now: datetime, limit: int) -> list[tuple[uuid.UUID, uuid.UUID]]:
+        """Due account-deletion receipts as (tenant ID, user ID) (I-8 S5)."""
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT tenant_id, user_id FROM account_deletion_candidates(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            return [(row.tenant_id, row.user_id) for row in rows]
+
+    def rate_limit_hit(self, key_hash: str, window_start: datetime) -> int:
+        """Count one request in a fixed window; returns the window's count (I-8 S6). Commits at once."""
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT rate_limit_hit(:k, :w)"), {"k": key_hash, "w": window_start}).scalar_one()
+
+    def rate_limit_prune(self) -> int:
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT rate_limit_prune()")).scalar_one()
+
+    def assert_app_role(self) -> None:
+        """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
+        with self.engine.connect() as conn:
+            unsafe = conn.execute(text("SELECT rolsuper OR rolbypassrls FROM pg_roles "
+                                       "WHERE rolname = current_user")).scalar_one()
+        if unsafe:
+            raise RuntimeError("CHANGELENS_DATABASE_URL must use the app role (changelens_app): "
+                               "this role bypasses row-level security")
 
     @contextmanager
     def write_intent_scope(self, tenant_id: uuid.UUID) -> Iterator["TenantRepo"]:
@@ -124,11 +135,10 @@ class Database:
     def pending_object_writes(self, now: datetime, limit: int) -> list[tuple[uuid.UUID, uuid.UUID]]:
         # Like queue dequeue, this pre-tenant scan returns IDs only. All subsequent access
         # and cleanup rechecks happen in tenant_scope under the upload's advisory lock.
-        with self.system_session() as s:
-            q = (select(ObjectWriteIntent.tenant_id, ObjectWriteIntent.id)
-                 .where(ObjectWriteIntent.next_attempt_at <= now)
-                 .order_by(ObjectWriteIntent.next_attempt_at, ObjectWriteIntent.created_at).limit(limit))
-            return list(s.execute(q).tuples())
+        with self._pre_tenant() as s:
+            rows = s.execute(text("SELECT tenant_id, intent_id FROM pending_object_writes(:now, :limit)"),
+                             {"now": now, "limit": limit})
+            return [(row.tenant_id, row.intent_id) for row in rows]
 
 
 class DbFactCache:
@@ -352,6 +362,16 @@ class TenantRepo:
             row.updated_at = now
             self.s.flush()
         return row
+
+    def month_spend(self, since: datetime) -> Decimal:
+        """This tenant's spend since `since`: actual costs plus open reservations, tombstones included."""
+        from changelens.domain.spend import tenant_spend
+        return tenant_spend(self.s, self.tenant_id, since)
+
+    def global_month_spend(self, since: datetime) -> Decimal:
+        """All tenants' spend since `since`, for the kill switch: one number, no rows (I-8 S6)."""
+        from changelens.domain.spend import global_spend
+        return global_spend(self.s, since)
 
     def delete_onboarding(self, account_id: uuid.UUID) -> int:
         """For 03a P8 DELETE_ACCOUNT (and DELETE_TENANT per member); no route until I-8.

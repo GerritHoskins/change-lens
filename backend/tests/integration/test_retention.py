@@ -6,8 +6,8 @@ from threading import Event
 import uuid
 
 import pytest
-from sqlalchemy import text
 
+from changelens.db import OWNER_ROLE, upgrade
 from changelens.domain import DbFactCache, used_at
 from changelens.domain.budget import DbCostMeter
 from changelens.domain.models import ObjectWriteIntent
@@ -16,7 +16,7 @@ from changelens.domain.retention import (
 )
 from changelens.metering import CeilingReached
 from changelens.pipeline.types import VerifyResult
-from conftest import TENANT_A, TOKEN_A, TOKEN_B, auth
+from conftest import TENANT_A, TEST_DB, TOKEN_A, TOKEN_B, auth, db_url
 
 
 def pair(env, *, run=True):
@@ -242,17 +242,12 @@ def test_in_flight_model_response_settles_after_deletion_without_more_calls_or_c
     assert env.sql("SELECT count(*) FROM jobs")[0][0] == 0
 
 
-def test_repeated_schema_bootstrap_and_clock_rollback_do_not_extend_or_shorten_observed_use(env):
+def test_repeated_migration_and_clock_rollback_do_not_extend_or_shorten_observed_use(env):
+    # The create_schema bootstrap and its NULL backfill are gone (I-8 S1); `upgrade head` at head is a no-op.
     project, _, _, _ = pair(env)
     old = datetime.now(timezone.utc)-timedelta(days=4)
     age(env, project, old)
     before = clocks(env, project)
-    env.db.create_schema()
+    upgrade(db_url(TEST_DB, OWNER_ROLE))
     assert clocks(env, project) == before
     assert used_at(old, old-timedelta(days=1)) == old
-    with env.db.system_session() as session:
-        session.execute(text("ALTER TABLE source_versions ALTER COLUMN last_used_at DROP NOT NULL"))
-        session.execute(text("UPDATE source_versions SET last_used_at=NULL WHERE project_id=:id"), {"id": project})
-    env.db.create_schema()
-    after = clocks(env, project)
-    assert sum(value > old for value in after.values()) == 2

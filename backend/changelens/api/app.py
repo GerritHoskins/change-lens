@@ -1,4 +1,4 @@
-"""FastAPI application factory for the `api` process (03 §9.1). Dev-token auth only (I-22)."""
+"""FastAPI application factory for the `api` process (03 §9.1). Auth is GUARD (`api.auth`, I-8 S1)."""
 from __future__ import annotations
 
 import logging
@@ -15,9 +15,17 @@ from changelens.api.comparisons import router as comparison_router
 from changelens.api.onboarding import router as onboarding_router
 from changelens.api.retention import router as retention_router
 from changelens.api.routes import router
+from changelens.api.session import router as session_router
+from changelens.api.account import router as account_router
+from changelens.auth.jwks import JwksKeyHolder
+from changelens.auth.jwt_verifier import JwtPolicy
+from changelens.api.limits import MemoryCounters, RateLimiter
+from changelens.auth.logto_management import idp_for
 from changelens.config import Settings
 from changelens.domain import Database
 from changelens.storage import ObjectStore, S3ObjectStore
+
+_DEFAULT = object()
 
 access_log = logging.getLogger("changelens.access")
 
@@ -96,7 +104,8 @@ class BodyLimitMiddleware:
         await self.app(scope, _receive, send)
 
 
-def create_app(settings: Settings, db: Optional[Database] = None, store: Optional[ObjectStore] = None) -> FastAPI:
+def create_app(settings: Settings, db: Optional[Database] = None, store: Optional[ObjectStore] = None,
+               keys: Optional[JwksKeyHolder] = None, idp=_DEFAULT, limiter: Optional[RateLimiter] = None) -> FastAPI:
     max_body = max(settings.limits.max_pdf_bytes, settings.limits.max_text_bytes) + _OVERHEAD
     # Uploads stay in memory: never spool document bytes to a temp file on disk (03 §9.1 `storage`).
     # The parser sees the full multipart stream before per-slot validation. Even a
@@ -110,12 +119,29 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
         s3.ensure_bucket()
         store = s3
     app.state.store = store
+    app.state.keys = None
+    # Rate-limit counters in Postgres, shared by every api process (I-8 S6). Test doubles for the
+    # database have no counter function and get the single-process counters instead.
+    if limiter is None:
+        db_ = app.state.db
+        hit = db_.rate_limit_hit if isinstance(db_, Database) else MemoryCounters()
+        limiter = RateLimiter(hit, settings.rate_limit_key)
+    app.state.limiter = limiter
+    # Deletes the IdP user on account deletion (I-8 S5); None leaves that step pending.
+    app.state.idp = idp_for(settings) if idp is _DEFAULT else idp
+    if settings.auth_mode == "logto":
+        keys = keys or JwksKeyHolder(JwtPolicy(settings.logto_issuer, settings.logto_audience),
+                                     settings.logto_jwks_url)
+        keys.load()  # no keys, no start: JwksUnavailable propagates (I-8 S1)
+        app.state.keys = keys
     errors.install(app)
     app.include_router(router)
     app.include_router(comparison_router)
     app.include_router(review_router)
     app.include_router(retention_router)
     app.include_router(onboarding_router)
+    app.include_router(session_router)
+    app.include_router(account_router)
     app.add_middleware(BodyLimitMiddleware, max_bytes=max_body)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(NoStoreMiddleware)

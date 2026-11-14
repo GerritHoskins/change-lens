@@ -8,6 +8,10 @@ from reportlab.pdfgen import canvas
 
 TOKEN_A = "dev-token-tenant-a-0123456789"
 TOKEN_B = "dev-token-tenant-b-0123456789"
+# The fixed subjects the two dev tokens map to; fixtures seed a user and owner membership for each.
+SUBJECT_A = "dev:tenant-a"
+SUBJECT_B = "dev:tenant-b"
+DEV_TOKENS = {TOKEN_A: SUBJECT_A, TOKEN_B: SUBJECT_B}
 
 EARLIER_LINES = [
     "Project brief: website relaunch",

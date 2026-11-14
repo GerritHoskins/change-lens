@@ -60,6 +60,12 @@ class TenantRepo:
     def __init__(self, state, tenant_id):
         self.state, self.tenant_id = state, tenant_id
 
+    def month_spend(self, since):
+        return Decimal("0")  # spend caps (I-8 S6) are covered by the integration tests
+
+    def global_month_spend(self, since):
+        return Decimal("0")
+
     def _get(self, collection, id_):
         row = self.state[collection].get(id_)
         return row if row is not None and row.tenant_id == self.tenant_id else None
