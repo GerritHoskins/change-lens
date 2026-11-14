@@ -702,7 +702,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onbEvidenceBody =>
-      'Each finding quotes the passage from both versions. “Show in document” opens the source, and on a PDF page the passage is highlighted. Quotes are checked against the source before they\'re shown.';
+      'Each finding quotes both versions. “Show in document” opens the source, with the passage highlighted on PDF pages. Quotes are checked against the source first.';
 
   @override
   String get onbReviewTitle => 'Your review isn\'t client approval';
