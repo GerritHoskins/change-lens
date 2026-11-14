@@ -63,6 +63,14 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   MFA offered by the IdP; enforcement per account setting    [AC-26]
   an active session's response carries onboarding ← {completed, step} of the account, read in the same transaction  # O-23; no row → {false, null}
 
+# As built for email one-time code (I-8 S2). Invites and teams are not built in v1: every first sign-in
+# creates its own tenant. Google, Apple and link_required follow in S4.
+#   user ← find_user(subject); if none: insert user, new tenant and owner membership in one savepoint;
+#   a concurrent first call that loses the unique-subject race re-reads the winner's rows (one user, one tenant).
+#   A deleted user, or a user with no active membership, is rejected (unauthenticated); never a second tenant.
+# App sequence (I-18): Logto sign-in → POST /session → onboarding if not completed (resume at step) → Projects.
+# On start with a stored session the app calls POST /session again; an expired Logto session returns to sign-in (O-22).
+
 PARK(apple_refresh, subject):                                # whenever P1 returns without a user row (AR-5)
   if apple_refresh: store it encrypted in apple_token_park under subject, expiring in 1 h
   # take_parked(subject) returns and removes it. On expiry: call Apple /auth/revoke with it, then delete it,
