@@ -38,15 +38,13 @@ class Worker:
     # Queue loop -----------------------------------------------------------------------------
     def run_once(self) -> bool:
         """Process at most one job. Returns False when the queue had nothing ready."""
-        with self.db.system_session() as s:
-            dead_jobs = jobs.reclaim_expired(s, self.settings.job_lease_seconds)
+        dead_jobs = self.db.reclaim_expired_jobs(self.settings.job_lease_seconds)
         # Never hold queue row locks while taking a project lifecycle lock: retention
         # takes the project lock before deleting the corresponding queue rows.
         for dead in dead_jobs:
             log.warning("job %s (%s) failed: lease expired after %d attempts", dead.id, dead.kind, dead.attempts)
             self._on_final_failure(dead)
-        with self.db.system_session() as s:
-            job = jobs.claim(s)
+        job = self.db.claim_job()
         if job is None:
             self.reconcile_uploads(limit=1)
             return False
@@ -59,15 +57,15 @@ class Worker:
             else:
                 raise ValueError("unknown job kind")
         except Exception as exc:  # retried with backoff; only the class name is recorded
-            with self.db.system_session() as s:
-                final = jobs.retry_or_fail(s, job, type(exc).__name__, self.backoff_seconds)
+            with self.db.tenant_scope(job.tenant_id) as repo:
+                final = jobs.retry_or_fail(repo.s, job, type(exc).__name__, self.backoff_seconds)
             log.warning("job %s (%s) attempt %d failed: %s%s", job.id, job.kind, job.attempts,
                         type(exc).__name__, "; giving up" if final else "; will retry")
             if final:
                 self._on_final_failure(job)
             return True
-        with self.db.system_session() as s:
-            jobs.complete(s, job.id)
+        with self.db.tenant_scope(job.tenant_id) as repo:
+            jobs.complete(repo.s, job.id)
         log.info("job %s (%s) done", job.id, job.kind)
         return True
 
@@ -148,9 +146,12 @@ class Worker:
             sides = [(e.id, e.sha256, earlier), (l.id, l.sha256, later)]
             ceiling, scope = c.cost_ceiling, c.scope_snapshot
         config_id = getattr(self.llm, "config_id", MODEL_CONFIG_ID)
-        meter = DbCostMeter(self.db, tenant_id, comparison_id)
+        meter = DbCostMeter(self.db, tenant_id, comparison_id, self.settings)
         out = run_comparison([(sha, doc, DbFactCache(self.db, tenant_id, vid)) for vid, sha, doc in sides],
                              scope, self.llm, ceiling, config_id, meter=meter)
+        if meter.spend_cap is not None:  # a monthly cap stopped the run before a paid stage (I-8 S6)
+            log.warning("comparison %s stopped: %s spend cap reached", comparison_id, meter.spend_cap)
+            out.status, out.warnings = "failed", out.warnings + [{"code": "spend_cap_reached"}]
         if any(w.get("code") == "cost_ceiling" for w in out.warnings):
             log.warning("comparison %s reached the cost ceiling after %d llm calls", comparison_id, out.calls)
         self._finish(tenant_id, comparison_id, out.checked, out.status, out.warnings)

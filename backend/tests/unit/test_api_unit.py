@@ -9,11 +9,13 @@ from fastapi.testclient import TestClient
 from changelens.api import uploads
 from changelens.api.app import create_app
 from changelens.api.errors import ApiError
+from changelens.api.limits import MemoryCounters
 from changelens.config import Limits, Settings
 from changelens.domain import Database
 from changelens.domain.models import Comparison
 from changelens.storage import MemoryObjectStore
-from helpers import TOKEN_A, auth, make_pdf
+from helpers import DEV_TOKENS, SUBJECT_A, TOKEN_A, auth, make_pdf
+from identity_fixture import SqliteIdentity
 
 LIMITS = Limits()
 
@@ -21,11 +23,17 @@ LIMITS = Limits()
 @pytest.fixture()
 def client_store():
     settings = Settings(database_url="postgresql+psycopg://nobody@127.0.0.1:1/none", s3_endpoint="http://unused",
-                        s3_access_key="x", s3_secret_key="x", s3_bucket="x", dev_tokens={TOKEN_A: uuid.uuid4()},
+                        s3_access_key="x", s3_secret_key="x", s3_bucket="x", dev_tokens=DEV_TOKENS,
                         limits=Limits(max_pdf_bytes=200_000, max_pdf_pages=2, max_text_bytes=1000, max_text_words=50))
     store = MemoryObjectStore()
-    # The engine never connects in these tests: every request is rejected before the database.
-    app = create_app(settings, Database(settings.database_url), store)
+    # The engine never connects in these tests: every request is rejected after GUARD (users and
+    # memberships in SQLite) and before any tenant-scoped database access.
+    db = Database(settings.database_url)
+    identity = SqliteIdentity()
+    identity.seed(SUBJECT_A, uuid.uuid4())
+    db.identity_scope = identity.identity_scope
+    db.rate_limit_hit = MemoryCounters()  # the rate-limit counters (I-8 S6) live in memory too
+    app = create_app(settings, db, store)
     return TestClient(app, raise_server_exceptions=False), store
 
 

@@ -13,9 +13,11 @@ from changelens.metering import CeilingReached, Reservation, money
 
 
 class DbCostMeter:
-    def __init__(self, db: Database, tenant_id: uuid.UUID, comparison_id: uuid.UUID):
+    def __init__(self, db: Database, tenant_id: uuid.UUID, comparison_id: uuid.UUID, settings=None):
         self.db, self.tenant_id, self.comparison_id = db, tenant_id, comparison_id
         self.calls = 0
+        self.settings = settings  # with settings, the monthly spend caps are checked before each reservation
+        self.spend_cap: str | None = None  # 'tenant' or 'global' once a cap stopped the run (I-8 S6)
 
     @staticmethod
     def _amounts(comparison) -> tuple[Decimal, Decimal]:
@@ -52,6 +54,11 @@ class DbCostMeter:
             comparison = repo.comparison(self.comparison_id, lock=True)
             if comparison is None or comparison.status not in ("queued", "running"):
                 raise CeilingReached()
+            if self.settings is not None:
+                from changelens.domain.spend import cap_reached
+                self.spend_cap = cap_reached(repo, self.settings)
+                if self.spend_cap is not None:
+                    raise CeilingReached()  # stops like the ceiling; the worker marks the run failed
             actual, reserved = self._amounts(comparison)
             if actual + reserved + estimate > money(comparison.cost_ceiling):
                 raise CeilingReached()

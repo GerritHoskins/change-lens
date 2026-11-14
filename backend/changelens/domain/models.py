@@ -1,4 +1,9 @@
-"""SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19)."""
+"""SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19), except `users`
+(the one pre-tenant table, read only through `domain.identity`; I-8 overview, decision 4) and
+`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6).
+
+The schema is owned by Alembic (`backend/migrations/`); a model change needs a revision.
+"""
 from __future__ import annotations
 
 import uuid
@@ -8,7 +13,7 @@ from typing import Optional
 
 from sqlalchemy import (
     BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text,
-    UniqueConstraint, func,
+    UniqueConstraint, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -191,7 +196,7 @@ class Job(Base):
 
 class ReviewEvent(Base):
     """User review of a finding (02 §5, 03a P6). Append-only; never creates or implies client
-    approval (AC-12). `actor` is the dev-token user until I-8 brings real users."""
+    approval (AC-12). `actor` is the user ID (I-8 S1)."""
     __tablename__ = "review_events"
     __table_args__ = (
         CheckConstraint("evidence_mode_before IS NULL OR evidence_mode_before IN "
@@ -226,16 +231,79 @@ class ClientApprovalRecord(Base):
     created_at: Mapped[datetime] = _now()
 
 
+class User(Base):
+    """One account, keyed by its Logto subject (I-8 S1). No `tenant_id`: a user exists before any tenant
+    and is found by subject on every request (03 §6 pre-tenant lookup). No email: Logto holds it
+    (decision 5). Linked identities share one Logto `sub` (D-8 C4), so one subject per user.
+    A deleted account's row is a tombstone (I-8 S5): only `id`, `created_at` and `deleted_at` remain, so
+    append-only references such as `review_events.actor` stay valid without personal data."""
+    __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("idp_subject", name="uq_users_idp_subject"),
+        CheckConstraint("idp_subject <> ''", name="ck_users_idp_subject"),
+        CheckConstraint("idp_subject IS NOT NULL OR deleted_at IS NOT NULL", name="ck_users_tombstone"),
+    )
+    id: Mapped[uuid.UUID] = _id()
+    idp_subject: Mapped[Optional[str]] = mapped_column(String(200))  # null only on a tombstone
+    created_at: Mapped[datetime] = _now()
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class Membership(Base):
+    """A user's role in a tenant. GUARD requires `active` (03a P0). v1 has one tenant per account, so a
+    user has at most one active membership (partial unique index)."""
+    __tablename__ = "memberships"
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'member')", name="ck_memberships_role"),
+        CheckConstraint("status IN ('active', 'inactive')", name="ck_memberships_status"),
+        Index("uq_memberships_one_active", "user_id", unique=True,
+              postgresql_where=text("status = 'active'"), sqlite_where=text("status = 'active'")),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_memberships_user"), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, index=True)
+    role: Mapped[str] = mapped_column(String(10), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False)
+    created_at: Mapped[datetime] = _now()
+
+
 class AccountOnboarding(Base):
     """Onboarding state of one account (O-23). Identifiers, a step number and timestamps only (AC-23).
-    `account_id` is the tenant ID until I-8 (one tenant per account in v1); I-8 adds the FK to users.id."""
+    `account_id` is the user ID (I-8 S1); v1 has one tenant per account."""
     __tablename__ = "account_onboarding"
     __table_args__ = (
         CheckConstraint("onboarding_step IS NULL OR onboarding_step BETWEEN 1 AND 32", name="ck_onboarding_step"),
         CheckConstraint("onboarding_completed_at IS NULL OR onboarding_step IS NULL", name="ck_onboarding_done"),
     )
-    account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_account_onboarding_user"),
+                                                  primary_key=True)
     tenant_id: Mapped[uuid.UUID] = _tenant()
     onboarding_step: Mapped[Optional[int]] = mapped_column(SmallInteger)  # last step reached, 1-based
     onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # set once
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AccountDeletion(Base):
+    """Account-deletion receipt (03a P8 DELETE_ACCOUNT; I-8 S5): IDs, status and timestamps only. Written in
+    the transaction that freezes the account; maintenance retries it until `complete`."""
+    __tablename__ = "account_deletions"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'complete')", name="ck_account_deletions_status"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_account_deletions_user"),
+                                               primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
+    requested_at: Mapped[datetime] = _now()
+    next_attempt_at: Mapped[datetime] = _now()
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    idp_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # Logto user gone
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class RateLimitCounter(Base):
+    """Fixed-window request counts (I-8 S6). `key_hash` is an HMAC of the account or IP, never the raw value.
+    No `tenant_id`: reached only through the `rate_limit_hit` and `rate_limit_prune` functions."""
+    __tablename__ = "rate_limit_counters"
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    hits: Mapped[int] = mapped_column(Integer, nullable=False)

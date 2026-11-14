@@ -1,5 +1,4 @@
 """Deleting primary data must not leave a cacheable API response behind."""
-import uuid
 
 import pytest
 from fastapi.responses import JSONResponse, Response
@@ -14,7 +13,7 @@ from changelens.storage import MemoryObjectStore
 def client():
     # No database/model/network calls. Test-only routes exercise real application middleware.
     settings = Settings(database_url="unused", s3_endpoint="unused", s3_access_key="unused",
-                        s3_secret_key="unused", s3_bucket="unused", dev_tokens={"test-token": uuid.uuid4()})
+                        s3_secret_key="unused", s3_bucket="unused", dev_tokens={"test-token-test-token": "dev:test"})
     app = create_app(settings, db=object(), store=MemoryObjectStore())
 
     @app.get("/test/report")

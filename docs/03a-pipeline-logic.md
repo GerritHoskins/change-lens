@@ -12,10 +12,15 @@ Conventions: `reject(code)` returns a problem+json error and stops. `log(...)` n
 GUARD(request):
   claims ← verify_jwt(request.token, idp_keys)              # signature, expiry, audience
   if claims invalid or session revoked at IdP: reject(unauthenticated)        [AC-26]
-  m ← membership_of(claims.subject)                          # tenant comes from here, never from the request body
+  # As built (I-8 S3): steps u and m are one call, session_lookup(subject), a SECURITY DEFINER function
+  # that returns (user, tenant, role) only for a live user with an active membership.
+  u ← user_by_subject(claims.subject)
+  # Checked on every request: a deleted user keeps valid cached tokens until they expire (D-8 side finding).
+  if u is none or u.deleted_at is set: reject(unauthenticated)                [AC-26]
+  m ← active_membership(u)                                   # tenant comes from here, never from the request body
   if m is none or m.status ≠ active: reject(unauthenticated)                   [AC-19, AC-26]
   tenant ← m.tenant
-  db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)               [AC-19]
+  db.begin(); db.execute("SET LOCAL app.tenant_id = ?", tenant)  # enforced by forced RLS policies (I-8 S3) [AC-19]
   # Every repository query runs under row-level security.
   # A row from another tenant is invisible, so lookups return nothing → reject(not_found).  [AC-19]
 ```
@@ -59,6 +64,14 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   access_token_ttl ≤ 15 min                                  # revocation takes effect at next refresh  [AC-26]
   MFA offered by the IdP; enforcement per account setting    [AC-26]
   an active session's response carries onboarding ← {completed, step} of the account, read in the same transaction  # O-23; no row → {false, null}
+
+# As built for email one-time code (I-8 S2). Invites and teams are not built in v1: every first sign-in
+# creates its own tenant. Google, Apple and link_required follow in S4.
+#   user ← find_user(subject); if none: insert user, new tenant and owner membership in one savepoint;
+#   a concurrent first call that loses the unique-subject race re-reads the winner's rows (one user, one tenant).
+#   A deleted user, or a user with no active membership, is rejected (unauthenticated); never a second tenant.
+# App sequence (I-18): Logto sign-in → POST /session → onboarding if not completed (resume at step) → Projects.
+# On start with a stored session the app calls POST /session again; an expired Logto session returns to sign-in (O-22).
 
 PARK(apple_refresh, subject):                                # whenever P1 returns without a user row (AR-5)
   if apple_refresh: store it encrypted in apple_token_park under subject, expiring in 1 h
@@ -157,7 +170,8 @@ API_CREATE_COMPARISON(project, earlier, later, scope, idempotency_key): # GUARD 
   E, L ← for each slot: the existing version, or IMPORT(upload or paste) per P2, in one transaction with c
   if E = L or either is rejected: reject(scope_not_confirmed)                 [AC-14]
   if allowance_remaining(tenant) < 1: reject(allowance_exhausted)             # early check; nothing charged  [AC-21]
-  if month_spend(tenant) ≥ tenant_spend_cap or global_kill_switch_on(): reject(spend_cap_reached)  # counts failed runs too (SA-4)  [AC-21]
+  if month_spend(tenant) ≥ tenant_spend_cap or month_spend(all) ≥ global_spend_cap: reject(spend_cap_reached)  # UTC month; failed runs, deleted projects count (SA-4)  [AC-21]
+  # As built (I-8 S6): GUARD first counts the request per account (429 rate_limited); the worker rechecks both caps before each paid stage
   status ← queued if E and L are parsed else waiting_for_versions
   c ← Comparison(E, L, scope_snapshot=scope, status, idempotency_key)
   if status = queued: jobs.enqueue(compare, ids={tenant, c.id})            [AC-23]
@@ -376,6 +390,9 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens with I-27), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
+  # As built (I-8 S5), sole owner in v1, each step resumable: freeze (receipt, deleted_at, membership inactive)
+  # → Apple revoke (S4) → DELETE_PROJECT for every project → onboarding row → delete the Logto user (404 = done)
+  # → tombstone (subject cleared) and membership deleted. 204 when all done, 202 while pending; maintenance retries.
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,

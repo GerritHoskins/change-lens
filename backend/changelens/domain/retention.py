@@ -61,7 +61,8 @@ def _remove_comparisons(repo, rows):
     for comparison in rows:
         # The comparison row is already locked. Settlement either precedes this snapshot
         # or sees its tombstone in a subsequent READ COMMITTED statement after deletion.
-        repo.add(ComparisonCostTombstone(id=comparison.id,
+        # created_at is the comparison's, so monthly spend (I-8 S6) counts it in the month it was made.
+        repo.add(ComparisonCostTombstone(id=comparison.id, created_at=comparison.created_at,
             cost_actual=comparison.cost_actual or Decimal("0"),
             cost_reservations=dict(comparison.cost_reservations)))
         finding_ids = select(Finding.id).where(Finding.tenant_id == repo.tenant_id,
@@ -222,28 +223,15 @@ def process_project_deletion(db, store, tenant_id, project_id, *, now=None) -> b
 
 
 def maintenance_snapshot(db, *, now=None, limit=100):
-    now = now or utcnow()
-    cutoff = now - RETENTION
-    with db.system_session() as session:
-        aged_comparison = exists(select(Comparison.id).where(Comparison.project_id == Project.id,
-            Comparison.tenant_id == Project.tenant_id, Comparison.last_used_at <= cutoff))
-        live_reference = exists(select(Comparison.id).where(
-            Comparison.tenant_id == SourceVersion.tenant_id, Comparison.last_used_at > cutoff,
-            or_(Comparison.earlier_id == SourceVersion.id, Comparison.later_id == SourceVersion.id))).correlate(SourceVersion)
-        aged_source = exists(select(SourceVersion.id).where(SourceVersion.project_id == Project.id,
-            SourceVersion.tenant_id == Project.tenant_id, SourceVersion.last_used_at <= cutoff, ~live_reference))
-        projects = list(session.execute(select(Project.tenant_id, Project.id).where(
-            Project.deleted_at.is_(None), or_(aged_comparison, aged_source)).order_by(Project.id).limit(limit)).tuples())
-        deletions = list(session.execute(select(ProjectDeletion.tenant_id, ProjectDeletion.project_id).where(
-            ProjectDeletion.status == "pending", ProjectDeletion.next_attempt_at <= now)
-            .order_by(ProjectDeletion.next_attempt_at).limit(limit)).tuples())
-        purges = list(session.execute(select(ObjectPurgeIntent.tenant_id, ObjectPurgeIntent.id).where(
-            ObjectPurgeIntent.next_attempt_at <= now).order_by(ObjectPurgeIntent.next_attempt_at).limit(limit)).tuples())
-    return projects, deletions, purges
+    """Pre-tenant candidates as (tenant ID, ID) lists, from the `maintenance_candidates` function
+    (migration 0003, I-8 S3), which applies the same RETENTION window. Everything after runs in
+    tenant_scope."""
+    return db.maintenance_candidates(now or utcnow(), limit)
 
 
-def run_maintenance(db, store, *, now=None, limit=100, execute=False) -> dict:
-    """Independent maintenance entry point. Default is a content-free dry run."""
+def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None) -> dict:
+    """Independent maintenance entry point. Default is a content-free dry run. `idp` deletes Logto users
+    for pending account deletions (I-8 S5); without it that step stays pending."""
     now = now or utcnow()
     projects, deletions, purges = maintenance_snapshot(db, now=now, limit=limit)
     result = {"execute": execute, "candidate_projects": len(projects), "pending_project_deletions": len(deletions),
@@ -262,4 +250,8 @@ def run_maintenance(db, store, *, now=None, limit=100, execute=False) -> dict:
     result["completed_object_purges"] = sum(process_object_purge(db, store, tenant, identifier, now=now)
                                             for tenant, identifier in purges)
     result["resolved_uploads"] = reconcile_pending_writes(db, store, now=now, limit=limit)
+    result["pruned_rate_limit_windows"] = db.rate_limit_prune()  # hashed counters older than 3 days
+    from changelens.domain.accounts import run_account_deletions  # accounts imports this module
+    result["completed_account_deletions"], result["pending_account_deletions"] = run_account_deletions(
+        db, store, idp, now=now, limit=limit)
     return result

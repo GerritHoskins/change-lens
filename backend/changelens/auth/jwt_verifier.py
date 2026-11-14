@@ -1,7 +1,7 @@
 """Offline JWT verification against deployment-supplied issuer, audience and trusted JWKS.
 
-No discovery or key URL is taken from a token. Refreshing trusted JWKS, session revocation,
-linking and resolving active memberships remain responsibilities of the future I-8 adapter.
+No discovery or key URL is taken from a token. Refreshing the trusted JWKS is `auth.jwks`, and
+resolving the user and active membership is GUARD (`api.auth`); linking is later I-8 work.
 Successful verification establishes a subject, not a tenant, membership or approval.
 """
 from __future__ import annotations
@@ -85,6 +85,10 @@ class JwtVerifier:
                 self._keys[kid] = key
         except (KeyError, TypeError, ValueError, AttributeError, jwt.PyJWTError):
             raise ValueError("invalid_trusted_jwks") from None
+
+    @property
+    def key_ids(self) -> frozenset[str]:
+        return frozenset(self._keys)
 
     def verify(self, token: str) -> VerifiedIdentity:
         try:
