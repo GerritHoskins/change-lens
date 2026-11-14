@@ -315,7 +315,7 @@
   "onbContextScope": "Then say what the newer version is:",
   "onbContextNote": "Missing items are never reported as cancelled.",
   "onbEvidenceTitle": "Every change shows its source",
-  "onbEvidenceBody": "Each finding quotes the passage from both versions. “Show in document” opens the source, and on a PDF page the passage is highlighted. Quotes are checked against the source before they're shown.",
+  "onbEvidenceBody": "Each finding quotes both versions. “Show in document” opens the source, with the passage highlighted on PDF pages. Quotes are checked against the source first.",
   "onbReviewTitle": "Your review isn't client approval",
   "onbReviewBody": "Confirm, correct or dismiss each finding. That records that you checked it, nothing more.",
   "onbReviewApproval": "If the client approves something, record it separately in their words, for example a pasted e-mail. ChangeLens doesn't verify it.",

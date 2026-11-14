@@ -133,6 +133,13 @@ void main() {
       expect(reported[e.key], isNotNull, reason: '${e.key} scrolls by ${e.value} px at 390×844, 1.0');
       expect(e.value, lessThanOrEqualTo(reported[e.key]!), reason: '${e.key} grew');
     }
+    // The design's margin: every step keeps at least this much room below its content
+    // (docs/onboarding-design-handoff.md §11.2, docs/onboarding/direction.md §11).
+    const minSpare = 24.0;
+    for (final e in spare.entries) {
+      expect(e.value, greaterThanOrEqualTo(minSpare),
+        reason: '${e.key} has ${e.value.toStringAsFixed(1)} px spare at 390×844, 1.0 (minimum $minSpare)');
+    }
   });
 
   group('Controls', () {
