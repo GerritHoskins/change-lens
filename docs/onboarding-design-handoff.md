@@ -15,6 +15,9 @@ it, start at [§9](#9-round-2-critique-fixes-2026-11-14). §1–§7 still apply.
 **Round 3 (2026-11-14):** round 2 is done and re-scored at 35/40. For the
 remaining polish, start at [§10](#10-round-3-polish-2026-11-14).
 
+**Round 4 (2026-11-14):** the implemented app scrolls on two German steps on iOS. Start
+at [§11](#11-round-4-german-overflow-on-ios-2026-11-14).
+
 ## 1. Start here
 
 Read, in order:
@@ -373,3 +376,84 @@ and keep the dark tweak working.
 > commit, or publish anywhere other than this canvas. Finish with the §10.3 checks
 > and a fresh `/impeccable critique`. Return the canvas link, a list of what changed
 > per artboard, the measured overflow results, and the new score.
+
+## 11. Round 4: German overflow on iOS (2026-11-14)
+
+The onboarding is implemented (commit `6a3791a`, `app/lib/screens/onboarding_screen.dart`).
+The no-scroll test (`app/test/onboarding_test.dart`) shows two German steps that don't fit
+at 390×844 with text at 1.0 on iOS:
+
+| Step | Locale, platform | Result |
+|---|---|---|
+| 2 "Du legst Reihenfolge und Umfang fest" | DE, iOS | Body scrolls by **46 px** |
+| 5 "Deine Prüfung ist keine Kundenfreigabe" | DE, iOS | Body scrolls by **12 px** |
+| 2 | DE, Android | Fits, with 3 px to spare |
+| 2 | EN, iOS | Fits, with 4 px to spare |
+
+**Why the canvas missed it.** The canvas measured at a 16 px body. The app's iOS body is
+**17 px with a line height of about 25 px** (`calm_theme.dart`, `bodyMedium`), while Android
+uses 16 px. The app's top bar, page header and pinned footer also differ slightly from the
+artboards. So round 2's "0 px overflow" was true for the canvas, not for the app.
+
+The owner chose to fix the overflow rather than accept a scroll. This round is copy and
+layout only: same six steps, same flow, nothing from §9.1 or §10 reopened.
+
+### 11.1 What to change
+
+1. **Step 2 (`Onb2Context`).** Free at least **3 lines (about 75 px)** of German body text at
+   17 px. Two lines only clear the overflow, and the third gives a margin, because English
+   and Android are within 4 px too.
+   - Candidates: `onbContextScope`, the three `onbScopeLine*` keys, `onbContextNote`, or the
+     illustration's height (the gap and swap icon between the two slots).
+   - The quoted labels inside the scope lines must stay word for word what the app shows:
+     „In der Ersatzversion nicht enthalten“, „Nicht angesprochen“, „Von dir zu prüfen“.
+     Shorten around them, not inside them.
+   - `confirmIntro` is also the compare screen's own text, so don't edit it for onboarding.
+     If step 2 needs a shorter opening line, propose a new key (for example
+     `onbContextBody`) and say in your report that onboarding then no longer repeats the
+     compare screen's wording. That's a trade-off for the owner.
+2. **Step 5 (`Onb4Review`).** Free at least **2 lines (about 50 px)** of German text.
+   - The main candidate is `onbReviewApproval` (149 characters).
+   - `approvalRecorded`, `approvalNone`, `reviewConfirmed` and `yourReview` are app strings
+     shown inside the example. Don't change them.
+   - The rule from §4 still applies: never "approved" or "agreed", and the review must not
+     read as client approval.
+3. **English.** Change English only where the same shortening makes it clearer, or where
+   English needs the margin too. Step 2 on iOS has 4 px to spare.
+
+**Out of scope:** type size, line height, spacing tokens, the step count and the
+illustration style. Don't shrink type to make things fit (§9.2 item 1).
+
+### 11.2 Measure the way the app renders
+
+- Add an iOS-metrics check to your measurement, with a 17 px body and a line height of
+  about 25 px, or render with those values. Report both platforms.
+- **Done when:** steps 2 and 5 fit at 390×844 and 1.0 in EN and DE on both platforms, with
+  at least 24 px to spare.
+- Re-check every changed line against brief §1–§6.
+
+### 11.3 Records
+
+- Update `docs/onboarding/onboarding_en.arb` and `_de.arb` (changed keys, any new key with its
+  `@` description). Keep the key sets and placeholders identical.
+- Add a Round 4 section to `docs/onboarding/direction.md` with the old and new text of every
+  changed key and the measurements.
+- Update the canvas artboards `Onb2Context` and `Onb4Review` in place.
+
+**Afterwards (not for the design agent):** the implementing agent copies the changed keys into
+`app/lib/l10n/`, runs `flutter gen-l10n`, and empties the `reported` ceiling in
+`onboarding_test.dart`, so the test then fails on any overflow.
+
+### 11.4 Round 4 receiving-agent prompt
+
+> Work in the current ChangeLens checkout and revise the existing canvas
+> https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr in place. Never create a new one.
+> Read docs/onboarding-design-handoff.md §11, then app/lib/screens/onboarding_screen.dart,
+> app/lib/design/calm_theme.dart and app/test/onboarding_test.dart to see how the app
+> renders steps 2 and 5. Shorten the German copy on step 2 by at least three lines and on
+> step 5 by at least two, at the iOS 17 px body. Keep the quoted app labels word for word,
+> don't edit app strings that other screens use, and don't shrink type. Update the ARB
+> fragments, direction.md and the two artboards. Don't edit app code, commit, or publish
+> anywhere other than this canvas. Return the old and new text of every changed key, the
+> measured spare room per step, locale and platform, and any new key the owner must
+> accept.
