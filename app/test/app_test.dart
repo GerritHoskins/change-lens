@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:changelens/api.dart';
+import 'package:changelens/design/calm_controls.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/compare_screen.dart';
 import 'package:changelens/screens/project_screen.dart';
@@ -97,7 +98,7 @@ final project = Project({'id': 'p1', 'name': 'Relaunch', 'client_label': null});
 final ready = [Version(version('v1', 'Brief v1')), Version(version('v2', 'Brief v2'))];
 
 Future<void> choose(WidgetTester tester, String key, String label) async {
-  final picker = find.byWidgetPredicate((w) => w is DropdownButtonFormField<String> &&
+  final picker = find.byWidgetPredicate((w) => w is CalmSelectField<String> &&
       w.key.toString().contains('$key-'));
   await tester.ensureVisible(picker);
   await tester.pumpAndSettle();
@@ -311,6 +312,8 @@ void main() {
         apiFactory: (base, token) => Api(base, token, client: MockClient(backend.handle)));
     await services.load();
     await tester.pumpWidget(ChangeLensApp(services: services));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('projects-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings')));
     await tester.pumpAndSettle();

@@ -667,4 +667,212 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saving => 'Saving…';
+
+  @override
+  String get onbSkip => 'Skip';
+
+  @override
+  String get onbNext => 'Next';
+
+  @override
+  String onbStep(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get onbExample => 'Example';
+
+  @override
+  String get onbDone => 'Done';
+
+  @override
+  String get onbReplayEntry => 'How ChangeLens works';
+
+  @override
+  String get onbContextTitle => 'You set the order and the scope';
+
+  @override
+  String get onbContextScope =>
+      'Then say what the newer version is. That decides how missing items are reported:';
+
+  @override
+  String get onbContextNote =>
+      'Something missing from the newer version is never reported as cancelled.';
+
+  @override
+  String get onbEvidenceTitle => 'Every change shows its source';
+
+  @override
+  String get onbEvidenceBody =>
+      'Each finding quotes the passage from both versions. “Show in document” opens the source, and on a PDF page the passage is highlighted. Quotes are checked against the source before they\'re shown.';
+
+  @override
+  String get onbReviewTitle => 'Your review isn\'t client approval';
+
+  @override
+  String get onbReviewBody =>
+      'Confirm, correct or dismiss each finding. That records that you checked it, nothing more.';
+
+  @override
+  String get onbReviewApproval =>
+      'If the client approves something, record it separately in their words, for example a pasted e-mail. ChangeLens doesn\'t verify it.';
+
+  @override
+  String get onbStartTitle => 'Ready for your first comparison';
+
+  @override
+  String get onbStartInputs =>
+      'Pasted text, or a PDF with selectable text. Scanned PDFs can\'t be read.';
+
+  @override
+  String onbStartLimits(int words, int pages, int megabytes) {
+    final intl.NumberFormat wordsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String wordsString = wordsNumberFormat.format(words);
+
+    return 'Up to about $wordsString words per version. PDFs up to $pages pages and $megabytes MB.';
+  }
+
+  @override
+  String get onbStartOnline =>
+      'An internet connection. Documents aren\'t stored on this device.';
+
+  @override
+  String get onbStartLanguage =>
+      'So far, comparisons have been tested on English briefs only.';
+
+  @override
+  String defInfo(String term) {
+    return 'About $term';
+  }
+
+  @override
+  String get defScopeComplete =>
+      'Items missing from it are reported as “Not in the replacement”. That never means an obligation is cancelled.';
+
+  @override
+  String get defScopePartial =>
+      'Items it doesn\'t mention are reported as “Not addressed”: neither removed nor reconfirmed.';
+
+  @override
+  String get defScopeUnknown =>
+      'Missing items are marked “Uncertain” and go to “Needs your review”.';
+
+  @override
+  String get defChangeTypesTitle => 'Change types';
+
+  @override
+  String get defAdded => 'New in the newer version.';
+
+  @override
+  String get defChanged =>
+      'Different in the two versions. Both values are shown.';
+
+  @override
+  String get defRemoved =>
+      'Missing from a complete replacement. This doesn\'t mean it is cancelled.';
+
+  @override
+  String get defNotAddressed =>
+      'A partial update didn\'t mention it. It is neither removed nor reconfirmed.';
+
+  @override
+  String get defUncertain => 'ChangeLens can\'t tell. Check it yourself.';
+
+  @override
+  String get defReworded => 'Same meaning, different wording.';
+
+  @override
+  String get defEvidenceTitle => 'How a passage was found';
+
+  @override
+  String get defModePdf => 'The passage is highlighted on the PDF page.';
+
+  @override
+  String get defModeFallback =>
+      'The highlight couldn\'t be placed on the page, so the parsed text is shown. Check the quote before you confirm.';
+
+  @override
+  String get defModeText =>
+      'This version has no PDF page, so only the text is shown.';
+
+  @override
+  String get defSummaryTitle => 'Selected summary';
+
+  @override
+  String get defSummaryBody =>
+      'The report shows a selection of changes. It isn\'t a complete list: “All differences” shows everything else, including presentation-only edits and text no finding explains.';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get onbIntroTitle => 'Compare two versions of a brief';
+
+  @override
+  String get onbIntroBody =>
+      'ChangeLens reads the earlier and the newer version and shows the changes it finds, each with the passage it comes from.';
+
+  @override
+  String get onbIntroGoal =>
+      'Catch a changed requirement before you deliver the wrong thing.';
+
+  @override
+  String get onbIntroAlt =>
+      'Illustration: an earlier and a newer brief become one list of changes.';
+
+  @override
+  String get onbScopeLineComplete =>
+      'Complete replacement: what\'s missing is reported as “Not in the replacement”.';
+
+  @override
+  String get onbScopeLinePartial =>
+      'Partial update: what it doesn\'t mention is “Not addressed”.';
+
+  @override
+  String get onbScopeLineUnknown =>
+      'Not sure: missing items go to “Needs your review”.';
+
+  @override
+  String get onbContextAlt =>
+      'Illustration: an earlier version above a newer version, which can be swapped.';
+
+  @override
+  String get onbUncertainTitle => 'When ChangeLens can\'t tell';
+
+  @override
+  String get onbUncertainBody =>
+      'The finding goes to “Needs your review” and gets the ? mark. A topic filter never hides it.';
+
+  @override
+  String get onbUncertainSummary =>
+      'The report is a selection. “All differences” shows everything else, including presentation-only edits.';
+
+  @override
+  String get onbReviewAlt =>
+      'Example: a finding confirmed by you, with no client approval recorded.';
+
+  @override
+  String get onbStartLine =>
+      'Paste text or pick a PDF with selectable text. You need to be online.';
+
+  @override
+  String get onbImportLink => 'What can I import?';
+
+  @override
+  String get onbStart => 'Start';
+
+  @override
+  String get importSheetTitle => 'What can I import?';
+
+  @override
+  String onbReviewApprovalLabel(String label) {
+    return 'It\'s then shown as “$label”.';
+  }
+
+  @override
+  String get onbStartTitleReplay => 'Before you compare';
+
+  @override
+  String get onbStartNext => 'Next: create a project and compare two briefs.';
 }

@@ -4,11 +4,11 @@ Plan section: §13.5. Effort is in person-days for one experienced developer [A]
 
 **Approach: build first, then learn (owner decision 2026-10-31, 06).** ChangeLens is built as a hobby app that can grow into a paid product, not as a gated validation programme. Discovery gates no longer block building. Milestones M1–M5 replace the earlier Gates 1–4; where a gate's quality thresholds still apply, the milestone's exit criteria say so. v1 is:
 - a Flutter app for iOS and Android, in English and German, for the EU market, with launch copy aimed at freelancers and small studios;
-- comparing PDFs and pasted text, plus screenshots (sold once their highlight placement passes D-19, O-16) and import from the share sheet;
-- freemium, with subscriptions sold through the app stores;
+- comparing PDFs and pasted text, imported by paste or the PDF picker;
+- free at launch, with a fair-use allowance as cost protection and no in-app purchase (O-20, 2026-11-13);
 - running on IONOS: FastAPI, Postgres, a worker, self-hosted Logto, and IONOS AI Model Hub.
 
-Share links and teams are not in v1. There is no fixed launch date. Task IDs from the earlier plan are kept, so the AC links in `traceability.md` stay valid.
+**Launch scope (O-20).** The first public release is free: M3 (screenshots and the share sheet) and the billing part of M4 (I-19) move to after launch. D-18 collects content-free usage data and pricing signals, and a later owner decision sets the subscription and billing strategy from them. Share links and teams are not in v1. There is no fixed launch date. Task IDs from the earlier plan are kept, so the AC links in `traceability.md` stay valid.
 
 ## M1 — Compare works end to end on a device (PDF and pasted text)
 
@@ -55,7 +55,9 @@ From the redesign handoff of 2026-11-01. The owner decided O-14 to O-17 on 2026-
 
 **M2 exit:** a new user can sign up, compare, and delete their account on both platforms. Cross-tenant tests are green.
 
-## M3 — Screenshots and share-sheet import
+## M3 — Screenshots and share-sheet import (after launch, O-20)
+
+Not part of the free launch. Screenshots were planned as the paid feature (O-16), so M3 is rescheduled together with the billing decision that D-18 informs.
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
@@ -63,25 +65,28 @@ From the redesign handoff of 2026-11-01. The owner decided O-14 to O-17 on 2026-
 | I-16 | Share-sheet import: an iOS Share Extension (Swift) and the Android `ACTION_SEND` intent, both handing off to the project picker. Adds camera and photo-library import to I-9, behind a flag until D-19 passes (O-16) | I-9 | Sharing a PDF, an image or text from Mail and Files lands in the chosen project on both platforms; the app-group container and app sandbox hold no document files after import (AC-24, AC-25) | 3–5 | iOS extension memory limits |
 | D-19 | Screenshot placement gate (O-16, option 1): a photo eval set (screenshots of development-split briefs, never held-out) and a region-placement metric reported like D-15: the share of passages whose highlighted region on the image covers the quoted text | I-1b | ≥ 95% placement, recorded in 06. Until it passes, screenshot import stays behind a flag, and the paywall (screen 16) and the import sheet's Pro badges leave screenshots out | 1–2 | Vision-model location accuracy [U] |
 
-## M4 — Freemium and billing
+## M4 — Fair-use allowance (billing after launch, O-20)
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| I-14 | Metering: comparison allowance, weighting for heavy documents, one unit per screenshot parse, token and cost logging. Free tier: 3 comparisons a month, PDF and text only. Paid: screenshots (once D-19 passes, O-16), unlimited comparisons within fair use, and history. All limits are config values [O] | I-8 | No unmetered path (AC-21); limits change without a release | 2–3 | — |
-| I-19 | Subscriptions through App Store and Google Play in-app purchase, using RevenueCat. The backend reads entitlements from RevenueCat webhooks and verified receipts; the app never decides entitlement by itself. Restore purchases; prices in EUR; trial optional | I-14, I-18 | A purchase in the sandbox and the Play test track unlocks the paid tier on both platforms; cancellation and expiry return the account to the free tier; webhook signatures are verified; the paywall lists screenshots only after D-19 passes (O-16) | 3–5 | Store review; RevenueCat fees above the free tier; VAT is handled by the stores |
+| I-14 | Metering as cost protection for the free launch (O-20): one fair-use comparison allowance per account per month, weighting for heavy documents, token and cost logging. No tiers and no paywall. The app says plainly when the allowance is used up and when it resets. Starting values (owner, 2026-11-13): 20 comparisons per account per month, a heavy document counts as 4 (O-8), and a global monthly model-spend cap of EUR 50 that trips the kill switch; all limits are config values. Tiers return with the billing decision | I-8 | No unmetered path (AC-21); limits change without a release; how often accounts reach the limit is counted for D-18 | 2–3 | Allowance too low hides demand; too high raises model cost |
 
-## M5 — Testers, launch and learning
+I-19 (subscriptions) is deferred until after launch; see the table of superseded or deferred tasks.
+
+## M5 — Launch and learning
+
+There is no external tester phase (O-21): no TestFlight or Play testing track is opened to outside users. Builds before launch go to the owner's own devices only.
 
 | ID | Task | Depends on | Acceptance | Effort | Risks / assumptions |
 |---|---|---|---|---|---|
-| I-21 | German translation of the app and both store listings (DE/EN), with screenshots aimed at freelancers and studios | I-10, I-19 | Every UI string is translated; the listings are reviewed | 2–3 | — |
+| I-21 | German translation of the app and both store listings (DE/EN), with screenshots aimed at freelancers and studios | I-10, I-18 | Every UI string is translated; the listings are reviewed | 2–3 | — |
 | I-7b | Fabricated scope changes (I-7 deviation, owner Q4 = A, 2026-11-01): reproduce and fix on the development split the cause of the 2 reportable findings on reordered or unchanged held-out pairs in the second I-7 look; first suspect the align contradiction rule sending a sentence read twice to the model aligner. Then construct fresh held-out pairs (new bases, never tuned on) and run the I-7 gates on them | I-7 | Zero fabricated scope changes on the development split over 2 runs; all I-7 gates pass on the fresh held-out pairs, recorded with a receipt and a decision-log row | 1–2 | Run-to-run variation at temperature 0 (34/46 identical) |
-| I-17 | Distribution: TestFlight and Play testing tracks, App Store privacy labels and the Play data-safety form matching the data inventory, a release pipeline in GitHub Actions, and an inspection of a release build on each platform (O-18) | I-9, I-13 | Testers can install on both platforms; store declarations checked against 03 §6; a release build on each platform is inspected and meets 03a P10 DEVICE_STORAGE (AC-25) and CLIENT_TELEMETRY (AC-23) | 1–2 | Review delays |
+| I-17 | Distribution: TestFlight and Play internal testing for the owner's devices only (O-21), store submission, App Store privacy labels and the Play data-safety form matching the data inventory, a release pipeline in GitHub Actions, and an inspection of a release build on each platform (O-18) | I-9, I-13 | The owner installs a release build on both platforms; store declarations checked against 03 §6; a release build on each platform is inspected and meets 03a P10 DEVICE_STORAGE (AC-25) and CLIENT_TELEMETRY (AC-23) | 1–2 | Review delays. The owner's old Play developer account was closed for inactivity (2024-06-29), so Android needs a new account (O-21). A new personal account must run a closed test with at least 12 testers opted in for 14 continuous days and then apply for production access; friends and family are not an option. An organisation account (D-U-N-S number, up to 30 days) is exempt |
 | D-9 | Security review: tenancy, injection, logging, provider data flow, mobile client and share extension. Write the incident-response runbook, including the 72-hour Art. 33 notification to the supervisory authority. Repeat for every new input path | I-13, I-16, I-19 | No open high-severity finding; runbook exists | 2–3 | — |
-| D-10 | Usability test with 5 users from the target audience (friends and contacts are fine) | I-10, I-17 | 5 users complete import → report → review without help; the main issues are fixed or logged | 1–2 | — |
-| D-18 | Learning loop: in-app feedback, and content-free product analytics (activation, comparisons per week, free-to-paid conversion, retention at 4 weeks), declared in the privacy policy and store forms. A monthly readout in the decision log | I-17 | Metrics visible from the first tester; no document content in any event (AC-23) | 1–2 | Small numbers early on |
+| D-10 | Usability test with 5 users from the target audience (friends and contacts are fine), in person on the owner's phones, not through a tester build (O-21) | I-10, I-17 | 5 users complete import → report → review without help; the main issues are fixed or logged | 1–2 | — |
+| D-18 | Learning loop and pricing evidence (O-20): in-app feedback, and content-free product analytics: activation (first comparison completed), comparisons per active account per week, retention at 4 weeks, how often and how soon accounts reach the fair-use allowance (I-14), and use of report features and evidence modes (I-26). A short in-app question after a few comparisons asks what the app is worth to the user; no fake paywall or offer that cannot be bought. Declared in the privacy policy and store forms, with consent where device access needs it (§ 25 TDDDG): server-side counts always, app-side events opt-in only, design in `docs/legal/README.md` | I-17, I-14 | Metrics visible from the first public user; no document content in any event (AC-23); a monthly readout in the decision log, and after about 3 months of public use a readout that feeds the owner's billing decision (O-20) | 2–3 | Small numbers early on; stated willingness to pay overstates real payment |
 
-**Public launch** follows M5 when D-9 has no open high-severity finding and testers can complete the flow. There is no date.
+**Public launch** follows M5 when D-9 has no open high-severity finding, the D-10 users can complete the flow, and I-7b passes (the release gate blocks a failing I-7 receipt). It is free (O-20). There is no date.
 
 ## Superseded or deferred
 
@@ -104,6 +109,7 @@ The earlier validation plan (04 §1–§3, Gates 1 and 4) is superseded by the b
 | I-12 | Share snapshots: token hashing, expiry, revocation, view log, read-only share page (AC-16, AC-17) | Deferred until after v1 |
 | I-27 | Content-free push notification when a comparison is ready: FCM and APNs, device registry, `POST /devices` and `DELETE /devices/{id}` (AC-25) | Deferred until after v1 (O-18, ADR-0022); v1 refreshes status in the app (I-24) |
 | I-15 | Pilot billing by invoice | Superseded by I-19 (in-app subscriptions) |
+| I-19 | Subscriptions through App Store and Google Play in-app purchase, using RevenueCat; the backend reads entitlements from verified webhooks and receipts; restore purchases; prices in EUR | Deferred until after launch (O-20, 2026-11-13). The launch is free; the billing strategy is decided again from the D-18 readout, and this task is rescoped then |
 
 ## Totals (rough)
 
@@ -112,9 +118,10 @@ The earlier validation plan (04 §1–§3, Gates 1 and 4) is superseded by the b
 | M1 Compare end to end | 31–51 d |
 | M1b Freelancer-first redesign | 10.5–18 d |
 | M2 Accounts and privacy | 10.5–18 d |
-| M3 Screenshots and share sheet | 8–15 d |
-| M4 Freemium and billing | 5–8 d |
-| M5 Testers and learning | 7–12 d |
+| M3 Screenshots and share sheet (after launch, O-20) | 8–15 d |
+| M4 Fair-use allowance (I-14; I-19 billing after launch) | 2–3 d now, 3–5 d later |
+| M5 Launch and learning | 7–12 d |
 | **Total** | **about 72–122 person-days**: roughly 7–15 months at 10–20 hours a week |
+| **Free launch scope (O-20)** | about 62–103 person-days in all: M1, M1b, M2, I-14 and M5, with D-18 one day larger; M3 and I-19 come after launch |
 
 Main risk: the evidence-highlight fidelity of PDFs and screenshots on a small screen. D-15 tests it first. Main assumption: IONOS AI Model Hub gives schema-valid extraction within the cost gates in `03-technical-design.md` §8. D-17 and I-7 measured this on short constructed briefs only.
