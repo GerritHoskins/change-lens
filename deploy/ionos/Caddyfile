@@ -1,0 +1,29 @@
+# TLS for the API and Logto's sign-in endpoints (I-8 S7). Certificates come from Let's Encrypt automatically.
+# No `log` directive: Caddy writes no access log, so no query strings, addresses or bodies are recorded here;
+# the api logs method, route template and status only (03a P9).
+# Caddy replaces any client-supplied X-Forwarded-For with the real client address, and the api trusts that
+# header only from Caddy's fixed address (CHANGELENS_TRUSTED_PROXIES=172.30.0.2).
+{
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+(common) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}
+
+api.pixeltronic.dev {
+	import common
+	reverse_proxy api:8000
+}
+
+auth.pixeltronic.dev {
+	import common
+	reverse_proxy logto:3001
+}

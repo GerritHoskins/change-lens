@@ -1,0 +1,217 @@
+# ChangeLens on one IONOS Cloud Cube (I-8 S7). Runbook: README.md in this folder.
+# Every image is pinned by tag and digest. No secret is in this file: each service reads its own env file
+# from /etc/changelens/ (root-only, created from the *.env.example files here). Nothing but Caddy listens on a
+# public port; the Logto admin console is on the host's loopback only (reach it through an SSH tunnel).
+#
+# Networks:
+#   edge     Caddy, the api, Logto, retention. Outbound internet (Logto's SMTP, JWKS, object storage).
+#            Caddy also answers as auth.pixeltronic.dev here, so processes reach Logto's public URL directly.
+#   data     internal, no internet: Postgres and everything that talks to it.
+#   outbound the egress proxy and the backup job: the only way out for the worker is the proxy's allow-list.
+name: changelens
+
+x-app: &app
+  build:
+    context: ../../backend
+    dockerfile: ../deploy/ionos/changelens.Dockerfile
+  image: changelens-backend:local
+  env_file: /etc/changelens/changelens.env
+  read_only: true
+  tmpfs:
+    - /tmp:size=512m
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  caddy:
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file: /etc/changelens/caddy.env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: 172.30.0.2  # = CHANGELENS_TRUSTED_PROXIES
+        aliases:
+          - auth.pixeltronic.dev
+          - api.pixeltronic.dev
+    restart: unless-stopped
+    logging: *logging
+
+  postgres:
+    image: postgres:16.16-alpine@sha256:0adbf25a9e96d38823bb813f3ac0ed41fadb665c88f1df7fe6dbfb060cbdc106
+    env_file: /etc/changelens/postgres.env
+    # A new volume mounts root-owned; the archive directory must belong to postgres (uid 70, as in the backup
+    # image) before the server starts.
+    entrypoint: ["sh", "-c", "chown postgres:postgres /wal-archive && chmod 700 /wal-archive && exec docker-entrypoint.sh \"$$@\"", "postgres-entrypoint"]
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=300
+      - -c
+      - archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/.%f.tmp && mv /wal-archive/.%f.tmp /wal-archive/%f
+      - -c
+      - log_statement=none
+      - -c
+      - log_min_error_statement=panic  # never log the failing statement or its parameters (AC-23)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - wal-archive:/wal-archive
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [data]
+    shm_size: 256m
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d changelens"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    logging: *logging
+
+  logto:
+    image: svhd/logto:1.45.0@sha256:9a9aff9423ab7863f00c881c31408e0bfe4def730bac2182d0097367002f5854
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    env_file: /etc/changelens/logto.env
+    environment:
+      TRUST_PROXY_HEADER: "1"
+      ENDPOINT: https://auth.pixeltronic.dev
+      ADMIN_ENDPOINT: http://localhost:3002
+    ports:
+      - "127.0.0.1:3002:3002"  # admin console: SSH tunnel only
+    networks: [edge, data]
+    mem_limit: 1g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    <<: *app
+    # --lan binds 0.0.0.0 inside the container; only Caddy can reach it (no published port). Its startup
+    # line warns about the dev token, which doesn't apply in logto mode (README, known gaps).
+    command: ["python", "-m", "changelens.api", "--port", "8000", "--lan"]
+    networks: [edge, data]
+    mem_limit: 1g
+    depends_on:
+      postgres:
+        condition: service_healthy
+      logto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "changelens.worker"]
+    env_file:
+      - /etc/changelens/changelens.env
+      - /etc/changelens/worker.env
+    environment:
+      # The worker has no route to the internet; the proxy lets through the model API and storage only.
+      HTTPS_PROXY: http://egress:3128
+      HTTP_PROXY: http://egress:3128
+      NO_PROXY: postgres,localhost,127.0.0.1
+    networks: [data]
+    mem_limit: 2g
+
+  retention:
+    <<: *app
+    command: ["python", "-m", "changelens.retention", "--apply", "--interval-seconds", "60"]
+    networks: [edge, data]
+    mem_limit: 512m
+
+  egress:
+    image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
+    volumes:
+      - ./squid/squid.conf:/etc/squid/squid.conf:ro
+      - /etc/changelens/egress-allowlist.txt:/etc/squid/allowlist.txt:ro
+    networks: [data, outbound]
+    mem_limit: 256m
+    restart: unless-stopped
+    logging: *logging
+
+  backup:
+    build: ./backup
+    image: changelens-backup:local
+    env_file: /etc/changelens/backup.env
+    volumes:
+      - wal-archive:/wal-archive
+      - backup-work:/work
+    networks: [data, outbound]
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  # One-off tools: docker compose --profile tools run --rm <name>
+  bootstrap-roles:
+    <<: *app
+    profiles: [tools]
+    env_file: /etc/changelens/admin.env
+    command: ["python", "-m", "changelens.db", "bootstrap-roles"]
+    networks: [data]
+    restart: "no"
+
+  migrate:
+    <<: *app
+    profiles: [tools]
+    env_file: /etc/changelens/admin.env
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    networks: [data]
+    restart: "no"
+
+  restore-test:
+    image: changelens-backup:local
+    profiles: [tools]
+    env_file: /etc/changelens/backup.env
+    entrypoint: ["/usr/local/bin/restore.sh"]
+    volumes:
+      - restore-data:/restore
+      - /etc/changelens/backup-identity.txt:/run/backup-identity.txt:ro
+    networks: [outbound]
+    restart: "no"
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  data:
+    internal: true
+  outbound: {}
+
+volumes:
+  caddy-data:
+  caddy-config:
+  pgdata:
+  wal-archive:
+  backup-work:
+  restore-data:
