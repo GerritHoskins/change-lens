@@ -1,0 +1,3 @@
+# /etc/changelens/egress-allowlist.txt: host names the worker may reach (HTTPS only), one per line.
+openai.inference.de-txl.ionos.com
+s3.eu-central-1.ionoscloud.com
