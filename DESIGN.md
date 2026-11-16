@@ -91,6 +91,21 @@ partial processing, personal review and client approval always have explicit tex
   comparison counts. Empty state, creation, refresh and connection recovery remain.
 - **Project:** comparison entry points and immutable versions; deletion remains a
   distinct destructive confirmation using the existing server behavior.
+- **History (P6, WP-D, 2026-11-16; owner-approved drafts on the WP-D/E canvas):** one list
+  replaces Versions and Comparisons. Versions are placed only by the comparisons the user ran,
+  newest first: each comparison is a card between its versions ("earlier → newer", scope, the
+  server's status), joined by a 2px `line` rail. Upload time, list order and labels never place a
+  version. Versions compared with the same earlier one but not with each other form a fork: one
+  indented block, in label order, opened by a note that neither is newer, with the main rail running
+  past it to the version they share. Comparisons in both directions keep both cards; a note above the
+  rail says the order is open. Versions in no comparison sit under "Not compared yet". Each version
+  row says "Compare from here" under its details and opens Compare with it preset as Earlier; a
+  rejected version shows its reason instead and offers no comparison. A card opens the comparison; a
+  failed card gives the cause from the comparison's warnings, or the generic next step. The arrow
+  in "earlier → newer" is a Lucide icon (the bundled Roboto has no U+2192). Only Failed and Partial
+  statuses are emphasised. At about 1.3× text and up the card drops its chevron and the rail gaps
+  narrow, so German status words never break mid-word (tested with the real font at 320 px, 2×).
+  No dates, page counts or finding progress: the list responses don't carry them.
 - **Compare:** one form for project, ordered inputs and newer scope. Nothing is
   preselected. Swap resets scope because it now describes a different source.
   Pending ambiguous submissions retain their body and idempotency key.
@@ -116,9 +131,36 @@ partial processing, personal review and client approval always have explicit tex
   keyboard and large text. Choices open a sheet of radio rows instead of a
   dropdown; only the destructive delete confirmation stays an adaptive dialog. Saving feedback is localized and announced. Client approval remains
   a separate, unverified record; confirming a finding never records approval.
+- **Sign-in (WP-A, 2026-11-16):** Logo D lockup, the promise heading and body, the six
+  topic blocks, then the methods (iOS: Apple, Google, email; Android: Google, email, since
+  native Apple is iOS-only). An error replaces the topic blocks so the buttons stay put;
+  a cancelled sign-in is announced, never shown as a banner. Email, its code and MFA run on
+  Logto's hosted page (docs/logto-branding-plan.md). `link_required` lists only the
+  account's methods; a completed link is announced (`linkDone`).
+- **Expired session:** a non-dismissible sheet over the current screen, never a route
+  reset, so an in-memory compare draft survives. The last-used method comes first, the
+  others behind "Other ways to sign in"; Sign out is the secondary action. If a different
+  account signs in, the old one is treated as signed out and every screen above Projects closes.
+- **Settings (WP-B):** opened from the Projects menu. Account (identity, signed-in method,
+  Sign out, Delete account with the adaptive destructive dialog, error and retry), then
+  Privacy with the usage-events switch. Privacy and the consent screen read and write the account's
+  answer (`/me/consent`, D-18 Task 2) but appear only in builds with `CHANGELENS_CONSENT=true`, off
+  until the I-20 legal review. Legal links are not built (I-20).
+- **Dismissal (P5, WP-C):** a sheet with four reason rows (reworded, wrong passage, not
+  relevant to the work, another reason), none preselected, and an optional note. Its
+  action is disabled until a reason is chosen and reads "Dismiss and next" when another
+  open finding follows. The finding stays in the report, dimmed, and keeps its change type.
+- **Review summary (P7, WP-C):** after the last open finding, the server's counts of
+  confirmed, corrected and dismissed findings in ink (no marker, no topic colour), a line
+  saying this is not client approval, and "Back to the project". The counts come from
+  reloading the report; if that fails, the finding screen simply stays.
 
 Shared components live in app/lib/design/calm_widgets.dart and calm_controls.dart
-(`CalmSheet`, `CalmRadioRow`, `CalmSelectField`, `CalmSurfaceScope`). Text fields use
+(`CalmSheet`, `CalmRadioRow`, `CalmSelectField`, `CalmSurfaceScope`, `calmAnnounce`),
+calm_brand.dart (`CalmLogoMark`, `CalmLogoLockup`: Logo D drawn from the docs/brand
+geometry; the wordmark ignores text scale and the lockup scales down to fit) and
+calm_actions.dart (`CalmProviderButton`, `CalmEqualPillPair`, `CalmCountSummary`,
+`calmOutlinedPill`). Text fields use
 `CalmFieldBorder`: label inside the block, 1px `control-border`, 2px `link` on focus;
 on a surface block (sheet, compare slot) fields and radio rows flip to `ground`.
 Secondary actions are ink text buttons; menus are shadowless surfaces. Icons are
@@ -129,13 +171,16 @@ quotes use the 16-pixel `space-inset`. Radii follow the tokens:
 and pills for buttons and chips. Text/icon buttons have a 48-pixel minimum target;
 the main action is a 60-pixel pill.
 
-**Documented exceptions to one main action (designs only, 2026-11-14).** Two first-launch
-screens have no black main pill. (1) Sign-in shows Sign in with Apple, Google and email as three
-buttons of the same size and weight, because App Review 4.8 requires an *equivalent* option. Each
-provider button follows its owner's rules (Apple: white-outline on light, white on dark; Google:
-light or dark theme), and email is an outlined ink pill. (2) The analytics consent screen
-(D-18 tier B) shows Allow and Don't allow as equal outlined pills, because refusing must be as easy as
-accepting. Neither screen is implemented. See `docs/onboarding/direction.md`.
+**Recorded exceptions to one main action (designed 2026-11-14, built 2026-11-16).** Two
+first-launch screens have no black main pill. (1) Sign-in shows its methods as buttons of the
+same 60-pixel height, because App Review 4.8 requires an *equivalent* option. Apple uses
+Apple's own button (`SignInWithAppleButton`: logo, black on light, white on dark). Google is
+an outlined ink pill until Google's official "G" asset is bundled (not in the repository).
+Email is an outlined ink pill. (2) The usage-events consent screen (D-18 tier B) shows Allow
+and Don't allow as two identical outlined ink pills (`CalmEqualPillPair`), nothing preselected,
+no Back, because refusing must be as easy as accepting. With `CHANGELENS_CONSENT=true` it follows
+onboarding until the account has answered for the current policy version; without the flag no route
+reaches it. See `docs/onboarding/direction.md`.
 
 ## Motion and platform behavior
 
@@ -154,11 +199,14 @@ The privacy cover also excludes covered document semantics while inactive.
 ## Integration boundaries
 
 Report.scope reads the existing response field; the comparison's known scope is
-also passed as a fallback. No backend contract was changed. Existing evidence-mode
+also passed as a fallback. WP-C added one backend contract: `dismissal_reason` on
+`POST /findings/{id}/reviews` (required with `dismissed`, refused otherwise, no default;
+revision `0007_dismissal_reason`). Existing evidence-mode
 and page-opened telemetry, opened-event retention behavior, corrections, picker
 cleanup and project-deletion logic remain separate from visual styling.
 
-Account/sign-in, image/camera/share import, billing/restore and other gated v1
+Sign-in and account deletion are built (I-18, WP-A/B). Image/camera/share import,
+the version timeline, the fair-use allowance, feedback, billing/restore and other gated v1
 surfaces remain designs from the handoff. No corresponding production feature,
 price, entitlement, automatic monitoring or new backend dependency was introduced.
 Developer connection settings remain a development surface; this work does not
@@ -190,3 +238,33 @@ These remain acceptance gaps under UX-6; owner acceptance is separate.
 
 No commit, push, publication, deployment or dependency/lockfile update was made.
 Other agents' existing app/backend changes remain in the working tree.
+
+**WP-A to WP-C (2026-11-16, on `14d2360`).** `flutter analyze --no-pub`: no issues.
+`flutter test`: 246 passed (215 before the new tests). The new layout matrix
+(`new_screens_layout_test.dart`) covers sign-in, the expired-session sheet, Settings, consent,
+P5 and P7 at 320×568 and 390×844, EN/DE, light/dark, 1× and 2× text: no overflow, pinned
+actions reachable without scrolling. It found one real defect, the lockup overflowing at 320
+pixels with 2× text, now fixed. Backend: the full suite (1014 tests) passes with the new revision. Not done: device or emulator renders, TalkBack/VoiceOver walkthroughs,
+edge-swipe, real Dynamic Type, iOS compilation, a fresh `.impeccable` critique and contrast
+measurement of the new screens.
+
+**WP-F state check (2026-11-16, code only).** Each import and status state in the handoff has
+a handler: picker cancel returns silently and purges (`compare_screen.dart`); unsupported type,
+oversize, no text layer and the other parse rejections map to `rejectionReasonLabel`
+(`comparison_screen.dart`); upload progress is the busy main action; a 4xx rejection frees
+the inputs for editing, while a transport or server failure keeps the in-memory submission and its
+idempotency key for a retry (`pendingComparison`, `compareRetrySame`); partial parse is the
+partial scope and `warningPartial`; status covers reading, queued, running, partial and failed;
+offline shows the connection message with Retry. Not done: the visual comparison against the v1
+canvas (needs canvas access) and feedback (needs the D-18 content-free endpoint).
+
+**WP-D (2026-11-16).** Built from the approved drafts on the existing comparisons list (no new
+API). `project_timeline_test.dart` covers ordering, forks, both directions, unplaced and
+unattached comparisons, and the widget; the layout matrix includes P6; Compare's Earlier preset
+has its own test. The v1 canvas's Calm Bold P6 matches in structure; its dates, page counts and
+progress bars were left out (no data). A follow-up `/impeccable critique` (27/40) found two P1s and
+three P2s; all five were fixed the same day (the History bullet above describes the result) and
+`flutter test` passed 262.
+
+**Not started.** WP-E (allowance) has owner-reviewable drafts but needs the I-14 allowance
+contract. WP-G waits for D-19 and needs a region-evidence design and the share and image packages.
