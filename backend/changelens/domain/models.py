@@ -205,6 +205,8 @@ class ReviewEvent(Base):
                         "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_before"),
         CheckConstraint("evidence_mode_after IS NULL OR evidence_mode_after IN "
                         "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_after"),
+        CheckConstraint("dismissal_reason IS NULL OR (action = 'dismissed' AND dismissal_reason IN "
+                        "('reworded', 'wrong_passage', 'irrelevant', 'other'))", name="ck_review_dismissal_reason"),
     )
     id: Mapped[uuid.UUID] = _id()
     tenant_id: Mapped[uuid.UUID] = _tenant()
@@ -216,6 +218,9 @@ class ReviewEvent(Base):
     evidence_mode_before: Mapped[Optional[str]] = mapped_column(String(20))
     evidence_mode_after: Mapped[Optional[str]] = mapped_column(String(20))
     page_opened: Mapped[Optional[bool]] = mapped_column(Boolean)
+    # WP-C (owner, 2026-11-16): why a finding was dismissed. Required on new dismissals, no default;
+    # null on other actions and on dismissals recorded before the field existed.
+    dismissal_reason: Mapped[Optional[str]] = mapped_column(String(16))
     created_at: Mapped[datetime] = _now()
 
 

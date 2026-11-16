@@ -112,3 +112,34 @@ def test_missing_tenant_resolved_source_cannot_append_a_review():
     with pytest.raises(ApiError) as error:
         review(repo.original.id, body, repo.request(), Principal(uuid.uuid4(), repo.tenant_id, "owner"))
     assert error.value.status == 404 and repo.writes == []
+
+
+def _text_review(**fields):
+    return ReviewIn(evidence_mode={"before": "text_only", "after": "text_only"}, page_opened=False, **fields)
+
+
+@pytest.mark.parametrize("fields", [
+    {"action": "dismissed"},  # no default reason
+    {"action": "dismissed", "dismissal_reason": "equivalent"},  # never relabelled as equivalent
+    {"action": "dismissed", "dismissal_reason": ""},
+    {"action": "confirmed", "dismissal_reason": "other"},
+    {"action": "note", "note": "Synthetic note", "dismissal_reason": "reworded"},
+])
+def test_dismissal_reason_is_required_on_dismissal_and_refused_elsewhere(fields):
+    repo = ReviewRepository(("earlier", "later"), ("text", "text"))
+    with pytest.raises(ApiError) as error:
+        review(repo.original.id, _text_review(**fields), repo.request(),
+               Principal(uuid.uuid4(), repo.tenant_id, "owner"))
+    assert error.value.status == 422 and repo.writes == []
+
+
+@pytest.mark.parametrize("reason", ["reworded", "wrong_passage", "irrelevant", "other"])
+def test_dismissal_keeps_the_finding_and_records_its_reason(reason):
+    repo = ReviewRepository(("earlier", "later"), ("text", "text"))
+    result = review(repo.original.id, _text_review(action="dismissed", dismissal_reason=reason), repo.request(),
+                    Principal(uuid.uuid4(), repo.tenant_id, "owner"))
+    assert result["review"]["action"] == "dismissed" and result["review"]["dismissal_reason"] == reason
+    assert result["finding"]["review"]["dismissal_reason"] == reason
+    # The finding stays as it was: same revision and change type, no approval record (AC-12).
+    assert len(repo.rows) == 1 and result["finding"]["change_type"] == "changed"
+    assert result["finding"]["client_approval_recorded"] is False
