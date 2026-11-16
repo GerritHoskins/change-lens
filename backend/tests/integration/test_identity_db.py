@@ -22,7 +22,7 @@ from test_reviews import _compared, _findings, _post
 from conftest import PG, SUBJECT_A, TENANT_A, TENANT_B, TOKEN_A, auth, reset_schema, db_url
 
 SCRATCH_DB = "changelens_migrations_test"
-HEAD = "0006_social_sign_in"
+HEAD = "0007_dismissal_reason"
 OWNER_URL = db_url(SCRATCH_DB, OWNER_ROLE)
 
 
@@ -60,6 +60,8 @@ def build_legacy(engine) -> None:
         conn.execute(text("DROP TABLE apple_token_parks"))
         conn.execute(text("DROP TABLE memberships"))
         conn.execute(text("DROP TABLE users"))
+        conn.execute(text("ALTER TABLE review_events DROP CONSTRAINT ck_review_dismissal_reason"))  # WP-C
+        conn.execute(text("ALTER TABLE review_events DROP COLUMN dismissal_reason"))
 
 
 def test_upgrade_head_on_an_empty_database_matches_the_models(scratch):

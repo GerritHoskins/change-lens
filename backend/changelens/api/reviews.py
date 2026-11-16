@@ -25,6 +25,9 @@ from changelens.topics import canonical_category, topic_counts, topic_for_catego
 
 router = APIRouter()
 ACTIONS = ("confirmed", "corrected", "dismissed", "note")
+# Why a finding was dismissed (WP-C, owner 2026-11-16). No default: the user picks one. A dismissed
+# finding stays in the report, dimmed; it is never relabelled as equivalent.
+DISMISSAL_REASONS = ("reworded", "wrong_passage", "irrelevant", "other")
 REVIEWABLE = ("complete", "partial")
 # UI wording for the record; never "approved" or "agreed" (02 §5, AC-12).
 APPROVAL_LABEL = "Client approval recorded (not verified by ChangeLens)"
@@ -40,6 +43,7 @@ class ReviewIn(ReviewTelemetryIn):
     action: str
     note: Optional[str] = Field(default=None, max_length=2000)
     correction: Optional[Correction] = None
+    dismissal_reason: Optional[str] = None
 
 
 class ApprovalIn(BaseModel):
@@ -50,7 +54,8 @@ class ApprovalIn(BaseModel):
 
 def _review_out(r: ReviewEvent) -> dict:
     return {"id": str(r.id), "finding_id": str(r.finding_id), "action": r.action, "note": r.note,
-            "actor": r.actor, "at": r.created_at.isoformat(), **review_evidence_out(r)}
+            "actor": r.actor, "at": r.created_at.isoformat(), "dismissal_reason": r.dismissal_reason,
+            **review_evidence_out(r)}
 
 
 def _approval_out(a: ClientApprovalRecord) -> dict:
@@ -156,6 +161,10 @@ def review(finding_id: uuid.UUID, body: ReviewIn, request: Request,
         raise ApiError(422, "invalid_request", "a note needs text")
     if (body.action == "corrected") != (body.correction is not None):
         raise ApiError(422, "invalid_request", "a correction is sent with action corrected, and only then")
+    if (body.action == "dismissed") != (body.dismissal_reason is not None):
+        raise ApiError(422, "invalid_request", "a dismissal_reason is sent with action dismissed, and only then")
+    if body.dismissal_reason is not None and body.dismissal_reason not in DISMISSAL_REASONS:
+        raise ApiError(422, "invalid_request", "dismissal_reason must be reworded, wrong_passage, irrelevant or other")
     with request.app.state.db.tenant_scope(principal.tenant_id) as repo:
         if not repo.lock_for_finding(finding_id):
             raise not_found()
@@ -185,7 +194,8 @@ def review(finding_id: uuid.UUID, body: ReviewIn, request: Request,
                 change_type=changed.get("change_type", f.change_type), evidence=list(f.evidence),
                 explanation=changed.get("explanation", f.explanation), uncertainty=f.uncertainty, note=f.note,
                 review_group=f.review_group, priority=f.priority, revision=f.revision + 1, supersedes_id=f.id))
-        event = repo.add(ReviewEvent(finding_id=f.id, actor=str(principal.user_id), action=body.action, note=body.note, **metadata))
+        event = repo.add(ReviewEvent(finding_id=f.id, actor=str(principal.user_id), action=body.action, note=body.note,
+                                 dismissal_reason=body.dismissal_reason, **metadata))
         repo.touch_comparison(comparison)
         repo.s.refresh(event)
         chain = chain + ([current] if current is not f else [])

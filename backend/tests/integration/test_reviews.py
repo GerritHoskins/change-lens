@@ -36,9 +36,16 @@ def test_confirm_and_dismiss_are_reviews_never_approvals(env):
     r = _post(env, "/findings/%s/reviews" % first["id"], {"action": "confirmed"})
     assert r.status_code == 201 and r.json()["finding"]["review"]["action"] == "confirmed"
     assert r.json()["review"]["page_opened"] is False
-    assert _post(env, "/findings/%s/reviews" % second["id"], {"action": "dismissed", "note": "not relevant"}).status_code == 201
+    # WP-C: a dismissal needs its reason, and only a dismissal takes one.
+    assert _post(env, "/findings/%s/reviews" % second["id"], {"action": "dismissed"}).status_code == 422
+    assert _post(env, "/findings/%s/reviews" % second["id"],
+                 {"action": "confirmed", "dismissal_reason": "other"}).status_code == 422
+    assert _post(env, "/findings/%s/reviews" % second["id"],
+                 {"action": "dismissed", "note": "not relevant", "dismissal_reason": "irrelevant"}).status_code == 201
     got = {f["id"]: f for f in _findings(env, cid)}
     assert got[first["id"]]["review"]["action"] == "confirmed" and got[second["id"]]["review"]["action"] == "dismissed"
+    assert got[second["id"]]["review"]["dismissal_reason"] == "irrelevant"
+    assert got[first["id"]]["review"]["dismissal_reason"] is None
     assert all(f["client_approval_recorded"] is False for f in got.values())  # AC-12
     assert env.sql("SELECT count(*) FROM client_approvals")[0][0] == 0
     assert "approved" not in str(got[first["id"]]).lower()
