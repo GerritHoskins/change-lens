@@ -1543,6 +1543,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next: create a project and compare two briefs.'**
   String get onbStartNext;
+
+  /// No description provided for @signInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to ChangeLens'**
+  String get signInTitle;
+
+  /// No description provided for @signInIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Your projects and comparisons belong to your account. Choose how you sign in.'**
+  String get signInIntro;
+
+  /// No description provided for @signInApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get signInApple;
+
+  /// No description provided for @signInGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get signInGoogle;
+
+  /// No description provided for @signInEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with email'**
+  String get signInEmail;
+
+  /// Under the email button. The code is sent by the sign-in page, not the app.
+  ///
+  /// In en, this message translates to:
+  /// **'We email you a one-time code. No password.'**
+  String get signInEmailHint;
+
+  /// No description provided for @signInWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get signInWorking;
+
+  /// No description provided for @signInUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in isn\'t reachable right now. Check your connection and try again.'**
+  String get signInUnavailable;
+
+  /// No description provided for @signInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in didn\'t work. Try again, or choose another method.'**
+  String get signInFailed;
+
+  /// 401 after a provider or Logto sign-in, for example a deleted account.
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in can\'t be used for a ChangeLens account. Choose another method.'**
+  String get signInRejected;
+
+  /// No description provided for @signedOutExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session ended. Sign in again to continue.'**
+  String get signedOutExpired;
+
+  /// No description provided for @signedOutDone.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re signed out.'**
+  String get signedOutDone;
+
+  /// No description provided for @accountDeletedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account and all its projects were deleted.'**
+  String get accountDeletedNotice;
+
+  /// 202 from DELETE /me: the account is gone for the user; cleanup continues on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is deleted. Removing the last stored copies finishes in the background.'**
+  String get accountDeletionPendingNotice;
+
+  /// No description provided for @linkFailedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The accounts weren\'t linked. Sign in with the method you already use, or start again.'**
+  String get linkFailedNotice;
+
+  /// link_required: a Google or Apple identity whose email already has an account (AC-26).
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an account'**
+  String get linkTitle;
+
+  /// No description provided for @linkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This email already has a ChangeLens account. To add {provider} sign-in, sign in once the way you usually do. We link {provider} after that.'**
+  String linkBody(String provider);
+
+  /// No description provided for @linkCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a different method'**
+  String get linkCancel;
+
+  /// No description provided for @linkAppleElsewhere.
+  ///
+  /// In en, this message translates to:
+  /// **'This account also signs in with Apple. Use an iPhone or iPad for that.'**
+  String get linkAppleElsewhere;
+
+  /// No description provided for @providerApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple'**
+  String get providerApple;
+
+  /// No description provided for @providerGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get providerGoogle;
+
+  /// No description provided for @restoringSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your account…'**
+  String get restoringSession;
+
+  /// No description provided for @sessionOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens can\'t reach your account right now. Check your connection.'**
+  String get sessionOffline;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @accountSignedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {email}'**
+  String accountSignedInAs(String email);
+
+  /// No description provided for @accountSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re signed in.'**
+  String get accountSignedIn;
+
+  /// No description provided for @signOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get signOut;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account removes every project, document, comparison and review, and the sign-in methods linked to it. This can\'t be undone.'**
+  String get deleteAccountIntro;
+
+  /// No description provided for @deleteAccountConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get deleteAccountConfirmTitle;
+
+  /// No description provided for @deleteAccountConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything in ChangeLens goes: all projects, documents, comparisons and reviews. You can\'t undo this.'**
+  String get deleteAccountConfirmBody;
+
+  /// No description provided for @deleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The account wasn\'t deleted. Check your connection and try again.'**
+  String get deleteAccountFailed;
+
+  /// No description provided for @deletingAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting…'**
+  String get deletingAccount;
 }
 
 class _AppLocalizationsDelegate

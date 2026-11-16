@@ -1,4 +1,4 @@
-// Client for the dev comparison API (backend/README.md, I-22). Bodies are never logged (03a P10).
+// Client for the ChangeLens API (backend/README.md; I-22, I-8). Bodies are never logged (03a P10).
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -97,30 +97,70 @@ class ComparisonInput {
       : {'label': label, if (bytes != null) 'file': true else 'text': text};
 }
 
+/// The decoded JSON body of a 2xx response, or an [ApiException] with the problem code.
+dynamic decodeApiResponse(http.Response res) {
+  dynamic body;
+  try {
+    body = res.body.isEmpty ? null : jsonDecode(res.body);
+  } on FormatException {
+    body = null; // not JSON (a proxy error page, say): report the status only
+  }
+  if (res.statusCode >= 300) {
+    // Problem details (backend/changelens/api/errors.py): {"code": ..., "detail"?: ...}
+    final err = body is Map ? body : const {};
+    throw ApiException(res.statusCode, '${err['code'] ?? 'http_${res.statusCode}'}', err['detail'] as String?);
+  }
+  return body;
+}
+
+/// The account's onboarding state (O-23): `GET /me/onboarding` and the `onboarding` of `POST /session`.
+class OnboardingState {
+  const OnboardingState({required this.completed, this.step});
+
+  OnboardingState.fromJson(Map<String, dynamic> j)
+      : completed = j['completed'] == true,
+        step = j['step'] is int ? j['step'] as int : null;
+
+  static const notStarted = OnboardingState(completed: false);
+
+  final bool completed;
+
+  /// The last step reached, 1-based; null when not started or completed.
+  final int? step;
+}
+
 class Api {
   Api(this.baseUrl, this.token, {http.Client? client}) : _client = client ?? http.Client();
 
   final String baseUrl, token;
   final http.Client _client;
 
-  Map<String, String> get _auth => {'Authorization': 'Bearer $token'};
+  /// With signed-in accounts the client adds the bearer itself and [token] is empty.
+  Map<String, String> get _auth => token.isEmpty ? {} : {'Authorization': 'Bearer $token'};
 
   Uri _u(String path) => Uri.parse(baseUrl.replaceAll(RegExp(r'/+$'), '') + path);
 
-  Future<dynamic> _json(Future<http.Response> call) async {
-    final res = await call;
-    dynamic body;
-    try {
-      body = res.body.isEmpty ? null : jsonDecode(res.body);
-    } on FormatException {
-      body = null; // not JSON (a proxy error page, say): report the status only
-    }
-    if (res.statusCode >= 300) {
-      // Problem details (backend/changelens/api/errors.py): {"code": ..., "detail"?: ...}
-      final err = body is Map ? body : const {};
-      throw ApiException(res.statusCode, '${err['code'] ?? 'http_${res.statusCode}'}', err['detail'] as String?);
-    }
-    return body;
+  Future<dynamic> _json(Future<http.Response> call) async => decodeApiResponse(await call);
+
+  Future<OnboardingState> onboarding() async =>
+      OnboardingState.fromJson(await _json(_client.get(_u('/me/onboarding'), headers: _auth)));
+
+  /// Saves the last onboarding step reached (1-based) or completion; exactly one of the two (O-23).
+  Future<OnboardingState> saveOnboarding({int? step, bool completed = false}) async {
+    assert((step != null) != completed, 'send exactly one of step or completed');
+    return OnboardingState.fromJson(await _json(_client.put(_u('/me/onboarding'),
+        headers: {..._auth, 'Content-Type': 'application/json'},
+        body: jsonEncode(completed ? {'completed': true} : {'step': step}))));
+  }
+
+  /// `DELETE /me` (I-8 S5): true when every step finished, false when the rest is pending. Both mean the
+  /// account is gone for the app: every later call is rejected.
+  Future<bool> deleteAccount() async {
+    final response = await _client.delete(_u('/me'), headers: _auth);
+    decodeApiResponse(response);
+    if (response.statusCode == 204) return true;
+    if (response.statusCode == 202) return false;
+    throw ApiException(response.statusCode, 'unexpected_response');
   }
 
   Future<List<Project>> projects() async {
