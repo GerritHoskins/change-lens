@@ -113,6 +113,9 @@ services:
     # --lan binds 0.0.0.0 inside the container; only Caddy can reach it (no published port). Its startup
     # line warns about the dev token, which doesn't apply in logto mode (README, known gaps).
     command: ["python", "-m", "changelens.api", "--port", "8000", "--lan"]
+    volumes: &signin
+      # Google and Apple sign-in secrets as files (README C8); an empty folder while sign-in is off.
+      - /etc/changelens/signin:/run/signin:ro
     networks: [edge, data]
     mem_limit: 1g
     depends_on:
@@ -143,6 +146,7 @@ services:
   retention:
     <<: *app
     command: ["python", "-m", "changelens.retention", "--apply", "--interval-seconds", "60"]
+    volumes: *signin  # revokes Apple tokens (deleted accounts, expired parked tokens)
     networks: [edge, data]
     mem_limit: 512m
 
