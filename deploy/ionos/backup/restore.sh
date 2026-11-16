@@ -10,7 +10,7 @@
 # (README step D2); remove it afterwards.
 set -eu
 : "${BACKUP_BUCKET:?}"
-[ -r /run/backup-identity.txt ] || { echo "restore: /etc/changelens/backup-identity.txt is missing"; exit 1; }
+[ -r /run/backup-identity.txt ] || { echo "restore: /etc/changelens/backup-identity.txt is missing or not readable (it must belong to uid 70)"; exit 1; }
 
 REMOTE="ionos:${BACKUP_BUCKET}"
 TARGET="${1:-}"
