@@ -1,0 +1,22 @@
+{
+  "description": {
+    "sign_in_to_your_account": "Mit E-Mail anmelden",
+    "privacy_policy": "Datenschutzerklärung",
+    "email": "E-Mail-Adresse"
+  },
+  "input": {
+    "email": "E-Mail-Adresse"
+  },
+  "action": {
+    "back": "Zurück"
+  },
+  "error": {
+    "invalid_email": "Die E-Mail-Adresse ist ungültig"
+  },
+  "mfa": {
+    "verify_mfa_factors": "Bestätige, dass du es bist",
+    "enter_one_time_code_description": "Gib den Code aus deiner Authenticator-App ein.",
+    "enter_backup_code_description": "Gib einen der Backup-Codes ein, die du beim Einrichten der Bestätigung in zwei Schritten gespeichert hast.",
+    "try_another_verification_method": "Eine andere Methode verwenden"
+  }
+}

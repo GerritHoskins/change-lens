@@ -1,0 +1,15 @@
+{
+  "description": {
+    "sign_in_to_your_account": "Sign in with email",
+    "terms_of_use": "Terms of use",
+    "privacy_policy": "Privacy policy"
+  },
+  "input": {
+    "email": "Email address"
+  },
+  "mfa": {
+    "verify_mfa_factors": "Confirm it’s you",
+    "enter_one_time_code_description": "Enter the code from your authenticator app.",
+    "enter_backup_code_description": "Enter one of the backup codes you saved when you set up 2-step verification."
+  }
+}
