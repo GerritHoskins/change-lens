@@ -242,6 +242,14 @@ void main() {
       expect(h.server.to('auth.test', '/oidc/token'), hasLength(2)); // restore + one refresh
     });
 
+    test('the access token lifetime is read from its claims (deploy/ionos E: 900)', () async {
+      final h = AuthHarness();
+      h.server.jwtAccess = true;
+      h.storeSession();
+      await h.session.restore();
+      expect(h.session.accessTokenLifetime, 900);
+    });
+
     test('a 401 from the API whose session is gone returns to sign-in', () async {
       final h = await signedIn();
       h.server.projectsStatus = 401;

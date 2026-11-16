@@ -27,6 +27,7 @@ class FakeServer {
   // Logto
   int refreshCounter = 0, accessCounter = 0;
   int expiresIn = 900;
+  bool jwtAccess = false; // access tokens shaped like Logto's JWTs (claims iat and exp)
   String? refreshError; // 'invalid_grant' or 'down'
   final validRefresh = <String>{};
   final pendingCodes = <String>{};
@@ -54,8 +55,9 @@ class FakeServer {
     return token;
   }
 
-  static String idToken(String email) =>
-      'e30.${base64Url.encode(utf8.encode(jsonEncode({'email': email}))).replaceAll('=', '')}.sig';
+  static String _b64(Object claims) => base64Url.encode(utf8.encode(jsonEncode(claims))).replaceAll('=', '');
+
+  static String idToken(String email) => 'e30.${_b64({'email': email})}.sig';
 
   http.Response _json(Object body, [int status = 200]) =>
       http.Response(jsonEncode(body), status, headers: {'content-type': 'application/json'});
@@ -76,7 +78,9 @@ class FakeServer {
       if (refreshError != null || !validRefresh.remove(form['refresh_token'])) {
         return _json({'error': 'invalid_grant'}, 400);
       }
-      return _json({'access_token': 'at-${++accessCounter}', 'refresh_token': _refresh(), 'expires_in': expiresIn});
+      final id = ++accessCounter;
+      final access = jwtAccess ? 'at-$id.${_b64({'iat': 1000, 'exp': 1000 + expiresIn})}.sig' : 'at-$id';
+      return _json({'access_token': access, 'refresh_token': _refresh(), 'expires_in': expiresIn});
     }
     final bearer = r.headers['Authorization'];
     if (r.method == 'POST' && path == '/session') {
