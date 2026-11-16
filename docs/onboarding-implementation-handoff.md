@@ -1,7 +1,7 @@
 # Onboarding implementation handoff
 
 Prepared 2026-11-14 for the implementing agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `c0b0a02`
+this repository, branch `m1-iphone`, baseline commit `c0b0a02`
 (pushed; the onboarding docs, the O-23 and O-24 decisions and the DESIGN.md exceptions are all
 committed). The only untracked paths are tool folders (`.claude-flow/`, `app/.claude-flow/`,
 `.playwright-mcp/`) and one older critique snapshot: leave them alone. HEAD may be one commit
@@ -9,7 +9,7 @@ ahead of `c0b0a02`: the commit that updated this handoff. This is a baseline, no
 that the checkout hasn't changed since: check `git status` and HEAD first.
 
 > **Owner authorisation: APPROVED.** A + B, Gerrit Hoskins, 14.11.2026. Recorded as O-24 in
-> [the decision log](06-decision-log.md).
+> the decision log (`06-decision-log.md`, private).
 > Design status: final after design round 3 (canvas version `1794661231-a0f9`; critique 35/40 before the round 3
 > polish, not re-scored since). Build from that version. If the canvas has changed since, the code-wins rule in §2 still applies.
 
@@ -30,14 +30,14 @@ and I-18.
 1. **Code wins.** `app/lib/screens/*`, `app/lib/design/*`. Where the canvas differs from what the app
    renders (for example a finding card), match the app.
 2. [Design direction](onboarding/direction.md): the flow, owner decisions, Round 2 changes and measurements.
-3. Canvas: https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr. The artboards for these phases are
+3. Canvas: the private Claude first-launch canvas. The artboards for these phases are
    `Onb1Promise`, `Onb2Context`, `Onb3Evidence`, `Onb3Uncertain`, `Onb4Review`, `Onb5Start` (steps 1–6),
    `ImportSheet`, `ProjectsReplay`, `DefScope`, `DefChangeTypes`, `DefEvidence` and `DefSummary`. Each one has
    locale, dark and state tweaks. The artboards are HTML mock-ups, not specs for pixel values: take
    values from DESIGN.md tokens and existing widgets.
 4. Copy: [onboarding_en.arb](onboarding/onboarding_en.arb) and [onboarding_de.arb](onboarding/onboarding_de.arb)
    (114 keys each, final wording after design round 3).
-5. [DESIGN.md](../DESIGN.md) (Calm Bold), [PRODUCT.md](../PRODUCT.md) (meaning rules),
+5. [DESIGN.md](../DESIGN.md) (Calm Bold), `PRODUCT.md` (meaning rules; private),
    [onboarding feature brief](onboarding-feature-brief.md) §1–§7.
 
 ## 3. Phase A: definition sheets

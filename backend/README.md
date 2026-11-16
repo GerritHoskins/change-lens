@@ -284,7 +284,7 @@ $env:CHANGELENS_IONOS_ENV_FILE = '..\..\change-lens\backend\.env'
 .venv\Scripts\python -m tools.d17_run --model Qwen/Qwen3.8-27B --runs 2
 ```
 
-Results and the model choice are in `docs/06-decision-log.md` (D-17, 2026-10-31).
+Results and the model choice are in the private decision log (D-17, 2026-10-31).
 
 ## 8. Fact extraction (I-2)
 

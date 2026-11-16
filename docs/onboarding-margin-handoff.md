@@ -1,7 +1,7 @@
 # Onboarding 24 px margin: implementation handoff
 
 Prepared 2026-11-14 for the implementing agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`. Baseline: the commit that adds this
+this repository, branch `m1-iphone`. Baseline: the commit that adds this
 file, on top of `fc7bf38`. Check `git status` and HEAD first.
 
 The untracked tool folders (`.claude-flow/`, `app/.claude-flow/`, `.playwright-mcp/`, `.claude/`) and
