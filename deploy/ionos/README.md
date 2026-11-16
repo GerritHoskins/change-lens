@@ -46,17 +46,20 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 
 ## B. Prepare the server
 
-1. **Harden SSH and the firewall.** Confirm that key login works first. **Done 2026-11-16 except the
-   `sshd_config` change:** password login stays on until key login from the PC works.
+1. **Harden SSH and the firewall.** Confirm that key login works first. **Done 2026-11-16.** The image's
+   `sshd_config` sets `PermitRootLogin no`, so the settings live in drop-ins that load first:
+   `/etc/ssh/sshd_config.d/00-changelens.conf` and `01-changelens-nopass.conf`. `sshd -T` shows
+   `passwordauthentication no`, and a password attempt is refused with `Permission denied (publickey)`.
    ```bash
    apt update && apt -y full-upgrade && apt -y install unattended-upgrades ufw git age
    ```
    ```bash
    dpkg-reconfigure -plow unattended-upgrades
    ```
-   In `/etc/ssh/sshd_config` set `PasswordAuthentication no` and `PermitRootLogin prohibit-password`, then:
+   Set `PermitRootLogin prohibit-password` and `PasswordAuthentication no` in a drop-in, which overrides
+   the main file:
    ```bash
-   systemctl restart ssh
+   printf 'PermitRootLogin prohibit-password\nPasswordAuthentication no\n' > /etc/ssh/sshd_config.d/00-changelens.conf && sshd -t && systemctl reload ssh
    ```
    ```bash
    ufw default deny incoming && ufw allow from <your-ip> to any port 22 proto tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp && ufw enable
