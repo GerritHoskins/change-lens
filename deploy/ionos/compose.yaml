@@ -204,6 +204,9 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24
+          # Dynamic addresses come from the upper half only, so a container started while Caddy is down can't
+          # take Caddy's fixed 172.30.0.2 ("Address already in use" on the next start).
+          ip_range: 172.30.0.128/25
   data:
     internal: true
   outbound: {}
