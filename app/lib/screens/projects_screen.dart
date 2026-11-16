@@ -1,4 +1,4 @@
-// Project list and creation, plus the developer settings for the dev API connection.
+// Project list and creation; the account screen (I-18), or in development builds the dev settings.
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -13,8 +13,9 @@ import 'project_screen.dart';
 import 'compare_screen.dart';
 import 'comparison_screen.dart';
 import 'onboarding_screen.dart';
+import 'account_screen.dart';
 
-enum _ProjectsMenu { howItWorks, devSettings }
+enum _ProjectsMenu { howItWorks, account, devSettings }
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -110,13 +111,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
             _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
+            _ProjectsMenu.account => AccountScreen(session: s.auth!),
             _ProjectsMenu.devSettings => const DevSettingsScreen(),
           })),
           itemBuilder: (_) => [
             PopupMenuItem(key: const Key('how-it-works'), value: _ProjectsMenu.howItWorks,
               child: Text(l.onbReplayEntry)),
-            PopupMenuItem(key: const Key('settings'), value: _ProjectsMenu.devSettings,
-              child: Text(l.devSettings)),
+            // Signed-in builds never show the dev connection (ui-ux-handoff §5).
+            if (s.auth != null)
+              PopupMenuItem(key: const Key('account'), value: _ProjectsMenu.account, child: Text(l.account))
+            else
+              PopupMenuItem(key: const Key('settings'), value: _ProjectsMenu.devSettings,
+                child: Text(l.devSettings)),
           ]),
         const SizedBox(width: 8),
       ]),
