@@ -22,21 +22,32 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 
 ## A. Accounts and settings (no server work)
 
-1. **DNS.** A records `api.pixeltronic.dev` and `auth.pixeltronic.dev` → the cube's public IPv4.
+1. **DNS.** A records `api.pixeltronic.dev` and `auth.pixeltronic.dev` → the cube's public IPv4. **Done
+   2026-11-15:** Cloudflare, DNS only, reserved IP `212.132.90.61`.
 2. **IONOS answers for D-8**, with the date: the DPA covers the Cube, Object Storage and mail; encryption at
-   rest for the Cube's disk and Object Storage; both in Germany.
-3. **Object Storage in Frankfurt** (`s3.eu-central-1.ionoscloud.com`; the backend signs for region
+   rest for the Cube's disk and Object Storage; both in Germany. Docs answered 2026-11-15: the Cloud AVV covers
+   Cube and Object Storage, the mail AVV covers Mail Basic/Business (keep both; contracts before 2022-07-19 may
+   need it accepted separately); storage stays in the chosen German location, but the AVVs allow EU/EEA and
+   qualified third-country processing (support, metadata), so record "stored in Germany", not "processed only
+   in Germany". Still open: the Cube's volume encryption (AES-XTS 256 applies only to volumes created after the
+   feature launched; ask IONOS support for this volume, by its ID) and the bucket encryption check in A3.
+3. **Object Storage in Frankfurt** (**done 2026-11-15**) (`s3.eu-central-1.ionoscloud.com`; the backend signs for region
    `eu-central-1`): bucket `changelens-originals` (private, versioning **off**) and bucket `changelens-backups`
    (private, versioning off, lifecycle rule: delete after 30 days). One access key for the app and, if IONOS
-   lets you scope keys per bucket, a second one for backups.
-4. **IONOS mailbox** `noreply@pixeltronic.dev` with SPF, DKIM and DMARC records as IONOS shows them.
+   lets you scope keys per bucket, a second one for backups. **Encryption:** the backend uploads originals
+   without an encryption header, so turn on default encryption (SSE-S3, AES-256) on `changelens-originals`;
+   backups are already `age`-encrypted. After C7, check one uploaded object shows `ServerSideEncryption:
+   AES256` (in the DCD object details, or `aws s3api head-object` with the app key).
+4. **IONOS mailbox** `noreply@pixeltronic.dev` with SPF, DKIM and DMARC records as IONOS shows them. **Done
+   2026-11-16:** MX, SPF, DKIM (`s1-ionos`, `s2-ionos`) and DMARC resolve in Cloudflare.
 5. **Google Cloud** OAuth clients (web, iOS `dev.changelens.app`, Android `dev.changelens.app` + SHA-1) and
    **Apple** (Sign in with Apple on the App ID, a Services ID, a `.p8` key with its Key ID and your Team ID).
    These are for S4; nothing below needs them yet.
 
 ## B. Prepare the server
 
-1. **Harden SSH and the firewall.** Confirm that key login works first.
+1. **Harden SSH and the firewall.** Confirm that key login works first. **Done 2026-11-16 except the
+   `sshd_config` change:** password login stays on until key login from the PC works.
    ```bash
    apt update && apt -y full-upgrade && apt -y install unattended-upgrades ufw git age
    ```
@@ -52,11 +63,12 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    ```
    Docker publishes ports past `ufw`; that's why only Caddy publishes public ports and Logto's admin port is
    bound to `127.0.0.1`.
-2. **Docker.**
+2. **Docker.** **Done 2026-11-16.**
    ```bash
    curl -fsSL https://get.docker.com | sh
    ```
-3. **The code.** Add a read-only deploy key to the GitHub repository, then:
+3. **The code.** Add a read-only deploy key to the GitHub repository, then: **Done 2026-11-16** (key
+   `/root/.ssh/changelens_deploy`, set as the clone's `core.sshCommand`).
    ```bash
    git clone git@github.com:GerritHoskins/change-lens.git /opt/changelens && cd /opt/changelens && git checkout m1-iphone
    ```
@@ -109,6 +121,18 @@ cd /opt/changelens/deploy/ionos
    ```bash
    docker compose ps
    ```
+   **Logto's tenant roles.** On the first start Logto's seed creates `logto_tenant_logto` and one
+   `logto_tenant_logto_<tenant>` login role per tenant, then connects as those. The init script revokes `CONNECT`
+   on the `logto` database from `PUBLIC`, so Logto's status check returns 500 (`CheckMyDatabase`) until they get
+   it. Once, after the first start (affects the `logto` database only):
+   ```bash
+   docker compose exec postgres psql -U postgres -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE logto TO logto_tenant_logto" -c "DO \$\$DECLARE r text; BEGIN FOR r IN SELECT rolname FROM pg_roles WHERE rolname LIKE 'logto_tenant_logto_%' LOOP EXECUTE format('GRANT CONNECT ON DATABASE logto TO %I', r); END LOOP; END\$\$"
+   ```
+   ```bash
+   docker compose restart logto && sleep 45 && docker compose ps logto
+   ```
+   Logto shows `healthy`. (Done 2026-11-16 on the cube, together with `ALTER ROLE logto CREATEROLE`, which
+   the init script now sets on a fresh volume.)
 4. **Logto admin console**, from your PC through an SSH tunnel (it is never public).
    ```powershell
    ssh -N -L 3002:127.0.0.1:3002 root@<cube-ip>
@@ -192,7 +216,8 @@ cd /opt/changelens/deploy/ionos
 
 Record each with its date:
 
-- [ ] A2's IONOS answers (DPA, encryption at rest, region)
+- [ ] A2's IONOS answers (DPA, encryption at rest, region), including support's answer on the Cube volume
+- [ ] an uploaded original showing `ServerSideEncryption: AES256`
 - [ ] the restore test's `RESTORE OK` line
 - [ ] the admin console unreachable from outside (C6's third command times out)
 - [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in)

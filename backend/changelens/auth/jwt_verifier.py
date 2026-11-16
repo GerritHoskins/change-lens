@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import re
-from typing import Mapping
+from typing import Mapping, Optional
 from urllib.parse import urlsplit
 
 import jwt
@@ -59,6 +59,14 @@ class VerifiedIdentity:
     expires_at: int
 
 
+def _implied_algorithm(policy: JwtPolicy, kty) -> Optional[str]:
+    """`alg` is optional in a JWK (RFC 7517 §4.4) and Logto leaves it out of its RSA keys. Without it, the key
+    is accepted only when exactly one allowed algorithm fits its `kty` (RSA under the default RS256-only
+    policy); an ambiguous or unknown key type stays rejected. The token header must still name that algorithm."""
+    matches = [alg for alg in policy.algorithms if ALGORITHMS[alg] == kty]
+    return matches[0] if len(matches) == 1 else None
+
+
 class JwtVerifier:
     def __init__(self, policy: JwtPolicy, jwks: Mapping):
         self.policy = policy
@@ -70,7 +78,7 @@ class JwtVerifier:
             for data in keys:
                 if not isinstance(data, dict):
                     raise ValueError()
-                kid, algorithm = data.get("kid"), data.get("alg")
+                kid, algorithm = data.get("kid"), data.get("alg", _implied_algorithm(policy, data.get("kty")))
                 if (not isinstance(kid, str) or not 1 <= len(kid) <= 200 or kid in self._keys
                         or algorithm not in policy.algorithms or data.get("kty") != ALGORITHMS[algorithm]
                         or data.get("use", "sig") != "sig"
