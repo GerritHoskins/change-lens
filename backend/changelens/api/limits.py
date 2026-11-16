@@ -2,7 +2,8 @@
 
 Fixed windows: per account per minute (every authenticated request), per IP per minute (requests that
 fail authentication, and `POST /session`), and new accounts per IP per UTC day (the sign-up cap in
-`POST /session`). Over a limit is `429 rate_limited` with `Retry-After`.
+`POST /session`: one counter for new account rows, one for Logto users that native Google or Apple sign-in
+creates, so a social sign-up counts once in each). Over a limit is `429 rate_limited` with `Retry-After`.
 
 Keys are an HMAC-SHA256 of the scope and the account ID or IP with a secret key, so the counters never
 hold a raw address. Nothing here logs an IP. Counts live in Postgres (`rate_limit_hit`, migration 0005),
@@ -91,3 +92,9 @@ def limit_ip(request: Request) -> None:
 def limit_signup(request: Request) -> None:
     settings = request.app.state.settings
     limiter(request).check("signup", client_ip(request), settings.signups_per_ip_per_day, DAY)
+
+
+def limit_signup_idp(request: Request) -> None:
+    """Before `POST /session` creates a Logto user for a new Google or Apple identity (I-8 S4)."""
+    settings = request.app.state.settings
+    limiter(request).check("signup-idp", client_ip(request), settings.signups_per_ip_per_day, DAY)

@@ -20,7 +20,8 @@ from helpers import SUBJECT_A, TOKEN_A, TOKEN_B, auth
 from helpers import EARLIER_LINES, LATER_LINES
 from test_reviews import _compared, _findings, _post
 
-EXCEPTIONS = {"users", "alembic_version", "rate_limit_counters"}  # no tenant_id: only through the functions
+# No tenant_id: only through the functions. The last two are I-8 S4's sign-in state.
+EXCEPTIONS = {"users", "alembic_version", "rate_limit_counters", "apple_token_parks", "pending_links"}
 FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "session_lookup": ["user_id", "tenant_id", "member_role"],
     "session_bootstrap": ["outcome", "user_id", "tenant_id", "member_role"],
@@ -35,6 +36,19 @@ FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "rate_limit_hit": ["rate_limit_hit"],  # I-8 S6
     "rate_limit_prune": ["rate_limit_prune"],
     "global_spend_since": ["global_spend_since"],
+    "apple_park_put": ["apple_park_put"],  # I-8 S4
+    "apple_parks_for": ["park_id", "token_enc"],
+    "apple_park_attach": ["apple_park_attach"],
+    "apple_park_expire": ["apple_park_expire"],
+    "apple_parks_due": ["park_id", "token_enc", "attempts"],
+    "apple_park_revoked": ["apple_park_revoked"],
+    "apple_park_retry": ["apple_park_retry"],
+    "pending_link_put": ["pending_link_put"],
+    "pending_link_take": ["provider", "provider_subject", "target_subject", "park_id", "park_token", "expired"],
+    "pending_links_prune": ["pending_links_prune"],
+    "account_apple_token": ["account_apple_token"],
+    "account_apple_token_clear": ["account_apple_token_clear"],
+    "account_social_cleanup": ["account_social_cleanup"],
 }
 
 
@@ -67,7 +81,7 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
         using, check = policies[(name, "ALL")]
         expected = "(tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)"
         assert using == expected and check == expected, name
-    for name in ("users", "rate_limit_counters"):  # RLS on, no policy: nothing visible without the functions
+    for name in ("users", "rate_limit_counters", "apple_token_parks", "pending_links"):  # RLS on, no policy
         assert tables[name][:2] == (True, True), name
     assert not [p for p in policies if p[0] in EXCEPTIONS]
 
@@ -295,7 +309,21 @@ def test_each_function_returns_only_its_listed_columns(env):
              "account_deletion_candidates": ("account_deletion_candidates(:n, 10)", {"n": now}),
              "rate_limit_hit": ("rate_limit_hit(:k, date_trunc('minute', now()))", {"k": "0" * 64}),
              "rate_limit_prune": ("rate_limit_prune()", {}),
-             "global_spend_since": ("global_spend_since(:n)", {"n": now})}
+             "global_spend_since": ("global_spend_since(:n)", {"n": now}),
+             "apple_park_put": ("apple_park_put(:i, 'sub', 'v1.k.x', now() + interval '1 hour')", {"i": uuid.uuid4()}),
+             "apple_parks_for": ("apple_parks_for('sub')", {}),
+             "apple_park_attach": ("apple_park_attach(:u, 'sub', :p, 'v1.k.y')", {"u": uuid.uuid4(), "p": uuid.uuid4()}),
+             "apple_park_expire": ("apple_park_expire(:p)", {"p": uuid.uuid4()}),
+             "apple_parks_due": ("apple_parks_due(:n, 10)", {"n": now}),
+             "apple_park_revoked": ("apple_park_revoked(:p)", {"p": uuid.uuid4()}),
+             "apple_park_retry": ("apple_park_retry(:p, now())", {"p": uuid.uuid4()}),
+             "pending_link_put": ("pending_link_put(:i, 'google', 'g-sub', 'target', NULL, now() + interval '1 hour')",
+                                  {"i": uuid.uuid4()}),
+             "pending_link_take": ("pending_link_take(:i)", {"i": uuid.uuid4()}),
+             "pending_links_prune": ("pending_links_prune(:n)", {"n": now}),
+             "account_apple_token": ("account_apple_token(:u)", {"u": uuid.uuid4()}),
+             "account_apple_token_clear": ("account_apple_token_clear(:u, 'x')", {"u": uuid.uuid4()}),
+             "account_social_cleanup": ("account_social_cleanup(:u)", {"u": uuid.uuid4()})}
     for name, (call, params) in calls.items():
         columns, _ = _call(env, "SELECT * FROM " + call, **params)
         assert columns == FUNCTIONS[name], name
@@ -313,6 +341,14 @@ def test_each_function_returns_only_its_listed_columns(env):
     "rate_limit_hit('not-a-hash', now())", "rate_limit_hit(repeat('a', 64), now() - interval '3 days')",
     "rate_limit_hit(repeat('a', 64), now() + interval '1 hour')", "rate_limit_hit(NULL, now())",
     "global_spend_since(NULL)",
+    "apple_park_put(gen_random_uuid(), 's', 'v1', now())", "apple_park_put(gen_random_uuid(), '', 'v1', now() + interval '1 hour')",
+    "apple_park_put(gen_random_uuid(), 's', 'v1', now() + interval '3 hours')", "apple_park_put(NULL, 's', 'v1', now())",
+    "apple_parks_for(NULL)", "apple_parks_for(repeat('s', 201))", "apple_parks_due(now(), 0)", "apple_parks_due(NULL, 5)",
+    "apple_park_retry(gen_random_uuid(), now() + interval '3 days')", "apple_park_attach(NULL, 's', NULL, 'v1')",
+    "pending_link_put(gen_random_uuid(), 'facebook', 'x', 't', NULL, now() + interval '1 hour')",
+    "pending_link_put(gen_random_uuid(), 'google', 'x', 't', NULL, now() + interval '3 hours')",
+    "pending_link_put(gen_random_uuid(), 'google', '', 't', NULL, now() + interval '1 hour')",
+    "pending_links_prune(NULL)",
 ])
 def test_functions_reject_invalid_arguments(env, call):
     with pytest.raises(DBAPIError) as error:

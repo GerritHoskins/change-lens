@@ -67,32 +67,40 @@ def _implied_algorithm(policy: JwtPolicy, kty) -> Optional[str]:
     return matches[0] if len(matches) == 1 else None
 
 
+def load_jwks(algorithms: tuple[str, ...], jwks: Mapping, implied=None) -> dict:
+    """Public signing keys by `kid`, refusing private material, duplicate IDs, weak RSA and unknown types.
+    `implied(kty)` names the algorithm for a key without `alg` (see `_implied_algorithm`)."""
+    loaded = {}
+    try:
+        keys = jwks["keys"]
+        if not isinstance(keys, list) or not 1 <= len(keys) <= 32:
+            raise ValueError()
+        for data in keys:
+            if not isinstance(data, dict):
+                raise ValueError()
+            kid = data.get("kid")
+            algorithm = data.get("alg", implied(data.get("kty")) if implied else None)
+            if (not isinstance(kid, str) or not 1 <= len(kid) <= 200 or kid in loaded
+                    or algorithm not in algorithms or data.get("kty") != ALGORITHMS[algorithm]
+                    or data.get("use", "sig") != "sig"
+                    or data.get("key_ops", ["verify"]) != ["verify"]
+                    or set(data) & {"d", "p", "q", "dp", "dq", "qi", "oth", "k"}):
+                raise ValueError()
+            if algorithm == "ES256" and data.get("crv") != "P-256":
+                raise ValueError()
+            key = jwt.PyJWK.from_dict(data, algorithm=algorithm)
+            if data["kty"] == "RSA" and key.key.key_size < 2048:
+                raise ValueError()
+            loaded[kid] = key
+    except (KeyError, TypeError, ValueError, AttributeError, jwt.PyJWTError):
+        raise ValueError("invalid_trusted_jwks") from None
+    return loaded
+
+
 class JwtVerifier:
     def __init__(self, policy: JwtPolicy, jwks: Mapping):
         self.policy = policy
-        self._keys = {}
-        try:
-            keys = jwks["keys"]
-            if not isinstance(keys, list) or not 1 <= len(keys) <= 32:
-                raise ValueError()
-            for data in keys:
-                if not isinstance(data, dict):
-                    raise ValueError()
-                kid, algorithm = data.get("kid"), data.get("alg", _implied_algorithm(policy, data.get("kty")))
-                if (not isinstance(kid, str) or not 1 <= len(kid) <= 200 or kid in self._keys
-                        or algorithm not in policy.algorithms or data.get("kty") != ALGORITHMS[algorithm]
-                        or data.get("use", "sig") != "sig"
-                        or data.get("key_ops", ["verify"]) != ["verify"]
-                        or set(data) & {"d", "p", "q", "dp", "dq", "qi", "oth", "k"}):
-                    raise ValueError()
-                if algorithm == "ES256" and data.get("crv") != "P-256":
-                    raise ValueError()
-                key = jwt.PyJWK.from_dict(data, algorithm=algorithm)
-                if data["kty"] == "RSA" and key.key.key_size < 2048:
-                    raise ValueError()
-                self._keys[kid] = key
-        except (KeyError, TypeError, ValueError, AttributeError, jwt.PyJWTError):
-            raise ValueError("invalid_trusted_jwks") from None
+        self._keys = load_jwks(policy.algorithms, jwks, lambda kty: _implied_algorithm(policy, kty))
 
     @property
     def key_ids(self) -> frozenset[str]:

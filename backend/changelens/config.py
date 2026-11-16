@@ -80,6 +80,15 @@ class Settings:
     logto_m2m_app_id: Optional[str] = None
     logto_m2m_app_secret: Optional[str] = field(default=None, repr=False)
     logto_management_resource: str = "https://default.logto.app/api"
+    # Native Google and Apple sign-in (I-8 S4), logto mode only. Secrets are files named here (03 §6).
+    google_client_id: Optional[str] = None  # the server (web) OAuth client the apps request codes for
+    google_client_secret_file: Optional[str] = None
+    google_redirect_uri: str = ""  # empty for codes from the native SDKs
+    apple_client_id: Optional[str] = None  # the app's bundle ID (native codes)
+    apple_team_id: Optional[str] = None
+    apple_key_id: Optional[str] = None
+    apple_private_key_file: Optional[str] = None  # the .p8 key
+    apple_token_keys_file: Optional[str] = None  # keyring for stored Apple refresh tokens (AR-3)
     # Cost and abuse limits (I-8 S6; 06, 2026-11-13). Changeable through the environment, no release.
     tenant_monthly_spend_cap_eur: Decimal = Decimal("5")
     global_monthly_spend_cap_eur: Decimal = Decimal("50")  # the kill switch for new work
@@ -115,6 +124,13 @@ class Settings:
         if len(self.rate_limit_key) < 32:
             raise ValueError("the rate-limit key needs at least 32 characters")
         object.__setattr__(self, "trusted_proxies", tuple(_ip(p) for p in self.trusted_proxies))
+        if self.google_client_id and not self.google_client_secret_file:
+            raise ValueError("Google sign-in needs a client secret file")
+        if self.apple_client_id and not (self.apple_team_id and self.apple_key_id and self.apple_private_key_file
+                                         and self.apple_token_keys_file):
+            raise ValueError("Apple sign-in needs team ID, key ID, .p8 key file and token keyring file")
+        if (self.google_client_id or self.apple_client_id) and self.auth_mode != "logto":
+            raise ValueError("Google and Apple sign-in need logto mode")
         management = self.logto_management_endpoint
         if management is not None and (not management.startswith("https://") or management != management.strip()
                                        or not (self.logto_m2m_app_id and self.logto_m2m_app_secret)):
@@ -142,6 +158,10 @@ class Settings:
                         logto_management_endpoint=env.get("CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT"),
                         logto_m2m_app_id=env.get("CHANGELENS_LOGTO_M2M_APP_ID"),
                         logto_m2m_app_secret=env.get("CHANGELENS_LOGTO_M2M_APP_SECRET"))
+            for name in ("google_client_id", "google_client_secret_file", "google_redirect_uri", "apple_client_id",
+                         "apple_team_id", "apple_key_id", "apple_private_key_file", "apple_token_keys_file"):
+                if env.get("CHANGELENS_" + name.upper()):
+                    auth[name] = env["CHANGELENS_" + name.upper()]
             if env.get("CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"):
                 auth["logto_management_resource"] = env["CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"]
             # A deployment keys its rate-limit counters with its own secret (I-8 S6).
