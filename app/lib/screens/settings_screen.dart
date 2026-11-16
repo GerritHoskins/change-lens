@@ -1,7 +1,7 @@
 // Settings (WP-B; I-18; first-launch canvas "Settings"; ui-ux-handoff §5 "Account/privacy"), opened from
 // the Projects menu: the account (signed in with, sign-out, in-app deletion: Apple 5.1.1(v), `DELETE /me`,
 // I-8 S5; 204 and 202 both end the account for the app), then Privacy with the usage-events switch.
-// Privacy appears only with a [UsageConsent], which needs D-18 (gated). Legal links (Terms, Privacy,
+// Privacy appears only with a [UsageConsent]: the account's answer when [Services.consentFlow] is on. Legal links (Terms, Privacy,
 // Imprint) wait for the reviewed I-20 texts and a link opener; they are not built.
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';

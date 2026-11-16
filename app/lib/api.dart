@@ -129,6 +129,19 @@ class OnboardingState {
   final int? step;
 }
 
+/// The usage-events consent (D-18 tier B): `GET`/`PUT /me/consent`. [granted] is null when the account
+/// hasn't answered for the current [policyVersion].
+class ConsentState {
+  const ConsentState({required this.granted, required this.policyVersion});
+
+  ConsentState.fromJson(Map<String, dynamic> j)
+      : granted = (j['usage_events'] as Map<String, dynamic>)['granted'] as bool?,
+        policyVersion = (j['usage_events'] as Map<String, dynamic>)['policy_version'] as String;
+
+  final bool? granted;
+  final String policyVersion;
+}
+
 class Api {
   Api(this.baseUrl, this.token, {http.Client? client}) : _client = client ?? http.Client();
 
@@ -152,6 +165,15 @@ class Api {
         headers: {..._auth, 'Content-Type': 'application/json'},
         body: jsonEncode(completed ? {'completed': true} : {'step': step}))));
   }
+
+  Future<ConsentState> consent() async =>
+      ConsentState.fromJson(await _json(_client.get(_u('/me/consent'), headers: _auth)));
+
+  /// Answers for [policyVersion], which must be the server's current one (else `policy_version_stale`).
+  Future<ConsentState> saveConsent({required bool granted, required String policyVersion}) async =>
+      ConsentState.fromJson(await _json(_client.put(_u('/me/consent'),
+          headers: {..._auth, 'Content-Type': 'application/json'},
+          body: jsonEncode({'usage_events': {'granted': granted, 'policy_version': policyVersion}}))));
 
   /// `DELETE /me` (I-8 S5): true when every step finished, false when the rest is pending. Both mean the
   /// account is gone for the app: every later call is rejected.

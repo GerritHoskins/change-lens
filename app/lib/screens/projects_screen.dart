@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../auth/account_consent.dart';
 import '../design/calm_controls.dart';
 import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
@@ -111,7 +112,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
             _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
-            _ProjectsMenu.account => SettingsScreen(session: s.auth!),
+            _ProjectsMenu.account => SettingsScreen(session: s.auth!,
+                consent: s.consentFlow ? AccountConsent(s.auth!) : null),
             _ProjectsMenu.devSettings => const DevSettingsScreen(),
           })),
           itemBuilder: (_) => [

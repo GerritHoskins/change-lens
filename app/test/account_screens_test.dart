@@ -21,13 +21,14 @@ class NoPicker implements DocumentPicker {
 }
 
 Future<AuthHarness> pumpGate(WidgetTester tester, {bool stored = false, Map<String, dynamic>? onboarding,
-    bool apple = true, Locale locale = const Locale('en'), void Function(AuthHarness)? before}) async {
+    bool apple = true, Locale locale = const Locale('en'), void Function(AuthHarness)? before,
+    bool consentFlow = false}) async {
   final h = AuthHarness();
   h.native.appleAvailable = apple;
   if (stored) h.storeSession();
   if (onboarding != null) h.server.onboarding = onboarding;
   before?.call(h);
-  final services = Services(h.store, NoPicker(), auth: h.session);
+  final services = Services(h.store, NoPicker(), auth: h.session, consentFlow: consentFlow);
   await tester.pumpWidget(ChangeLensApp(services: services, locale: locale));
   await h.session.restore();
   await tester.pumpAndSettle();

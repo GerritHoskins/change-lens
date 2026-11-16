@@ -1,5 +1,5 @@
-// Fakes for I-18: Logto (authorize + token endpoints), the API's `POST /session`, `/me/onboarding` and
-// `DELETE /me`, the system browser and the native Google and Apple sheets. No test reaches a network.
+// Fakes for I-18: Logto (authorize + token endpoints), the API's `POST /session`, `/me/onboarding`,
+// `/me/consent` (D-18) and `DELETE /me`, the system browser and the native Google and Apple sheets. No test reaches a network.
 import 'dart:convert';
 
 import 'package:changelens/auth/logto.dart';
@@ -42,6 +42,11 @@ class FakeServer {
   };
   int providerStatus = 200;
   int deleteStatus = 204;
+  // Usage-events consent (D-18 tier B): the answer for [policyVersion]; null until answered.
+  bool? consent;
+  String policyVersion = '2026-11-13';
+  final consentPuts = <Map<String, dynamic>>[];
+  int consentStatus = 200; // PUT /me/consent; 409 answers policy_version_stale once
   int projectsStatus = 200;
 
   String issueCode() {
@@ -90,7 +95,7 @@ class FakeServer {
         return _json(providerAnswer);
       }
       if (sessionStatus != 200) return _json({'code': 'unauthenticated'}, sessionStatus);
-      return _json({'status': 'active', 'onboarding': onboarding});
+      return _json({'status': 'active', 'onboarding': onboarding, 'consent': {'usage_events': consent}});
     }
     if (bearer == null || !bearer.startsWith('Bearer at-')) return _json({'code': 'unauthenticated'}, 401);
     if (path == '/me/onboarding' && r.method == 'GET') return _json(onboarding);
@@ -100,6 +105,19 @@ class FakeServer {
       onboarding = body['completed'] == true ? {'completed': true, 'step': null} : {'completed': false, 'step': body['step']};
       return _json(onboarding);
     }
+    if (path == '/me/consent' && r.method == 'GET') return _json(_consentBody());
+    if (path == '/me/consent' && r.method == 'PUT') {
+      final body = (jsonDecode(r.body) as Map<String, dynamic>)['usage_events'] as Map<String, dynamic>;
+      consentPuts.add(body);
+      if (consentStatus == 409) {
+        consentStatus = 200;
+        return _json({'code': 'policy_version_stale'}, 409);
+      }
+      if (consentStatus != 200) return _json({'code': 'internal_error'}, consentStatus);
+      if (body['policy_version'] != policyVersion) return _json({'code': 'policy_version_stale'}, 409);
+      consent = body['granted'] as bool;
+      return _json(_consentBody());
+    }
     if (path == '/me' && r.method == 'DELETE') {
       return deleteStatus >= 300 ? _json({'code': 'unavailable'}, deleteStatus) : http.Response('', deleteStatus);
     }
@@ -108,6 +126,9 @@ class FakeServer {
     }
     return _json({'code': 'not_found'}, 404);
   }
+
+  Map<String, dynamic> _consentBody() => {'usage_events': {
+    'granted': consent, 'policy_version': policyVersion, 'decided_at': consent == null ? null : '2026-11-16T10:00:00+00:00'}};
 
   Iterable<http.Request> to(String host, String path) =>
       requests.where((r) => r.url.host == host && r.url.path == path);

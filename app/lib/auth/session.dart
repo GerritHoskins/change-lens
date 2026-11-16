@@ -51,9 +51,12 @@ class LinkRequired extends AuthState {
 }
 
 class SignedIn extends AuthState {
-  const SignedIn(this.onboarding, {this.email, this.linked});
+  const SignedIn(this.onboarding, {this.email, this.linked, this.consent});
   final OnboardingState onboarding;
   final String? email;
+
+  /// The usage-events consent answer for the current policy version (D-18 tier B); null = not answered.
+  final bool? consent;
 
   /// The provider the backend just linked to the account (announced once as `linkDone`).
   final SignInMethod? linked;
@@ -134,7 +137,8 @@ class AuthSession extends ChangeNotifier {
     if (stored == null || stored.isEmpty) return _set(const SignedOut());
     try {
       await _keep(await logto.refresh(stored));
-      _set(SignedIn(await _bootstrap(), email: _tokens?.email));
+      final (onboarding, consent) = await _bootstrap();
+      _set(SignedIn(onboarding, email: _tokens?.email, consent: consent));
     } on SessionExpired {
       await _forget();
       _set(const SignedOut(SignedOutReason.expired));
@@ -230,7 +234,7 @@ class AuthSession extends ChangeNotifier {
     final before = _state;
     await _keep(tokens);
     try {
-      final onboarding = await _bootstrap(linkId: linkId);
+      final (onboarding, consent) = await _bootstrap(linkId: linkId);
       lastMethod = method;
       await store.write(lastMethodKey, method.name);
       final subject = _subjectOf(tokens.accessToken);
@@ -241,7 +245,7 @@ class AuthSession extends ChangeNotifier {
         // Another account: nothing of the previous one stays on screen or in memory.
         if (before is ReauthRequired) _set(const SignedOut());
       }
-      _set(SignedIn(onboarding, email: tokens.email,
+      _set(SignedIn(onboarding, email: tokens.email, consent: consent,
         linked: linkId != null && before is LinkRequired ? before.provider : null));
     } on ApiException catch (e) {
       if (e.status != 401) rethrow;
@@ -253,14 +257,19 @@ class AuthSession extends ChangeNotifier {
     }
   }
 
-  Future<OnboardingState> _bootstrap({String? linkId}) async {
+  /// `POST /session`: the onboarding state and the usage-events consent answer (null = ask).
+  Future<(OnboardingState, bool?)> _bootstrap({String? linkId}) async {
     final token = await accessToken();
     final body = decodeApiResponse(await _inner.post(_u('/session'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode(linkId == null ? {} : {'link_id': linkId})));
     if (body is! Map || body['status'] != 'active') throw ApiException(200, 'session_malformed');
     final onboarding = body['onboarding'];
-    return onboarding is Map<String, dynamic> ? OnboardingState.fromJson(onboarding) : OnboardingState.notStarted;
+    final consent = body['consent'];
+    return (
+      onboarding is Map<String, dynamic> ? OnboardingState.fromJson(onboarding) : OnboardingState.notStarted,
+      consent is Map && consent['usage_events'] is bool ? consent['usage_events'] as bool : null,
+    );
   }
 
   Future<void> _keep(TokenSet tokens) async {
@@ -325,8 +334,8 @@ class AuthSession extends ChangeNotifier {
     try {
       if (_state is! SignedIn) return;
       await _refresh();
-      final onboarding = await _bootstrap();
-      if (_state case SignedIn(:final email)) _set(SignedIn(onboarding, email: email));
+      final (onboarding, consent) = await _bootstrap();
+      if (_state case SignedIn(:final email)) _set(SignedIn(onboarding, email: email, consent: consent));
     } on SessionExpired {
       await _expire();
     } on ApiException catch (e) {
@@ -361,11 +370,26 @@ class AuthSession extends ChangeNotifier {
   Future<void> completeOnboarding() async {
     final current = _state;
     if (current is! SignedIn) return;
-    _set(SignedIn(const OnboardingState(completed: true), email: current.email));
+    _set(SignedIn(const OnboardingState(completed: true), email: current.email, consent: current.consent));
     try {
       await api.saveOnboarding(completed: true);
     } on Exception {
       // not saved: onboarding shows again on the next start, at the saved step
+    }
+  }
+
+  /// Answers the usage-events consent (D-18 tier B) for the policy version the server names now; a policy
+  /// change in between is retried once with the new version. Throws when it couldn't be saved.
+  Future<void> answerUsageEvents(bool allow) async {
+    var current = await api.consent();
+    try {
+      current = await api.saveConsent(granted: allow, policyVersion: current.policyVersion);
+    } on ApiException catch (e) {
+      if (e.status != 409) rethrow;
+      current = await api.saveConsent(granted: allow, policyVersion: (await api.consent()).policyVersion);
+    }
+    if (_state case SignedIn(:final onboarding, :final email)) {
+      _set(SignedIn(onboarding, email: email, consent: current.granted));
     }
   }
 
