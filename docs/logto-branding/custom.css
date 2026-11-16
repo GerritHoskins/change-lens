@@ -1,0 +1,88 @@
+/*
+ * ChangeLens branding for the Logto 1.45 sign-in experience (OSS, auth.pixeltronic.dev).
+ * Source of truth for Console → Sign-in experience → Branding → Custom CSS (applied by script, see
+ * docs/logto-branding-plan.md §4.4). Calm Bold tokens: DESIGN.md.
+ *
+ * Not set here: the brand colour. Logto writes --color-brand-* inline on <body> from the Console values
+ * (light #111114, dark #F3F3EF), which beats any stylesheet.
+ *
+ * Three kinds of rule, from robust to fragile:
+ *   1. Theme variables under html[data-theme] body: Logto's own design tokens. Safe across upgrades.
+ *   2. Stable hooks: .logto_page-container, .logto_main-content, .logto_branding-header, .logto_signature.
+ *   3. FRAGILE: suffix matches on CSS-module class names ([class$='_headline'], [class*='_primary']).
+ *      Re-check these on every Logto upgrade (S7 runbook, "Logto upgrade").
+ */
+
+/* Roboto, the app's bundled font, served from this origin by Caddy: no third-party font request. */
+@font-face { font-family: 'Roboto'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/changelens-brand/fonts/roboto-400.woff2') format('woff2'); }
+@font-face { font-family: 'Roboto'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/changelens-brand/fonts/roboto-600.woff2') format('woff2'); }
+@font-face { font-family: 'Roboto'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/changelens-brand/fonts/roboto-700.woff2') format('woff2'); }
+
+/* 1. Theme variables ---------------------------------------------------------------------------- */
+html[data-theme] body {
+  --cl-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --radius: 18px !important;
+  --font-headline-1: 700 32px/35px var(--cl-font) !important;
+  --font-headline-2: 700 28px/32px var(--cl-font) !important;
+  --font-title-1: 700 24px/29px var(--cl-font) !important;
+  --font-title-2: 600 20px/26px var(--cl-font) !important;
+  --font-title-3: 600 17px/22px var(--cl-font) !important;
+  --font-label-1: 600 17px/22px var(--cl-font) !important;
+  --font-label-2: 600 14px/20px var(--cl-font) !important;
+  --font-label-3: 600 12px/16px var(--cl-font) !important;
+  --font-body-1: 400 16px/23px var(--cl-font) !important;
+  --font-body-2: 400 15px/21px var(--cl-font) !important;
+  --font-body-3: 400 13px/18px var(--cl-font) !important;
+  --font-subhead-cap: 700 12px/16px var(--cl-font) !important;
+  font-family: var(--cl-font);
+}
+
+html[data-theme='light'] body {
+  --color-bg-body-base: #F5F5F2 !important;   /* ground */
+  --color-bg-body: #F5F5F2 !important;
+  --color-bg-layer-1: #FFFFFF !important;     /* surface */
+  --color-bg-layer-2: #FFFFFF !important;
+  --color-type-primary: #111114 !important;   /* ink */
+  --color-type-secondary: #5E5E66 !important; /* muted */
+  --color-line-border: #86868E !important;    /* control-border */
+  --color-line-divider: #DCDCD6 !important;   /* line */
+  --color-danger-default: #C4320A !important; /* error */
+}
+
+html[data-theme='dark'] body {
+  --color-bg-body-base: #121214 !important;
+  --color-bg-body: #121214 !important;
+  --color-bg-layer-1: #1E1E22 !important;
+  --color-bg-layer-2: #1E1E22 !important;
+  --color-type-primary: #F3F3EF !important;
+  --color-type-secondary: #A6A6AE !important;
+  --color-line-border: #76767E !important;
+  --color-line-divider: #34343A !important;
+  --color-danger-default: #FF8A65 !important;
+  /* Logto paints the primary button label with --color-static-white. On the dark brand colour (#F3F3EF)
+     that would be white on near-white, so it becomes ink. Also used by Logto's toast: check it (§5). */
+  --color-static-white: #111114 !important;
+}
+
+/* 2. Stable hooks ------------------------------------------------------------------------------- */
+.logto_branding-header { align-items: flex-start !important; }
+.logto_main-content a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* 3. FRAGILE: CSS-module suffix selectors (re-check on every Logto upgrade) ---------------------- */
+/* Calm Bold headline: large, heavy, left-aligned (Logto: centred 20 px on mobile). */
+.logto_branding-header [class$='_headline'] {
+  text-align: left !important;
+  font: var(--font-headline-1) !important;
+  letter-spacing: -1px;
+}
+.logto_branding-header [class*='_logoWrapper'] { justify-content: flex-start !important; }
+/* One black pill per screen: the primary action is 60 px tall and fully rounded. */
+.logto_main-content button[class*='_primary'],
+.logto_main-content button[class*='_secondary'] {
+  height: 60px !important;
+  border-radius: 999px !important;
+  font: var(--font-label-1) !important;
+}
