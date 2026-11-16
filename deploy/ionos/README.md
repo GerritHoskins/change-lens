@@ -42,7 +42,7 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    2026-11-16:** MX, SPF, DKIM (`s1-ionos`, `s2-ionos`) and DMARC resolve in Cloudflare.
 5. **Google Cloud** OAuth clients (web, iOS `dev.changelens.app`, Android `dev.changelens.app` + SHA-1) and
    **Apple** (Sign in with Apple on the App ID, a Services ID, a `.p8` key with its Key ID and your Team ID).
-   These are for S4; nothing below needs them yet.
+   These are for S4 and step C8 only.
 
 ## B. Prepare the server
 
@@ -183,6 +183,36 @@ cd /opt/changelens/deploy/ionos
    ```
    The worker logs no storage error at start (it checks the bucket); the proxy log shows `TCP_TUNNEL/200`
    only for allow-listed hosts and `TCP_DENIED/403` for anything else. If IONOS rejects the `eu-central-1` signature, record it and stop: the backend's region is fixed.
+8. **Native Google and Apple sign-in** (I-8 S4; needs A5 and revision `0006_social_sign_in`, so run F's app
+   release first). Never add Google or Apple as a social connector in Logto: the backend does the code
+   exchange and links accounts itself, and a Logto connector would bring back Logto's one-click link. The
+   C5 role must cover `POST /api/one-time-tokens` and the user endpoints; full Management API access does.
+   1. **The folder**, readable by the containers' user (uid 10001) and no one else but root:
+      ```bash
+      install -d -m 750 -o root -g 10001 /etc/changelens/signin
+      ```
+   2. **The files.** Google's web client secret (one line) and Apple's `.p8` key, pasted with `nano`, then
+      the keyring for stored Apple refresh tokens (a fresh random 32-byte key):
+      ```bash
+      nano /etc/changelens/signin/google-client-secret && nano /etc/changelens/signin/apple-signin.p8
+      ```
+      ```bash
+      printf '{"active":"k1","keys":{"k1":"%s"}}\n' "$(openssl rand 32 | basenc --base64url | tr -d '=')" > /etc/changelens/signin/apple-token-keys.json && chown root:10001 /etc/changelens/signin/* && chmod 640 /etc/changelens/signin/*
+      ```
+      Keep a copy of `apple-token-keys.json` in your password manager: without it, stored Apple tokens can't
+      be revoked when an account is deleted. To rotate, add a key and move `active`; never remove an old one.
+   3. **The settings.** Uncomment the Google and Apple lines in `/etc/changelens/changelens.env` and fill in
+      the client ID, Team ID and Key ID (all of a provider's lines or none), then:
+      ```bash
+      docker compose up -d --force-recreate api worker retention
+      ```
+   4. **Check.** No start error in `docker compose logs --tail 20 api retention`, then a made-up code must be
+      refused by the provider: `401` means configured, `422` means that provider is still off, and `503`
+      means the provider refused our client ID, secret or key (or couldn't be reached):
+      ```bash
+      for p in google apple; do curl -s -o /dev/null -w "$p %{http_code}\n" -X POST -H 'content-type: application/json' -d "{\"provider\":\"$p\",\"code\":\"not-a-real-code\"}" https://api.pixeltronic.dev/session; done
+      ```
+      A real sign-in needs the app (I-18); record it in E.
 
 ## D. Backups, restore test and monitoring
 
@@ -288,6 +318,6 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
   process, so the worker holds them too, although only the api and retention use them (03 §6 wants them
   limited to those two).
 - Secrets reach the processes as environment variables from root-only files, not as files; `docker inspect`
-  shows them to root.
+  shows them to root. Only the sign-in secrets (C8) are files.
 - The images' OS packages (`apt`/`apk`) aren't hash-pinned; the base images and Python wheels are.
 - Python 3.10 reached end of life in October 2026 (no more security fixes); moving to 3.12 needs new wheel pins.
