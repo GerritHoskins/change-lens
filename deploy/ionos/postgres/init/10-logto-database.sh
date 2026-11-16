@@ -11,9 +11,11 @@ if [ -z "${LOGTO_DB_PASSWORD:-}" ]; then
 fi
 
 # psql reads the value from the environment itself (\getenv), so it never appears on a command line.
+# CREATEROLE: Logto's seed creates its own tenant role (logto_tenant_logto). On Postgres 16 a CREATEROLE role
+# can only manage the roles it creates, so it can't touch postgres or the ChangeLens roles.
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<'SQL'
 \getenv pw LOGTO_DB_PASSWORD
-CREATE ROLE logto LOGIN PASSWORD :'pw';
+CREATE ROLE logto LOGIN CREATEROLE PASSWORD :'pw';
 CREATE DATABASE logto OWNER logto;
 REVOKE ALL ON DATABASE logto FROM PUBLIC;
 SQL

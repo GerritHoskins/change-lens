@@ -143,6 +143,19 @@ def test_es256_requires_matching_curve_and_explicit_deployment_algorithm():
         JwtVerifier(JwtPolicy(ISSUER, AUDIENCE), {"keys": [jwk]})
 
 
+def test_jwk_without_alg_is_accepted_only_when_the_key_type_fits_one_allowed_algorithm(signing):
+    # Logto publishes its RSA key without "alg" (seen on the I-8 S7 deployment).
+    bare = {k: v for k, v in signing[1].items() if k != "alg"}
+    verifier = JwtVerifier(JwtPolicy(ISSUER, AUDIENCE), {"keys": [bare]})
+    assert verifier.verify(token(signing)).subject == "synthetic-subject"
+    with pytest.raises(AccessTokenRejected):
+        verifier.verify(token(signing, algorithm="PS256"))
+    with pytest.raises(ValueError, match="^invalid_trusted_jwks$"):
+        JwtVerifier(JwtPolicy(ISSUER, AUDIENCE, algorithms=("RS256", "PS256")), {"keys": [bare]})
+    with pytest.raises(ValueError, match="^invalid_trusted_jwks$"):
+        JwtVerifier(JwtPolicy(ISSUER, AUDIENCE, algorithms=("ES256",)), {"keys": [bare]})
+
+
 def test_trusted_key_rotation_uses_new_verifier_snapshot_without_fetching(signing):
     current = JwtVerifier(JwtPolicy(ISSUER, AUDIENCE), {"keys": [signing[1]]})
     next_jwk = {**signing[1], "kid": "next"}
