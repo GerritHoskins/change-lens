@@ -24,7 +24,8 @@ from sqlalchemy.pool import NullPool
 
 from changelens.domain.identity import IdentityRepo
 from changelens.domain.models import (
-    AccountOnboarding, ClientApprovalRecord, Comparison, ComparisonCostTombstone, FactCacheEntry, Finding,
+    AccountOnboarding, ClientApprovalRecord, Comparison, ComparisonCostTombstone, ConsentEvent, FactCacheEntry,
+    Finding,
     ObjectWriteIntent, Project, ReviewEvent, SourceVersion,
 )
 
@@ -369,6 +370,27 @@ class TenantRepo:
             row.updated_at = now
             self.s.flush()
         return row
+
+    def consent(self, account_id: uuid.UUID, purpose: str) -> Optional[ConsentEvent]:
+        """The newest consent answer for one purpose, or None (D-18 tier B). Reads never write."""
+        return self.s.scalars(
+            select(ConsentEvent).where(ConsentEvent.account_id == account_id, ConsentEvent.purpose == purpose,
+                                       ConsentEvent.tenant_id == self.tenant_id)
+            .order_by(ConsentEvent.decided_at.desc()).limit(1)).one_or_none()
+
+    def record_consent(self, account_id: uuid.UUID, purpose: str, granted: bool, policy_version: str,
+                       now: Optional[datetime] = None) -> ConsentEvent:
+        """Append one answer; earlier answers stay as they were (the record of choice, time and version)."""
+        row = self.add(ConsentEvent(account_id=account_id, purpose=purpose, granted=granted,
+                                    policy_version=policy_version, decided_at=now or datetime.now(timezone.utc)))
+        self.s.flush()
+        return row
+
+    def delete_consent(self, account_id: uuid.UUID) -> int:
+        """For 03a P8 DELETE_ACCOUNT: append-only means never updated, not kept after the account is gone."""
+        result = self.s.execute(delete(ConsentEvent).where(ConsentEvent.account_id == account_id,
+                                                           ConsentEvent.tenant_id == self.tenant_id))
+        return result.rowcount
 
     def month_spend(self, since: datetime) -> Decimal:
         """This tenant's spend since `since`: actual costs plus open reservations, tombstones included."""
