@@ -277,10 +277,11 @@ App release:
 ```bash
 cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
 ```
-Logto upgrade: change the image tag and digest in `compose.yaml`, then run its database alteration before
-starting the new version:
+Logto upgrade (not part of an app release): change the image tag and digest in `compose.yaml` first, then run
+its database alteration before starting the new version. The command reads the version from `compose.yaml`
+and stops if it finds none:
 ```bash
-docker compose pull logto && docker compose run --rm --entrypoint sh logto -c "npm run cli db alteration deploy <new-version>" && docker compose up -d logto
+V=$(grep -o 'svhd/logto:[0-9][0-9.]*' compose.yaml | cut -d: -f2) && [ -n "$V" ] && echo "Logto $V" && docker compose pull logto && docker compose run --rm --entrypoint sh logto -c "npm run cli db alteration deploy $V" && docker compose up -d logto
 ```
 
 ## G. Sharing the cube with another site
