@@ -276,10 +276,14 @@ class Review {
         evidenceModeBefore = (j['evidence_mode'] as Map?)?['before'] as String?,
         evidenceModeAfter = (j['evidence_mode'] as Map?)?['after'] as String?,
         pageOpened = j['page_opened'] as bool?,
+        dismissalReason = j['dismissal_reason'] as String?,
         at = DateTime.parse(j['at'] as String);
 
   final String action;
   final String? note;
+  /// Why a dismissal was made (WP-C): reworded | wrong_passage | irrelevant | other. Null on other
+  /// actions and on dismissals recorded before the field existed.
+  final String? dismissalReason;
   // Historical reviews have unknown observations; never infer them from the action.
   final String? evidenceModeBefore, evidenceModeAfter;
   final bool? pageOpened;
@@ -380,12 +384,15 @@ extension ReportApi on Api {
   Future<FindingDetail> finding(String id) async =>
       FindingDetail(await _json(_client.get(_u('/findings/$id'), headers: _auth)));
 
-  /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15).
+  /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15). A
+  /// dismissal needs its [dismissalReason], and only a dismissal takes one (WP-C).
   Future<Finding> review(String findingId, String action, {required Map<String, String?> evidenceMode,
-      required bool pageOpened, String? note, Map<String, String>? correction}) async {
+      required bool pageOpened, String? note, Map<String, String>? correction, String? dismissalReason}) async {
+    assert((action == 'dismissed') == (dismissalReason != null), 'a dismissal needs a reason, and only a dismissal');
     final j = await _json(_client.post(_u('/findings/$findingId/reviews'),
         headers: {..._auth, 'Content-Type': 'application/json'},
         body: jsonEncode({'action': action, 'note': note, 'correction': correction,
+          'dismissal_reason': ?dismissalReason,
           'evidence_mode': evidenceMode, 'page_opened': pageOpened})));
     return Finding(j['finding'] as Map<String, dynamic>);
   }

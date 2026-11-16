@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons_500.dart';
 abstract final class CalmIcons {
   static const IconData add = LucideIcons500.plus;
   static const IconData approval = LucideIcons500.mailCheck;
+  static const IconData arrowUp = LucideIcons500.arrowUp;
   static const IconData arrowForward = LucideIcons500.arrowRight;
   static const IconData back = LucideIcons500.arrowLeft;
   static const IconData backIOS = LucideIcons500.chevronLeft;
@@ -15,6 +16,7 @@ abstract final class CalmIcons {
   static const IconData close = LucideIcons500.x;
   static const IconData compare = LucideIcons500.arrowRightLeft;
   static const IconData document = LucideIcons500.fileText;
+  static const IconData fork = LucideIcons500.gitFork;
   static const IconData info = LucideIcons500.info;
   static const IconData language = LucideIcons500.languages;
   static const IconData limits = LucideIcons500.ruler;

@@ -12,10 +12,13 @@ import 'comparison_screen.dart';
 import 'definition_sheets.dart';
 
 class CompareScreen extends StatefulWidget {
-  const CompareScreen({super.key, this.project, this.versions = const []});
+  const CompareScreen({super.key, this.project, this.versions = const [], this.earlierId});
 
   final Project? project;
   final List<Version> versions;
+
+  /// A version the user chose from the project's history: preset as Earlier, nothing else.
+  final String? earlierId;
 
   @override
   State<CompareScreen> createState() => _CompareScreenState();
@@ -51,6 +54,8 @@ class _CompareScreenState extends State<CompareScreen> {
       earlier = pending.earlier;
       later = pending.later;
       scope = pending.scope;
+    } else if (widget.earlierId != null) {
+      earlier = ComparisonInput.existing(widget.earlierId);
     }
     _load();
   }

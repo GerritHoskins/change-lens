@@ -139,6 +139,13 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets('P6: a version chosen from the history is preset as Earlier, and nothing else', (tester) async {
+    await pumpApp(tester, () => CompareScreen(project: project, versions: ready, earlierId: 'v1'));
+    expect(find.byKey(const ValueKey('earlier-v1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('newer-new')), findsOneWidget);
+    expect(startEnabled(tester), isFalse);
+  });
+
   testWidgets('AC-14: scope alone is not enough', (tester) async {
     await pumpApp(tester, () => CompareScreen(project: project, versions: ready));
     await tester.ensureVisible(find.byKey(const Key('scope-unknown')));
@@ -158,6 +165,8 @@ void main() {
       expect(find.byIcon(icon), findsNothing);
     }
     await tester.scrollUntilVisible(find.textContaining('cannot be edited'), 150);
+    await tester.ensureVisible(find.textContaining('cannot be edited'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('cannot be edited').hitTestable(), findsOneWidget);
   });
 

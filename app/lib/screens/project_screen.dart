@@ -1,4 +1,5 @@
-// A project's versions and comparisons, plus import by paste or PDF picker (AC-24).
+// A project's history (P6 timeline: versions linked by the comparisons the user ran), plus import
+// by paste or PDF picker (AC-24).
 // Versions are immutable (AC-15): there is no edit or delete action, only "import a new version".
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -10,11 +11,14 @@ import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
-import 'comparison_screen.dart';
 import 'compare_screen.dart';
+import 'project_timeline.dart';
 
 class ProjectScreen extends StatefulWidget {
   const ProjectScreen({super.key, required this.project});
+
+  /// Names this screen's route, so the review summary can return here ("Back to the project").
+  static const routeName = 'project';
 
   final Project project;
 
@@ -157,18 +161,17 @@ class _ProjectScreenState extends State<ProjectScreen> {
     }
   }
 
-  String _status(AppLocalizations l, Version v) => switch (v.status) {
-        'parsed' => l.statusParsed,
-        'rejected' => l.statusRejected(v.rejectReason ?? ''),
-        _ => l.statusUploaded,
-      };
+  Future<void> _compare({String? earlierId}) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+        CompareScreen(project: widget.project, versions: versions, earlierId: earlierId)));
+    if (mounted) await _load();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
-    final byId = {for (final v in versions) v.id: v.label};
     return PopScope(
       canPop: !_deleting,
       child: Scaffold(
@@ -203,11 +206,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
             child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
           FilledButton.icon(
             key: const Key('compare'),
-            onPressed: () async {
-              await Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CompareScreen(project: widget.project, versions: versions)));
-              if (mounted) await _load();
-            },
+            onPressed: _compare,
             icon: const Icon(CalmIcons.compare),
             label: Text(l.compareBriefs),
           ),
@@ -227,54 +226,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
           if (importing) Padding(padding: const EdgeInsets.only(top: 12),
             child: Semantics(liveRegion: true, child: Text(l.uploading))),
           const SizedBox(height: 32),
-          Semantics(header: true, child: Text(l.comparisonsTitle, style: text.titleLarge)),
-          const SizedBox(height: 12),
-          if (!loading && comparisons.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(l.comparisonsEmpty, style: text.bodyMedium?.copyWith(color: colors.muted))),
-          for (final c in comparisons)
-            Material(color: Colors.transparent, child: InkWell(
-              borderRadius: BorderRadius.circular(CalmRadius.md),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ComparisonScreen(comparisonId: c.id, versions: versions))),
-              child: Container(padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  SourcePairSummary(framed: false,
-                    earlier: byId[c.earlierId] ?? l.sourceUnavailable,
-                    newer: byId[c.laterId] ?? l.sourceUnavailable,
-                    scope: c.scope),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: Text(comparisonStatusLabel(l, c.status), style: text.labelLarge?.copyWith(
-                      color: c.status == 'failed' ? Theme.of(context).colorScheme.error
-                        : c.status == 'partial' ? colors.warning : colors.muted))),
-                    const SizedBox(width: 12),
-                    Icon(CalmIcons.chevronRight, color: colors.muted),
-                  ]),
-                ])),
-            )),
-          const SizedBox(height: 28),
-          Semantics(header: true, child: Text(l.versionsTitle, style: text.titleLarge)),
-          const SizedBox(height: 8),
-          if (!loading && versions.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(l.versionsEmpty, style: text.bodyMedium?.copyWith(color: colors.muted))),
-          for (final v in versions)
-            Container(
-              key: Key('version-${v.id}'),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Padding(padding: const EdgeInsets.only(top: 2),
-                  child: Icon(v.kind == 'pdf' ? CalmIcons.document : CalmIcons.text, color: colors.muted)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(v.label, style: text.titleMedium),
-                  const SizedBox(height: 5),
-                  Text([_status(l, v), if (v.warnings > 0) l.warningsCount(v.warnings)].join(' · '),
-                    style: text.bodyMedium?.copyWith(color: v.status == 'rejected' ? Theme.of(context).colorScheme.error : colors.muted)),
-                ])),
-              ]),
-            ),
+          ProjectTimeline(versions: versions, comparisons: comparisons, loading: loading,
+            onCompareFrom: (version) => _compare(earlierId: version.id)),
           const SizedBox(height: 16),
           Text(l.originalsNote, style: text.bodySmall?.copyWith(color: colors.muted)),
         ]),

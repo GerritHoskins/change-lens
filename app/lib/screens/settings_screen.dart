@@ -1,5 +1,8 @@
-// Account (I-18; ui-ux-handoff §5 "Account/privacy"): who is signed in, sign-out, and in-app account
-// deletion (Apple 5.1.1(v); `DELETE /me`, I-8 S5). 204 and 202 both end the account for the app.
+// Settings (WP-B; I-18; first-launch canvas "Settings"; ui-ux-handoff §5 "Account/privacy"), opened from
+// the Projects menu: the account (signed in with, sign-out, in-app deletion: Apple 5.1.1(v), `DELETE /me`,
+// I-8 S5; 204 and 202 both end the account for the app), then Privacy with the usage-events switch.
+// Privacy appears only with a [UsageConsent], which needs D-18 (gated). Legal links (Terms, Privacy,
+// Imprint) wait for the reviewed I-20 texts and a link opener; they are not built.
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 
@@ -7,18 +10,34 @@ import '../auth/session.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
+import 'consent_screen.dart';
+import 'sign_in_screen.dart' show methodName;
 
-class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key, required this.session});
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key, required this.session, this.consent});
 
   final AuthSession session;
 
+  /// The account's usage-events answer (D-18); null hides the Privacy section until it exists.
+  final UsageConsent? consent;
+
   @override
-  State<AccountScreen> createState() => _AccountScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> {
-  bool deleting = false, deleteFailed = false;
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool deleting = false, deleteFailed = false, consentSaving = false, consentFailed = false;
+
+  Future<void> _setConsent(bool allow) async {
+    setState(() { consentSaving = true; consentFailed = false; });
+    try {
+      await widget.consent!.answer(allow);
+    } on Exception {
+      if (mounted) setState(() => consentFailed = true);
+    } finally {
+      if (mounted) setState(() => consentSaving = false);
+    }
+  }
 
   Future<void> _confirmDelete() async {
     final l = AppLocalizations.of(context);
@@ -56,12 +75,19 @@ class _AccountScreenState extends State<AccountScreen> {
     final colors = CalmColors.of(context);
     final state = widget.session.state;
     final email = state is SignedIn ? state.email : null;
+    final method = widget.session.lastMethod;
+    final consent = widget.consent;
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(top: false, child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        CalmPageHeader(title: l.account),
+        CalmPageHeader(title: l.settingsTitle),
+        Semantics(header: true, child: Text(l.settingsAccount, style: text.titleMedium)),
+        const SizedBox(height: 8),
         Text(email == null ? l.accountSignedIn : l.accountSignedInAs(email), key: const Key('account-identity'),
           style: text.bodyLarge),
+        if (method != null) Padding(padding: const EdgeInsets.only(top: 4),
+          child: Text(l.settingsSignedInWith(methodName(l, method)), key: const Key('account-method'),
+            style: text.bodyMedium?.copyWith(color: colors.muted))),
         const SizedBox(height: 16),
         Align(alignment: AlignmentDirectional.centerStart,
           child: OutlinedButton(key: const Key('sign-out'), onPressed: deleting ? null : widget.session.signOut,
@@ -84,6 +110,18 @@ class _AccountScreenState extends State<AccountScreen> {
           style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
           onPressed: deleting ? null : _confirmDelete,
           child: Semantics(liveRegion: true, child: Text(deleting ? l.deletingAccount : l.deleteAccount)))),
+        if (consent != null) ...[
+          Padding(padding: const EdgeInsets.symmetric(vertical: 28), child: Divider(color: colors.line, height: 1)),
+          Semantics(header: true, child: Text(l.settingsPrivacy, style: text.titleMedium)),
+          const SizedBox(height: 8),
+          ListenableBuilder(listenable: consent, builder: (context, _) => SwitchListTile.adaptive(
+            key: const Key('usage-events'), contentPadding: EdgeInsets.zero,
+            title: Text(l.settingsUsageEvents), subtitle: Text(l.settingsUsageEventsHint),
+            value: consent.allowed ?? false,
+            onChanged: consentSaving ? null : _setConsent)),
+          if (consentFailed) Semantics(liveRegion: true,
+            child: CalmWarning(key: const Key('usage-events-error'), text: l.consentSaveFailed)),
+        ],
       ])),
     );
   }

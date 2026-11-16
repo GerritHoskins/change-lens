@@ -13,7 +13,7 @@ import 'project_screen.dart';
 import 'compare_screen.dart';
 import 'comparison_screen.dart';
 import 'onboarding_screen.dart';
-import 'account_screen.dart';
+import 'settings_screen.dart';
 
 enum _ProjectsMenu { howItWorks, account, devSettings }
 
@@ -111,7 +111,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
             _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
-            _ProjectsMenu.account => AccountScreen(session: s.auth!),
+            _ProjectsMenu.account => SettingsScreen(session: s.auth!),
             _ProjectsMenu.devSettings => const DevSettingsScreen(),
           })),
           itemBuilder: (_) => [
@@ -119,7 +119,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               child: Text(l.onbReplayEntry)),
             // Signed-in builds never show the dev connection (ui-ux-handoff §5).
             if (s.auth != null)
-              PopupMenuItem(key: const Key('account'), value: _ProjectsMenu.account, child: Text(l.account))
+              PopupMenuItem(key: const Key('account'), value: _ProjectsMenu.account, child: Text(l.settingsTitle))
             else
               PopupMenuItem(key: const Key('settings'), value: _ProjectsMenu.devSettings,
                 child: Text(l.devSettings)),
@@ -149,7 +149,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     borderRadius: BorderRadius.circular(CalmRadius.md),
                     onTap: () async {
                       final deleted = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(builder: (_) => ProjectScreen(project: p)));
+                        MaterialPageRoute(settings: const RouteSettings(name: ProjectScreen.routeName),
+                          builder: (_) => ProjectScreen(project: p)));
                       if (!mounted) return;
                       await _load();
                       if (!context.mounted || deleted == null) return;

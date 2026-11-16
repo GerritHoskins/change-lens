@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../l10n/app_localizations.dart';
 import 'calm_controls.dart';
 import 'calm_icons.dart';
 import 'calm_theme.dart';
+
+/// Announces a state change to TalkBack and VoiceOver without showing anything (a cancelled sign-in,
+/// a linked method).
+void calmAnnounce(BuildContext context, String message) =>
+    SemanticsService.sendAnnouncement(View.of(context), message, Directionality.of(context));
 
 /// Opens a definition sheet in context: a 48px info disc labelled "About {term}".
 class CalmInfoButton extends StatelessWidget {

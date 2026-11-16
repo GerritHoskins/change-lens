@@ -2,6 +2,8 @@
 // Review (confirm, correct, dismiss, note) and client approval are different calls and different
 // sections; nothing here turns a review into an approval (AC-12). A correction is saved as a new
 // revision and the original stays in the history (AC-15).
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +18,7 @@ import 'definition_sheets.dart';
 import 'evidence_screen.dart';
 import 'evidence_resolution.dart';
 import 'report_widgets.dart';
+import 'review_completion.dart';
 
 const changeTypes = ['added', 'changed', 'removed', 'not_addressed', 'uncertain', 'equivalent'];
 const categories = ['deliverable', 'quantity', 'date_deadline', 'responsibility_owner', 'approval_wording',
@@ -42,6 +45,7 @@ class _FindingScreenState extends State<FindingScreen> {
   String? error;
   bool busy = false, loading = false, checking = false, pageOpened = false, opened = false;
   bool reviewJustSaved = false;
+  bool leaving = false; // replaced by the review summary
   String? evidenceError;
   final presentations = <Evidence, EvidencePresentation>{};
   final sourceVersions = <String, Version>{};
@@ -118,7 +122,7 @@ class _FindingScreenState extends State<FindingScreen> {
     setState(() => busy = true);
     try {
       await call();
-      if (!mounted) return;
+      if (!mounted || leaving) return;
       await _load();
     } on Exception catch (e) {
       if (!mounted) return;
@@ -135,13 +139,28 @@ class _FindingScreenState extends State<FindingScreen> {
     }
   }
 
-  Future<void> _review(String action, {String? note, Map<String, String>? correction}) async {
+  Future<void> _review(String action, {String? note, Map<String, String>? correction, String? reason}) async {
     if (!canReview) return;
+    // Only a finding that was still open can complete the review; re-reviewing one never jumps away.
+    final wasOpen = !const {'confirmed', 'corrected', 'dismissed'}.contains(detail?.finding.review?.action);
     await _save(() async {
-      final f = await ServicesScope.of(context).api.review(id, action, note: note, correction: correction,
+      final api = ServicesScope.of(context).api;
+      final f = await api.review(id, action, note: note, correction: correction, dismissalReason: reason,
           evidenceMode: evidenceModes(presentations), pageOpened: pageOpened);
       // Follow the report's order, retaining this position when a correction creates a revision.
-      final nextIndex = action == 'confirmed' ? nextPendingIndex : reportIndex;
+      final advances = action == 'confirmed' || action == 'dismissed';
+      final nextIndex = advances ? nextPendingIndex : reportIndex;
+      // The last open finding: the summary (P7), counted from the server's report, not from this screen.
+      if (wasOpen && action != 'note' && nextIndex == reportIndex) {
+        final report = await _reportIfDone(api);
+        if (report != null && mounted) {
+          leaving = true;
+          // Not awaited: the future only completes when the summary closes.
+          unawaited(Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+            builder: (_) => ReviewSummaryScreen(report: report))));
+          return;
+        }
+      }
       final nextId = nextIndex != reportIndex ? widget.report.findings[nextIndex].id : f.id;
       if (!mounted) return;
       setState(() {
@@ -156,6 +175,23 @@ class _FindingScreenState extends State<FindingScreen> {
         id = nextId;
       });
     });
+  }
+
+  /// The report when every finding has a review; null otherwise, or when it can't be loaded (the
+  /// finding screen then simply stays, as before).
+  Future<Report?> _reportIfDone(Api api) async {
+    try {
+      final report = await api.report(widget.comparisonId);
+      return everyFindingReviewed(report) ? report : null;
+    } on Exception {
+      return null;
+    }
+  }
+
+  Future<void> _dismiss() async {
+    final result = await showCalmSheet<(String, String?)>(context,
+      builder: (_) => DismissSheet(hasNext: nextPendingIndex != reportIndex));
+    if (result != null) await _review('dismissed', note: result.$2, reason: result.$1);
   }
 
   Future<String?> _askNote({required bool required}) async {
@@ -272,10 +308,8 @@ class _FindingScreenState extends State<FindingScreen> {
               text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved)),
           Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton(onPressed: canReview ? () => _correct(f) : null, child: Text(l.actionCorrect)),
-            TextButton(onPressed: canReview ? () async {
-              final note = await _askNote(required: false);
-              if (note != null) await _review('dismissed', note: note.isEmpty ? null : note);
-            } : null, child: Text(l.actionDismiss)),
+            TextButton(key: const Key('review-dismiss'), onPressed: canReview ? _dismiss : null,
+              child: Text(l.actionDismiss)),
             TextButton(onPressed: canReview ? () async {
               final note = await _askNote(required: true);
               if (note != null && note.isNotEmpty) await _review('note', note: note);
@@ -289,7 +323,9 @@ class _FindingScreenState extends State<FindingScreen> {
             for (final r in d.reviews)
               ListTile(dense: true, contentPadding: EdgeInsets.zero,
                   title: Text(reviewLabel(l, r) ?? l.noteLabel),
-                  subtitle: Text([date.format(r.at.toLocal()), if (r.note != null) r.note!].join(' · '))),
+                  subtitle: Text([date.format(r.at.toLocal()),
+                    if (r.dismissalReason != null) l.dismissReasonLine(dismissalReasonLabel(l, r.dismissalReason!)),
+                    if (r.note != null) r.note!].join(' · '))),
           ],
           // Separate record, separate wording (AC-12).
           const Divider(),

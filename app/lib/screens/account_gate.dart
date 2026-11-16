@@ -1,9 +1,11 @@
 // The app's first screen (I-18; 03a P1 app sequence, O-22, O-23): sign-in first, then onboarding until the
 // account has completed it (resuming at the saved step), then Projects. Development builds without an
-// account session go straight to Projects and the dev settings.
+// account session go straight to Projects and the dev settings. A session that ends while the app is in
+// use shows the sign-in sheet over the current screen (WP-A), so in-memory work stays.
 import 'package:flutter/material.dart';
 
 import '../auth/session.dart';
+import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'onboarding_screen.dart';
@@ -19,6 +21,7 @@ class AccountGate extends StatefulWidget {
 
 class _AccountGateState extends State<AccountGate> {
   AuthSession? _session;
+  bool _sheetOpen = false;
 
   @override
   void didChangeDependencies() {
@@ -35,10 +38,35 @@ class _AccountGateState extends State<AccountGate> {
     super.dispose();
   }
 
-  /// Signed out anywhere in the app (sign-out, deletion, expired session): close every screen above.
+  /// Expired mid-use: the sign-in sheet over the current screen. Signed out anywhere (sign-out,
+  /// deletion, another account): close every screen above, the sheet too.
   void _changed() {
-    if (_session?.state is SignedIn || !mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    final state = _session?.state;
+    if (!mounted || state == null) return;
+    switch (state) {
+      case ReauthRequired():
+        _showSheet();
+      case SignedIn(:final linked):
+        if (linked != null) {
+          final l = AppLocalizations.of(context);
+          calmAnnounce(context, l.linkDone(methodName(l, linked)));
+        }
+      default:
+        Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
+  /// The sheet must stay while the session is gone: if something removed it (a screen below popping or
+  /// replacing the top route), it comes back on the next frame.
+  void _showSheet() {
+    if (_sheetOpen) return;
+    _sheetOpen = true;
+    showSessionExpiredSheet(context, _session!).whenComplete(() {
+      _sheetOpen = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _session?.state is ReauthRequired) _showSheet();
+      });
+    });
   }
 
   @override
@@ -49,10 +77,13 @@ class _AccountGateState extends State<AccountGate> {
       AuthRestoring() => const _Waiting(),
       AuthOffline() => _Offline(onRetry: session.restore),
       SignedOut() || LinkRequired() => SignInScreen(session: session),
-      SignedIn(:final onboarding) when !onboarding.completed => OnboardingScreen(
+      SignedIn(:final onboarding) || ReauthRequired(previous: SignedIn(:final onboarding))
+          when !onboarding.completed => OnboardingScreen(
         key: const ValueKey('first-run-onboarding'), mode: OnboardingMode.firstRun,
         resumeAt: onboarding.step, onStep: session.saveOnboardingStep, onFinish: session.completeOnboarding),
-      SignedIn() => const ProjectsScreen(),
+      // Same widget as signed in, so the screens above and their state stay while the sheet is up.
+      // Keyed by account: a different account gets a fresh Projects, never the previous one's list.
+      SignedIn() || ReauthRequired() => ProjectsScreen(key: ValueKey('projects-${session.account}')),
     });
   }
 }
