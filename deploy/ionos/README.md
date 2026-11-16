@@ -250,6 +250,33 @@ starting the new version:
 docker compose pull logto && docker compose run --rm --entrypoint sh logto -c "npm run cli db alteration deploy <new-version>" && docker compose up -d logto
 ```
 
+## G. Sharing the cube with another site
+
+Only one process can own ports 80 and 443. On the cube, this Caddy also serves `avatar.pixeltronic.dev`
+(profile-ai, compose project `deploy`, network `deploy_avatar`). That setup lives on the server only, outside the
+repository, so `git pull` never touches it:
+
+| Server file | What |
+|---|---|
+| `/opt/changelens/deploy/ionos/compose.override.yaml` | Loaded by compose automatically: mounts the files below and joins Caddy to `deploy_avatar` as `172.30.5.2` (the address profile-ai trusts as its proxy) |
+| `/etc/changelens/caddy/Caddyfile` | Two lines: `import /etc/caddy/changelens.caddy` (this folder's Caddyfile, global options first), then `import /etc/caddy/avatar.caddy` |
+| `/etc/changelens/caddy/avatar.caddy` | A copy of profile-ai's `deploy/Caddyfile` site block |
+
+The global options here (no request details in Caddy's log) cover the avatar site too. A change to the avatar
+block: edit `avatar.caddy`, then `docker compose restart caddy`. In profile-ai's `deploy` folder start only
+`docker compose up -d app backup`; its own Caddy (`deploy-caddy-1`) is stopped with restart off, and starting
+it would clash on the ports and on `172.30.5.2`.
+
+Taking over from another Caddy (done 2026-11-16): a container keeps a fixed network address while stopped, so
+disconnect the old one from the shared network before starting this one:
+```bash
+docker stop deploy-caddy-1 && docker update --restart=no deploy-caddy-1 && docker network disconnect deploy_avatar deploy-caddy-1 && docker compose up -d
+```
+Back to the old one:
+```bash
+docker compose stop caddy && docker network disconnect deploy_avatar changelens-caddy-1; docker network connect --ip 172.30.5.2 deploy_avatar deploy-caddy-1 && docker start deploy-caddy-1 && docker update --restart=unless-stopped deploy-caddy-1
+```
+
 ## Known gaps
 
 - `python -m changelens.api --lan` prints a warning about the dev token at start; it doesn't apply in `logto`

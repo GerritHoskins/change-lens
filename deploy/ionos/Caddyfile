@@ -1,12 +1,28 @@
 # TLS for the API and Logto's sign-in endpoints (I-8 S7). Certificates come from Let's Encrypt automatically.
-# No `log` directive: Caddy writes no access log, so no query strings, addresses or bodies are recorded here;
-# the api logs method, route template and status only (03a P9).
+# No per-site `log` directive: Caddy writes no access log. Its error log (a failed or 502 request) would still
+# carry the client address, full URI and headers, so the default logger drops those fields: an error entry
+# keeps host, method, status, duration and the error only (03a P9). The api logs method, route template and
+# status. The filter covers every site this Caddy serves, including ones imported next to this file.
 # Caddy replaces any client-supplied X-Forwarded-For with the real client address, and the api trusts that
 # header only from Caddy's fixed address (CHANGELENS_TRUSTED_PROXIES=172.30.0.2).
 {
 	email {$ACME_EMAIL}
 	servers {
 		protocols h1 h2 h3
+	}
+	log default {
+		output stderr
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>uri delete
+				request>headers delete
+				request>tls delete
+			}
+		}
 	}
 }
 
