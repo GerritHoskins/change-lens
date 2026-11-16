@@ -878,4 +878,121 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get onbStartNext =>
       'Als Nächstes: Lege ein Projekt an und vergleiche zwei Briefings.';
+
+  @override
+  String get signInTitle => 'Bei ChangeLens anmelden';
+
+  @override
+  String get signInIntro =>
+      'Deine Projekte und Vergleiche gehören zu deinem Konto. Wähle, wie du dich anmeldest.';
+
+  @override
+  String get signInApple => 'Weiter mit Apple';
+
+  @override
+  String get signInGoogle => 'Weiter mit Google';
+
+  @override
+  String get signInEmail => 'Weiter mit E-Mail';
+
+  @override
+  String get signInEmailHint =>
+      'Wir schicken dir einen Einmalcode per E-Mail. Kein Passwort.';
+
+  @override
+  String get signInWorking => 'Anmeldung läuft …';
+
+  @override
+  String get signInUnavailable =>
+      'Die Anmeldung ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.';
+
+  @override
+  String get signInFailed =>
+      'Die Anmeldung hat nicht geklappt. Versuche es erneut oder wähle eine andere Methode.';
+
+  @override
+  String get signInRejected =>
+      'Mit dieser Anmeldung ist kein ChangeLens-Konto möglich. Wähle eine andere Methode.';
+
+  @override
+  String get signedOutExpired =>
+      'Deine Sitzung ist abgelaufen. Melde dich erneut an, um weiterzumachen.';
+
+  @override
+  String get signedOutDone => 'Du bist abgemeldet.';
+
+  @override
+  String get accountDeletedNotice =>
+      'Dein Konto und alle seine Projekte wurden gelöscht.';
+
+  @override
+  String get accountDeletionPendingNotice =>
+      'Dein Konto ist gelöscht. Die letzten gespeicherten Kopien werden im Hintergrund entfernt.';
+
+  @override
+  String get linkFailedNotice =>
+      'Die Konten wurden nicht verknüpft. Melde dich mit deiner bisherigen Methode an oder beginne neu.';
+
+  @override
+  String get linkTitle => 'Du hast schon ein Konto';
+
+  @override
+  String linkBody(String provider) {
+    return 'Zu dieser E-Mail gibt es schon ein ChangeLens-Konto. Um die Anmeldung mit $provider hinzuzufügen, melde dich einmal wie gewohnt an. Danach verknüpfen wir $provider.';
+  }
+
+  @override
+  String get linkCancel => 'Andere Methode wählen';
+
+  @override
+  String get linkAppleElsewhere =>
+      'Dieses Konto meldet sich auch mit Apple an. Nutze dafür ein iPhone oder iPad.';
+
+  @override
+  String get providerApple => 'Apple';
+
+  @override
+  String get providerGoogle => 'Google';
+
+  @override
+  String get restoringSession => 'Dein Konto wird geöffnet …';
+
+  @override
+  String get sessionOffline =>
+      'ChangeLens erreicht dein Konto gerade nicht. Prüfe deine Verbindung.';
+
+  @override
+  String get account => 'Konto';
+
+  @override
+  String accountSignedInAs(String email) {
+    return 'Angemeldet als $email';
+  }
+
+  @override
+  String get accountSignedIn => 'Du bist angemeldet.';
+
+  @override
+  String get signOut => 'Abmelden';
+
+  @override
+  String get deleteAccount => 'Konto löschen';
+
+  @override
+  String get deleteAccountIntro =>
+      'Wenn du dein Konto löschst, werden alle Projekte, Dokumente, Vergleiche und Prüfungen entfernt, ebenso die damit verknüpften Anmeldemethoden. Das lässt sich nicht rückgängig machen.';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Konto löschen?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'Alles in ChangeLens wird gelöscht: alle Projekte, Dokumente, Vergleiche und Prüfungen. Du kannst das nicht rückgängig machen.';
+
+  @override
+  String get deleteAccountFailed =>
+      'Das Konto wurde nicht gelöscht. Prüfe deine Verbindung und versuche es erneut.';
+
+  @override
+  String get deletingAccount => 'Wird gelöscht …';
 }

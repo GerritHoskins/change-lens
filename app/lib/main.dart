@@ -1,14 +1,18 @@
 // ChangeLens app shell (05 I-9): projects, versions, import by paste or PDF, and the order and
 // scope confirmation. Portrait only on phones in v1 (06). UI strings come from lib/l10n.
+// Builds with `--dart-define=CHANGELENS_LOGTO_APP_ID=...` sign in to an account (I-18); others use
+// the dev settings.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show LicenseRegistry, LicenseEntryWithLineBreaks;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'auth/logto.dart';
+import 'auth/session.dart';
 import 'l10n/app_localizations.dart';
 import 'design/calm_theme.dart';
-import 'screens/projects_screen.dart';
+import 'screens/account_gate.dart';
 import 'services.dart';
 
 Future<void> main() async {
@@ -18,14 +22,18 @@ Future<void> main() async {
   });
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await pdfrxFlutterInitialize(); // evidence view (I-10)
-  final services = Services(SecureSettingsStore(), PlatformDocumentPicker());
+  final store = SecureSettingsStore();
+  final config = AuthConfig.fromEnvironment();
+  final services = Services(store, PlatformDocumentPicker(),
+    auth: config == null ? null : AuthSession(config, store));
   await services.picker.purge(); // leftovers from an interrupted import (03a P10, AC-25)
   await services.load();
+  services.auth?.restore(); // the gate waits on it
   runApp(ChangeLensApp(services: services));
 }
 
 class ChangeLensApp extends StatelessWidget {
-  const ChangeLensApp({super.key, required this.services, this.home = const ProjectsScreen(),
+  const ChangeLensApp({super.key, required this.services, this.home = const AccountGate(),
     this.themeMode = ThemeMode.system, this.locale});
 
   final Services services;
