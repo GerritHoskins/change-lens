@@ -1,4 +1,5 @@
-// App-wide services: dev connection settings, the API client and document import.
+// App-wide services: the signed-in account (I-18) or, in development builds, the dev connection
+// settings; the API client and document import.
 // Document bytes stay in memory; picker cleanup is requested after import and on start (AC-25).
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api.dart';
+import 'auth/session.dart';
 
 /// Key-value store for the dev connection. Production: Keychain / Keystore only (03a P10).
 abstract class SettingsStore {
@@ -70,21 +72,37 @@ class PlatformDocumentPicker implements DocumentPicker {
 }
 
 class Services extends ChangeNotifier {
-  Services(this.store, this.picker, {this.apiFactory = Api.new});
+  Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth}) {
+    auth?.addListener(_authChanged);
+  }
 
   static const _baseKey = 'api_base_url', _tokenKey = 'dev_token';
 
   final SettingsStore store;
   final DocumentPicker picker;
   final Api Function(String baseUrl, String token) apiFactory;
+
+  /// The account session in production builds; null in development builds, which use the dev settings.
+  final AuthSession? auth;
   String baseUrl = '';
   String token = '';
   Api? _api;
   ComparisonSubmission? pendingComparison;
 
-  bool get configured => baseUrl.isNotEmpty && token.isNotEmpty;
+  bool get configured => auth != null ? auth!.state is SignedIn : baseUrl.isNotEmpty && token.isNotEmpty;
 
-  Api get api => _api ??= apiFactory(baseUrl, token);
+  Api get api => auth?.api ?? (_api ??= apiFactory(baseUrl, token));
+
+  void _authChanged() {
+    if (auth!.state is! SignedIn) pendingComparison = null; // nothing of one account survives sign-out
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    auth?.removeListener(_authChanged);
+    super.dispose();
+  }
 
   Future<void> load() async {
     final newBase = await store.read(_baseKey) ?? '';
