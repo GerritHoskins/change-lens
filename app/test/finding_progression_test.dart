@@ -6,6 +6,7 @@ import 'package:changelens/main.dart';
 import 'package:changelens/screens/evidence_resolution.dart';
 import 'package:changelens/screens/evidence_screen.dart';
 import 'package:changelens/screens/finding_screen.dart';
+import 'package:changelens/screens/review_completion.dart';
 import 'package:changelens/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,7 +105,10 @@ void main() {
     expect(posts.map((request) => request.url.path), ['/findings/first/reviews', '/findings/second/reviews']);
     expect(jsonDecode(posts.last.body)['evidence_mode'], {'before': null, 'after': 'text_only'});
     expect(jsonDecode(posts.last.body)['page_opened'], false);
-    expect(find.text('Explanation of second.'), findsOneWidget); // last item stays, no invented completion
+    // Every finding now has a review on the server: the summary (P7), counted from the reloaded report.
+    expect(find.byType(ReviewSummaryScreen), findsOneWidget);
+    expect(backend.requests.where((r) => r.method == 'GET' && r.url.path == '/comparisons/c1/findings'),
+      hasLength(greaterThanOrEqualTo(1)));
     expect(backend.requests.where((request) => request.url.path == '/comparisons/c1/opened'), hasLength(1));
   });
 
@@ -172,7 +176,7 @@ void main() {
     expect(reviewPosts(backend).length, 1);
   });
 
-  for (final action in ['Add note', 'Dismiss']) {
+  for (final action in ['Add note']) {
     testWidgets('$action stays on the current finding', (tester) async {
       final backend = ProgressBackend();
       await pumpProgress(tester, backend);

@@ -21,13 +21,14 @@ class NoPicker implements DocumentPicker {
 }
 
 Future<AuthHarness> pumpGate(WidgetTester tester, {bool stored = false, Map<String, dynamic>? onboarding,
-    bool apple = true}) async {
+    bool apple = true, Locale locale = const Locale('en'), void Function(AuthHarness)? before}) async {
   final h = AuthHarness();
   h.native.appleAvailable = apple;
   if (stored) h.storeSession();
   if (onboarding != null) h.server.onboarding = onboarding;
+  before?.call(h);
   final services = Services(h.store, NoPicker(), auth: h.session);
-  await tester.pumpWidget(ChangeLensApp(services: services, locale: const Locale('en')));
+  await tester.pumpWidget(ChangeLensApp(services: services, locale: locale));
   await h.session.restore();
   await tester.pumpAndSettle();
   return h;
@@ -42,7 +43,7 @@ Future<void> tapKey(WidgetTester tester, String key) async {
 void main() {
   testWidgets('Signed out: Apple, Google and email on iOS; no Apple on Android', (tester) async {
     await pumpGate(tester);
-    expect(find.text('Sign in to ChangeLens'), findsOneWidget);
+    expect(find.text('What changed, and which changes matter?'), findsOneWidget);
     for (final key in ['sign-in-apple', 'sign-in-google', 'sign-in-email']) {
       expect(find.byKey(Key(key)), findsOneWidget);
     }
@@ -113,7 +114,7 @@ void main() {
     h.server.providerAnswer = {'status': 'link_required', 'methods': ['email'], 'link_id': 'link-1'};
     await tapKey(tester, 'sign-in-apple');
     await tapKey(tester, 'link-cancel');
-    expect(find.text('Sign in to ChangeLens'), findsOneWidget);
+    expect(find.text('What changed, and which changes matter?'), findsOneWidget);
 
     await tapKey(tester, 'sign-in-apple');
     h.server.sessionStatus = 401;

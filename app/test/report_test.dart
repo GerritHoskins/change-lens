@@ -65,7 +65,8 @@ class ReportBackend {
         approvals.add({...body, 'id': 'a1', 'finding_id': f['id']});
         return http.Response(jsonEncode(approvals.last), 201);
       }
-      final review = {'action': body['action'], 'note': body['note'], 'at': '2026-10-31T10:00:00Z'};
+      final review = {'action': body['action'], 'note': body['note'], 'dismissal_reason': body['dismissal_reason'],
+        'at': '2026-10-31T10:00:00Z'};
       reviews.add(review);
       var current = {...f, 'review': review};
       if (body['correction'] != null) {

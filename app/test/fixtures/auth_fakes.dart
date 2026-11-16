@@ -28,6 +28,7 @@ class FakeServer {
   int refreshCounter = 0, accessCounter = 0;
   int expiresIn = 900;
   bool jwtAccess = false; // access tokens shaped like Logto's JWTs (claims iat and exp)
+  String? subject; // with jwtAccess: the account's `sub` claim
   String? refreshError; // 'invalid_grant' or 'down'
   final validRefresh = <String>{};
   final pendingCodes = <String>{};
@@ -79,7 +80,7 @@ class FakeServer {
         return _json({'error': 'invalid_grant'}, 400);
       }
       final id = ++accessCounter;
-      final access = jwtAccess ? 'at-$id.${_b64({'iat': 1000, 'exp': 1000 + expiresIn})}.sig' : 'at-$id';
+      final access = jwtAccess ? 'at-$id.${_b64({'iat': 1000, 'exp': 1000 + expiresIn, 'sub': ?subject})}.sig' : 'at-$id';
       return _json({'access_token': access, 'refresh_token': _refresh(), 'expires_in': expiresIn});
     }
     final bearer = r.headers['Authorization'];
