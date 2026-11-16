@@ -10,9 +10,9 @@ Do not store authentication cookies or temporary frame URLs in the repository.
 
 | Reference | Observed title and contents | Authority |
 | --- | --- | --- |
-| [A: v1 screens](https://claude.ai/artifact/2oxDXfdjVheCfHT7NbrPGW?org=9fa5e83c-15b7-4533-adf4-75445b144fdb) | **ChangeLens v1 screens**, 78 artboards: incumbent screens, M1b P0–P7, accounts/import/billing states, EN/DE, dark, three visual variants and an A+B iteration | Historical design evidence; compare against current product decisions |
-| [B: Calm Bold](https://claude.ai/artifact/V9325dymoruEtTngXEULo5) | **ChangeLens Calm Bold**, proposed tokens/components/voice; 25 files listed | Candidate replacement system, explicitly labelled a proposal |
-| [C: original system](https://claude.ai/artifact/Dhhsup9qRnHA7uyn8cvoYm) | **ChangeLens**, indigo Material 3 roles, component guidance and D-15 POC provenance; 19 files listed | Historical POC/system documentation, not proof of current app completeness |
+| A: v1 screens (private Claude design artifact) | **ChangeLens v1 screens**, 78 artboards: incumbent screens, M1b P0–P7, accounts/import/billing states, EN/DE, dark, three visual variants and an A+B iteration | Historical design evidence; compare against current product decisions |
+| B: Calm Bold (private Claude design artifact) | **ChangeLens Calm Bold**, proposed tokens/components/voice; 25 files listed | Candidate replacement system, explicitly labelled a proposal |
+| C: original system (private Claude design artifact) | **ChangeLens**, indigo Material 3 roles, component guidance and D-15 POC provenance; 19 files listed | Historical POC/system documentation, not proof of current app completeness |
 
 The first artifact resolves the missing canvas reference. P5 is **Dismiss with a
 reason**; P7 is **Review done ≠ client approval**, with a later Calm Bold **all checked**

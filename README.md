@@ -4,7 +4,7 @@
 
 ChangeLens compares two versions of a client brief, pasted as text or picked as a PDF, and reports the changes in deadlines, deliverables, responsibilities, approval wording and budget. Each finding comes with the quoted source passage behind it. It is built for web and design freelancers and small studios who handle revised briefs and need to catch a changed requirement before they deliver the wrong thing.
 
-> **Status:** a hobby project in active development, intended to become a paid product. It is not public. The backend runs locally with a single development token, and only synthetic documents are used. The app is not in the App Store or on Google Play.
+> **Status:** a hobby project in active development, intended to become a paid product. The source is public to read; see [License](#license). The backend runs locally with a single development token, and only synthetic documents are used. The app is not in the App Store or on Google Play.
 
 <p align="center">
   <img src="docs/screenshots/projects.png" width="200" alt="Projects screen: a Compare two briefs button and one project, Cedar website, by Northstar Studio">
@@ -44,8 +44,8 @@ The app follows the system theme and ships in English and German.
 | --- | --- |
 | [`app/`](app/README.md) | Flutter app for iOS and Android (portrait phones in v1) |
 | [`backend/`](backend/README.md) | FastAPI `api` and `worker`, Postgres job queue, S3-compatible storage, the comparison pipeline |
-| [`docs/`](docs/) | Product decision, MVP spec, technical design, backlog, decision log, ADRs and the [SOP](docs/SOP.md) |
-| [`PRODUCT.md`](PRODUCT.md) · [`DESIGN.md`](DESIGN.md) | Product context and the Calm Bold design system |
+| [`docs/`](docs/) | MVP spec, technical design, ADRs and the [SOP](docs/SOP.md); the product decision, validation plan, backlog and decision log are kept private |
+| [`DESIGN.md`](DESIGN.md) | The Calm Bold design system |
 | `scripts/`, `evidence/` | CI, release and evaluation scripts, and recorded check output |
 | `poc/` | The D-15 proof of concept |
 | `codemagic.yaml` | Ad hoc iOS builds for the owner's device checks |
@@ -80,7 +80,11 @@ cd backend
 
 Built: projects and immutable versions, text and PDF import, one-screen compare, topic-grouped reports, finding review with corrections and history, the separate client-approval record, PDF evidence with a text fallback, 30-day retention after last use, and the German locale. The end-to-end check has passed on an Android phone and an iPhone (on the iPhone with pasted text; the iOS PDF picker is not yet exercised).
 
-Planned for v1: public sign-in with account linking and in-app account deletion, and a fair-use allowance. The first release is free; screenshot and share-sheet import and subscriptions follow after launch, once real usage informs the pricing. Push notifications, share links and teams come later. The [backlog](docs/05-backlog.md) has the details.
+Planned for v1: public sign-in with account linking and in-app account deletion, and a fair-use allowance. The first release is free; screenshot and share-sheet import and subscriptions follow after launch, once real usage informs the pricing. Push notifications, share links and teams come later.
+
+## License
+
+Source-available, not open source: you may read the code, fork it on GitHub and run it to evaluate it, but not reuse, redistribute or offer it as a service without written permission. See [LICENSE](LICENSE). Third-party components, such as the bundled Roboto fonts, keep their own licences.
 
 ---
 

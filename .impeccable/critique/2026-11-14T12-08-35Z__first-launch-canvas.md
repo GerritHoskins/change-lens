@@ -1,13 +1,13 @@
 ---
-target: "ChangeLens first-launch canvas, round 2 https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr"
+target: "ChangeLens first-launch canvas, round 2 (private Claude artifact)"
 total_score: 35
 max_score: 40
 na_heuristics: 
 p0_count: 0
 p1_count: 0
-target_identity: "url:https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr"
+target_identity: "artifact:first-launch-canvas"
 timestamp: 2026-11-14T12-08-35Z
-slug: claude-ai-artifact-nzabbmaxfh1vp7a9v99rmr
+slug: first-launch-canvas
 ---
 Method: design review only (detector not applicable, native platform). Round 2 re-score of the canvas after handoff §9 fixes. 20 artboards, 30 EN states, rendered locally at 390x844 in EN, DE and dark; overflow and target sizes measured in the browser. Previous run: 26/40 (2026-11-14T10-54-13Z).
 

@@ -1,7 +1,7 @@
 # Onboarding and first-launch design handoff
 
 Prepared 2026-11-14 for the design agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit
+this repository, branch `m1-iphone`, baseline commit
 `4a401b3`. This is a baseline, not proof that the checkout hasn't changed since:
 check `git status` and the current HEAD first.
 
@@ -25,12 +25,12 @@ Read, in order:
 1. [Onboarding feature brief](onboarding-feature-brief.md): the content source. It
    covers what the app is, the four ideas users must understand, the full flow in exact
    in-app wording, trust points, limits, and what must **not** be promised (§7).
-2. [PRODUCT.md](../PRODUCT.md): audience, purpose, the rules about meaning and data
+2. `PRODUCT.md` (private): audience, purpose, the rules about meaning and data
    that can't be broken, and the principle "Let the user establish context before
    interpreting a change."
 3. [DESIGN.md](../DESIGN.md): the Calm Bold system (tokens, components, motion,
    platform behaviour). Implemented in `app/lib/design/`.
-4. [Decision log](06-decision-log.md) **O-22**: the owner's decision on first-launch order.
+4. Decision log (`06-decision-log.md`, private) **O-22**: the owner's decision on first-launch order.
 5. [MVP spec](02-mvp-spec.md) §1 step 1 and AC-25/AC-26;
    [UI/UX handoff](ui-ux-handoff.md) §5 "First use/auth" and §8 checklist.
 6. [Design references](ui-ux-references.md): the owner's v1 screens canvas has
@@ -176,9 +176,9 @@ seen flag and a second one for the saved step that resume uses
 
 ## 9. Round 2: critique fixes (2026-11-14)
 
-**Canvas:** [ChangeLens first launch](https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr)
+**Canvas:** ChangeLens first launch (private Claude design artifact)
 (17 artboards, 390×844, with locale, dark and state tweaks). **Critique:**
-`.impeccable/critique/2026-11-14T10-54-13Z__claude-ai-artifact-nzabbmaxfh1vp7a9v99rmr.md`,
+`.impeccable/critique/2026-11-14T10-54-13Z__first-launch-canvas.md`,
 scored 26/40, with four P1 issues, one P2 and nine minor ones. Read it before starting.
 
 ### 9.1 Owner answers
@@ -271,7 +271,7 @@ as done. Change the English and German branches together, and keep the dark twea
 ### 9.4 Round 2 receiving-agent prompt
 
 > Work in the current ChangeLens checkout and revise the existing canvas
-> https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr in place. Never create a new
+> the private Claude first-launch canvas in place. Never create a new
 > one. Read docs/onboarding-design-handoff.md §9 and the critique snapshot it
 > names, then DESIGN.md and the onboarding feature brief. Apply §9.2 in order,
 > starting with items 1 and 2. Change the English and German branches together
@@ -284,7 +284,7 @@ as done. Change the English and German branches together, and keep the dark twea
 ## 10. Round 3: polish (2026-11-14)
 
 **Canvas:** same link as §9, now 20 artboards. **Critique:**
-`.impeccable/critique/2026-11-14T12-08-35Z__claude-ai-artifact-nzabbmaxfh1vp7a9v99rmr.md`,
+`.impeccable/critique/2026-11-14T12-08-35Z__first-launch-canvas.md`,
 scored 35/40 (up from 26/40), with no P0 or P1 issues, two P2s, one P3 and six minor
 observations. Read it first. Round 2's results are recorded in
 `docs/onboarding/direction.md` §8.
@@ -367,7 +367,7 @@ and keep the dark tweak working.
 ### 10.4 Round 3 receiving-agent prompt
 
 > Work in the current ChangeLens checkout and revise the existing canvas
-> https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr in place. Never create a new
+> the private Claude first-launch canvas in place. Never create a new
 > one. Read docs/onboarding-design-handoff.md §10 and the round 2 critique snapshot
 > it names, then docs/onboarding/direction.md. Apply §10.1 in order. Don't change
 > the flow, the step count, the sign-in layout, or anything §9.1 or §10.1 lists as
@@ -447,7 +447,7 @@ illustration style. Don't shrink type to make things fit (§9.2 item 1).
 ### 11.4 Round 4 receiving-agent prompt
 
 > Work in the current ChangeLens checkout and revise the existing canvas
-> https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr in place. Never create a new one.
+> the private Claude first-launch canvas in place. Never create a new one.
 > Read docs/onboarding-design-handoff.md §11, then app/lib/screens/onboarding_screen.dart,
 > app/lib/design/calm_theme.dart and app/test/onboarding_test.dart to see how the app
 > renders steps 2 and 5. Shorten the German copy on step 2 by at least three lines and on

@@ -1,13 +1,13 @@
 ---
-target: "ChangeLens first-launch canvas https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr"
+target: "ChangeLens first-launch canvas (private Claude artifact)"
 total_score: 26
 max_score: 40
 na_heuristics: 
 p0_count: 0
 p1_count: 4
-target_identity: "url:https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr"
+target_identity: "artifact:first-launch-canvas"
 timestamp: 2026-11-14T10-54-13Z
-slug: claude-ai-artifact-nzabbmaxfh1vp7a9v99rmr
+slug: first-launch-canvas
 ---
 Method: design review only (detector not applicable, native platform). Canvas artboards (HTML mock-ups of the Flutter app) rendered locally at 390x844 in EN, DE and dark; overflow measured in the browser.
 

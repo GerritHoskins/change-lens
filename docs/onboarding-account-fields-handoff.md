@@ -1,7 +1,7 @@
 # Onboarding account fields: backend handoff
 
 Prepared 2026-11-14 for the backend agent. Repository:
-`C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`, baseline commit `9e7037c`
+this repository, branch `m1-iphone`, baseline commit `9e7037c`
 (onboarding implemented, round-5 copy applied, 24 px margin asserted; no backend change since
 `c33bee7`). This is a baseline, not proof that the checkout hasn't changed since: check
 `git status` and HEAD first. Untracked tool folders (`.claude-flow/`, `app/.claude-flow/`,
