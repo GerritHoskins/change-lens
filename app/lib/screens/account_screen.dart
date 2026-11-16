@@ -1,5 +1,6 @@
 // Account (I-18; ui-ux-handoff §5 "Account/privacy"): who is signed in, sign-out, and in-app account
 // deletion (Apple 5.1.1(v); `DELETE /me`, I-8 S5). 204 and 202 both end the account for the app.
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 
 import '../auth/session.dart';
@@ -65,6 +66,11 @@ class _AccountScreenState extends State<AccountScreen> {
         Align(alignment: AlignmentDirectional.centerStart,
           child: OutlinedButton(key: const Key('sign-out'), onPressed: deleting ? null : widget.session.signOut,
             child: Text(l.signOut))),
+        // Debug and profile builds only: the access token's lifetime for deploy/ionos E (never the token).
+        if (!kReleaseMode && widget.session.accessTokenLifetime != null) Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Text('Access token lifetime: ${widget.session.accessTokenLifetime} s',
+            key: const Key('token-lifetime'), style: text.bodySmall?.copyWith(color: colors.muted))),
         Padding(padding: const EdgeInsets.symmetric(vertical: 28), child: Divider(color: colors.line, height: 1)),
         Text(l.deleteAccount, style: text.titleMedium),
         const SizedBox(height: 8),

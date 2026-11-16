@@ -236,6 +236,20 @@ class AuthSession extends ChangeNotifier {
     if (revoke && refresh != null) unawaited(logto.revoke(refresh));
   }
 
+  /// `exp - iat` of the current access token, for the deployment evidence (deploy/ionos E; 900 expected).
+  /// Read from the token's claims; the token itself is never shown.
+  int? get accessTokenLifetime {
+    final parts = _tokens?.accessToken.split('.');
+    if (parts == null || parts.length != 3) return null;
+    try {
+      final claims = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+      if (claims is! Map || claims['exp'] is! int || claims['iat'] is! int) return null;
+      return (claims['exp'] as int) - (claims['iat'] as int);
+    } on FormatException {
+      return null;
+    }
+  }
+
   /// A valid API access token, refreshed shortly before it expires. One refresh at a time: with
   /// rotation, a second use of the same refresh token would fail.
   Future<String> accessToken() async {
