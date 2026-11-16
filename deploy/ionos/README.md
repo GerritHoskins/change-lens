@@ -23,7 +23,7 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 ## A. Accounts and settings (no server work)
 
 1. **DNS.** A records `api.pixeltronic.dev` and `auth.pixeltronic.dev` → the cube's public IPv4. **Done
-   2026-11-15:** Cloudflare, DNS only, reserved IP `212.132.90.61`.
+   2026-11-15:** Cloudflare, DNS only, the Cube's reserved IP.
 2. **IONOS answers for D-8**, with the date: the DPA covers the Cube, Object Storage and mail; encryption at
    rest for the Cube's disk and Object Storage; both in Germany. Docs answered 2026-11-15: the Cloud AVV covers
    Cube and Object Storage, the mail AVV covers Mail Basic/Business (keep both; contracts before 2022-07-19 may
@@ -261,7 +261,7 @@ Record each with its date:
 - [x] the restore test's `RESTORE OK` line: 2026-11-16, `RESTORE OK started=2026-11-16T09:21:57Z
       finished=2026-11-16T09:22:04Z base=20261116T074356Z.tar.age`, schema `0005_limits`; `logto.users rows 1`
       came from WAL replay (the admin account was created after the 07:43 base backup)
-- [x] the admin console unreachable from outside: 2026-11-16, `212.132.90.61:3002` timed out; `api` 401,
+- [x] the admin console unreachable from outside: 2026-11-16, `<cube-ip>:3002` timed out; `api` 401,
       `auth` 200 (C6)
 - [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the
       monitor's alert mail arrived through IONOS SMTP; a real sign-in code is still open

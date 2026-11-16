@@ -7,7 +7,7 @@ which differs in line endings only (CRLF, no content diff).
 Copy: `onboarding_en.arb` and `onboarding_de.arb` in this folder (114 keys each after round 3, with matching placeholders).
 They are **not** merged into `app/lib/l10n/`, because implementation isn't authorised yet.
 
-Designs: https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr (20 artboards at 390×844, plus 5 logo drafts; each has Tweaks for locale, dark and, where relevant, state).
+Designs: the private Claude first-launch canvas (20 artboards at 390×844, plus 5 logo drafts; each has Tweaks for locale, dark and, where relevant, state).
 
 Current state: sign-in → **6 onboarding steps** → consent → Projects. §2–§6 record round 1, when there were 5 steps. Rounds 2 and 3 (§8, §9) supersede them where they differ. Critique scores: 26/40 after round 1, 35/40 after round 2.
 

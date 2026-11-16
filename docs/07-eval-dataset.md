@@ -22,7 +22,7 @@ Why Tier A fits: an RFP addendum is a real revision written by a real client. Ad
 **Rules for Tier A**
 - Record the URL, retrieval date and stated licence for each document. UK government documents are usually under the Open Government Licence and TED content is reusable under the Commission's reuse policy [U: confirm per source in D-3]. Where the licence is unclear, use the document for internal evaluation only.
 - Remove names, emails and phone numbers of contact officers before labelling. Anonymise each person consistently (`Contact A`, `Contact B`), so that changes of owner stay labellable.
-- **Never commit source documents or real labels to git**, even though the repository is private. They live in private storage; Git holds the schema, tooling, generic guidance and synthetic tests; the collection manifest stays in private storage too.
+- **Never commit source documents or real labels to git**; the repository is public. They live in private storage; Git holds the schema, tooling, generic guidance and synthetic tests; the collection manifest stays in private storage too.
 
 ## 3. Constructed pairs (Tier D)
 

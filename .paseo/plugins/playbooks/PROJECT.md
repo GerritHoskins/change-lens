@@ -1,5 +1,5 @@
 # ChangeLens verification
-Read docs/SOP.md, the assigned item in docs/05-backlog.md, its named ADRs, backend/README.md
+Read docs/SOP.md, the assigned item in docs/05-backlog.md (private, local only), its named ADRs, backend/README.md
 and app/README.md only as relevant. Preserve traceability and independently verified evidence.
 Do not reinterpret plan-check success as proof of the implemented product.
 Use synthetic documents/labels. Real customer documents, labels and held-out data stay out

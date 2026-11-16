@@ -118,7 +118,7 @@ Real-pair labelling is postponed while the owner builds the app. These are instr
 Run from the `change-lens-label` worktree in PowerShell, using the project environment:
 
 ```powershell
-$data = 'C:\Users\Gerrit\job-search\POCs\change-lens-data'
+$data = '..\change-lens-data'  # your private data folder, outside Git
 $python = '.\.venv\Scripts\python.exe'
 $pairs = (Get-Content -Raw -Encoding UTF8 "$data/manifest-draft.json" | ConvertFrom-Json).pairs |
     Where-Object { $_.id -ne 'P-015' } | ForEach-Object { $_.id }
