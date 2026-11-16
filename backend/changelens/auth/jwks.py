@@ -1,4 +1,5 @@
-"""Logto signing keys for `JwtVerifier`, fetched from the configured JWKS URL only (I-8 S1).
+"""Signing keys fetched from a configured JWKS URL only: Logto's for `JwtVerifier` (I-8 S1), and Google's
+and Apple's for their ID tokens through `verifier_factory` (I-8 S4).
 
 The URL comes from settings, never from a token header (`jku`, `x5u` and friends are rejected by the
 verifier). A token whose `kid` is unknown triggers at most one refresh per `refresh_seconds`; a failed
@@ -15,7 +16,7 @@ from typing import Callable, Optional
 import httpx
 import jwt
 
-from changelens.auth.jwt_verifier import AccessTokenRejected, JwtPolicy, JwtVerifier, VerifiedIdentity
+from changelens.auth.jwt_verifier import AccessTokenRejected, JwtPolicy, JwtVerifier
 
 log = logging.getLogger("changelens.auth")
 MAX_JWKS_BYTES = 64 * 1024
@@ -27,10 +28,12 @@ class JwksUnavailable(Exception):
 
 
 class JwksKeyHolder:
-    def __init__(self, policy: JwtPolicy, url: str, *, client: Optional[httpx.Client] = None,
+    def __init__(self, policy: Optional[JwtPolicy], url: str, *, client: Optional[httpx.Client] = None,
                  timeout_seconds: float = 3.0, max_bytes: int = MAX_JWKS_BYTES, refresh_seconds: float = 60.0,
-                 clock: Callable[[], float] = time.monotonic):
+                 clock: Callable[[], float] = time.monotonic, verifier_factory: Optional[Callable] = None):
         self.policy, self.url = policy, url
+        # Builds the verifier from a fetched JWKS; any object with `key_ids` and `verify(token)`.
+        self._factory = verifier_factory or (lambda jwks: JwtVerifier(policy, jwks))
         self._client = client or httpx.Client(timeout=timeout_seconds, follow_redirects=False)
         self._max_bytes, self._refresh_seconds, self._clock = max_bytes, refresh_seconds, clock
         self._verifier: Optional[JwtVerifier] = None
@@ -43,14 +46,19 @@ class JwksKeyHolder:
         with self._lock:
             self._verifier = self._fetch()
 
-    def verify(self, token: str) -> VerifiedIdentity:
+    @property
+    def ready(self) -> bool:
+        """Whether any keys are held, so a rejection means a bad token rather than an outage."""
+        return self._verifier is not None
+
+    def verify(self, token: str, **kwargs):
         verifier = self._verifier
         kid = _kid(token)
         if kid is not None and (verifier is None or kid not in verifier.key_ids):
             verifier = self._refresh()
         if verifier is None:
             raise AccessTokenRejected()
-        return verifier.verify(token)
+        return verifier.verify(token, **kwargs)
 
     def _refresh(self) -> Optional[JwtVerifier]:
         with self._lock:
@@ -77,7 +85,7 @@ class JwksKeyHolder:
                     body += chunk
                     if len(body) > self._max_bytes:
                         raise ValueError("too large")
-            return JwtVerifier(self.policy, json.loads(bytes(body)))
+            return self._factory(json.loads(bytes(body)))
         except Exception as exc:  # network, status, size, JSON or key validation
             log.warning("jwks fetch failed: %s", type(exc).__name__)
             raise JwksUnavailable() from None
