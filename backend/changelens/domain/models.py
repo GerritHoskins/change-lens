@@ -1,6 +1,8 @@
 """SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19), except `users`
-(the one pre-tenant table, read only through `domain.identity`; I-8 overview, decision 4) and
-`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6).
+(the one pre-tenant table, read only through `domain.identity`; I-8 overview, decision 4),
+`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6), and `apple_token_parks`
+and `pending_links` (sign-in state before a user row or session exists, reached only through the
+functions of migration 0006; I-8 S4).
 
 The schema is owned by Alembic (`backend/migrations/`); a model change needs a revision.
 """
@@ -242,11 +244,15 @@ class User(Base):
         UniqueConstraint("idp_subject", name="uq_users_idp_subject"),
         CheckConstraint("idp_subject <> ''", name="ck_users_idp_subject"),
         CheckConstraint("idp_subject IS NOT NULL OR deleted_at IS NOT NULL", name="ck_users_tombstone"),
+        CheckConstraint("idp_subject IS NOT NULL OR apple_refresh_token_enc IS NULL", name="ck_users_tombstone_token"),
     )
     id: Mapped[uuid.UUID] = _id()
     idp_subject: Mapped[Optional[str]] = mapped_column(String(200))  # null only on a tombstone
     created_at: Mapped[datetime] = _now()
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # Apple's refresh token, encrypted and bound to this user's ID (I-8 S4, AR-2); revoked and nulled
+    # first when the account is deleted (AR-1).
+    apple_refresh_token_enc: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class Membership(Base):
@@ -307,3 +313,33 @@ class RateLimitCounter(Base):
     key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     hits: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class AppleTokenPark(Base):
+    """An Apple refresh token from a sign-in with no user row yet (I-8 S4, AR-5): encrypted and bound to
+    this row's ID, under the Logto subject it attaches to, or none while a pending link holds it. After
+    `expires_at` maintenance revokes it with Apple, then deletes it (AR-6)."""
+    __tablename__ = "apple_token_parks"
+    id: Mapped[uuid.UUID] = _id()
+    logto_subject: Mapped[Optional[str]] = mapped_column(String(200), index=True)
+    token_enc: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = _now()
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class PendingLink(Base):
+    """`link_required` (03a P1, O-19; I-8 S4): a Google or Apple identity waiting to be linked to the Logto
+    user with the same verified email once that user signs in with an existing method. One hour, used
+    once. No email is stored."""
+    __tablename__ = "pending_links"
+    __table_args__ = (CheckConstraint("provider IN ('google', 'apple')", name="ck_pending_links_provider"),)
+    id: Mapped[uuid.UUID] = _id()
+    provider: Mapped[str] = mapped_column(String(10), nullable=False)
+    provider_subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_subject: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    park_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("apple_token_parks.id", name="fk_pending_links_park", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = _now()
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

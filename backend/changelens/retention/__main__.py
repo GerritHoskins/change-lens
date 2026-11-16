@@ -8,6 +8,7 @@ from changelens.auth.logto_management import idp_for
 from changelens.config import Settings
 from changelens.domain import Database
 from changelens.domain.retention import run_maintenance
+from changelens.domain.social import apple_tokens_for
 from changelens.logs import configure_logging
 from changelens.storage import S3ObjectStore
 
@@ -32,11 +33,13 @@ def main(argv=None):
     # No schema bootstrap or bucket creation here: even preview must remain read-only.
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)
     idp = idp_for(settings)
+    apple = apple_tokens_for(settings)  # revokes deleted accounts' and expired parked Apple tokens (I-8 S4)
     try:
         db.assert_app_role()  # RLS must apply to this process (I-8 S3)
         while True:
             try:
-                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp)
+                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp,
+                                          apple=apple)
                 print(json.dumps(summary, sort_keys=True), flush=True)
                 if args.once:
                     return 0
