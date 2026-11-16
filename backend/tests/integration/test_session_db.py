@@ -25,7 +25,8 @@ def test_eight_parallel_first_calls_make_one_user_and_one_membership(env_factory
     with ThreadPoolExecutor(max_workers=8) as pool:
         responses = list(pool.map(call, range(8)))
     assert [r.status_code for r in responses] == [200] * 8
-    assert all(r.json() == {"status": "active", "onboarding": {"completed": False, "step": None}} for r in responses)
+    assert all(r.json() == {"status": "active", "onboarding": {"completed": False, "step": None},
+                            "consent": {"usage_events": None}} for r in responses)
     assert env.sql("SELECT count(*) FROM users WHERE idp_subject = 'dev:new-c'") == [(1,)]
     assert env.sql("SELECT count(*), count(DISTINCT tenant_id) FROM memberships m JOIN users u ON u.id = m.user_id "
                    "WHERE u.idp_subject = 'dev:new-c'") == [(1, 1)]

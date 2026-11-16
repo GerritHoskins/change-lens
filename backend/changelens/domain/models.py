@@ -293,6 +293,24 @@ class AccountOnboarding(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class ConsentEvent(Base):
+    """One consent answer of one account (D-18 tier B; contracts draft C1): purpose, choice, policy version and
+    time only (AC-23). Append-only: never updated; the newest row is the answer. Deleted with the account."""
+    __tablename__ = "consent_events"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('usage_events')", name="ck_consent_events_purpose"),
+        Index("ix_consent_events_account_purpose", "account_id", "purpose", "decided_at"),
+    )
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_consent_events_user"),
+                                                  nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class AccountDeletion(Base):
     """Account-deletion receipt (03a P8 DELETE_ACCOUNT; I-8 S5): IDs, status and timestamps only. Written in
     the transaction that freezes the account; maintenance retries it until `complete`."""

@@ -5,7 +5,8 @@ With a bearer (a Logto access token, verified exactly as GUARD's step 1): body n
 membership; later calls return the same account. With `link_id`, the Google or Apple identity of that
 pending link is linked to this user first, only if this user is the link's target, before expiry and
 once (O-19); anything else is `401` and the link is gone. A parked Apple token is then attached to the
-user row. The response carries the onboarding state read in the same transaction (O-23).
+user row. The response carries the onboarding state read in the same transaction (O-23),
+and the usage-events consent answer for the current policy version (D-18 tier B; null = ask).
 
 Without a bearer: native Google or Apple sign-in, body `{"provider": "google" | "apple", "code": ...,
 "nonce": ...}` (nonce optional; Apple: the raw value whose SHA-256 the app gave Apple). The backend
@@ -26,6 +27,7 @@ from fastapi import APIRouter, Body, Request
 from changelens.api.auth import token_subject
 from changelens.api.errors import ApiError
 from changelens.api.limits import limit_ip, limit_signup, limit_signup_idp
+from changelens.api.consent import USAGE_EVENTS, consent_state
 from changelens.api.onboarding import _state
 from changelens.auth.logto_management import IdpUnavailable
 from changelens.auth.social import ProviderRejected, ProviderUnavailable, valid_nonce
@@ -69,6 +71,8 @@ def create_session(request: Request, body: Optional[dict] = Body(default=None)):
         if principal is not None:
             repo = identities.bind_tenant(principal.tenant_id)
             onboarding = _state(repo.onboarding(principal.user_id))
+            consent = consent_state(repo.consent(principal.user_id, USAGE_EVENTS),
+                                    state.settings.consent_policy_version)
     if principal is None:
         if link is not None and link[2] is not None:
             with state.db.social_scope() as social:
@@ -84,7 +88,8 @@ def create_session(request: Request, body: Optional[dict] = Body(default=None)):
         except IdpUnavailable:
             raise _unavailable() from None
     attach_parked(state.db, state.apple, principal.user_id, subject, park)
-    return {"status": "active", "onboarding": onboarding}
+    return {"status": "active", "onboarding": onboarding,
+            "consent": {"usage_events": consent["usage_events"]["granted"]}}
 
 
 def _provider_session(request: Request, body: dict) -> dict:

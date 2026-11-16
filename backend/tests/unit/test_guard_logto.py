@@ -25,7 +25,7 @@ from changelens.auth.jwks import JwksKeyHolder, JwksUnavailable
 from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.config import Settings
 from changelens.domain import TenantRepo
-from changelens.domain.models import AccountOnboarding, Membership, User
+from changelens.domain.models import AccountOnboarding, ConsentEvent, Membership, User
 from changelens.storage import MemoryObjectStore
 from identity_fixture import SqliteIdentity, sqlite_engine
 
@@ -77,13 +77,14 @@ class Jwks:
 
 
 class GuardDb:
-    """Users, memberships and onboarding in one SQLite database; the real repositories."""
+    """Users, memberships, onboarding and consent in one SQLite database; the real repositories."""
 
     def __init__(self):
         self.engine = sqlite_engine()
         self.identity = SqliteIdentity(self.engine)
         self.identity_scope = self.identity.identity_scope
         AccountOnboarding.__table__.create(self.engine)
+        ConsentEvent.__table__.create(self.engine)
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
 
     @contextmanager
