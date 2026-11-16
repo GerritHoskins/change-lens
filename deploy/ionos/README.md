@@ -97,6 +97,9 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 
 ## C. First start
 
+**Done 2026-11-16** on the cube (C1–C7; the worker hasn't used the egress proxy yet, so its allow-list is
+unchecked until the first comparison).
+
 All from `/opt/changelens/deploy/ionos`:
 ```bash
 cd /opt/changelens/deploy/ionos
@@ -180,6 +183,9 @@ cd /opt/changelens/deploy/ionos
 
 ## D. Backups, restore test and monitoring
 
+**Done 2026-11-16:** backups and WAL shipping run, restore test passed (E), monitor cron set, alert mail received.
+Still open: D3's outside uptime check and D4's calendar entry.
+
 1. **Backups run.** Within a few minutes the log shows `started`, `wal shipped=…`, `base backup uploaded`,
    `logto audit entries deleted=…`:
    ```bash
@@ -190,9 +196,10 @@ cd /opt/changelens/deploy/ionos
    docker compose exec postgres psql -U postgres -d logto -c '\d logs'
    ```
 2. **Restore test** (03 §6; record the date and the `RESTORE OK` line). Put the private key back for the
-   test only: paste the password-manager content into the file, run, then delete it.
+   test only: paste the password-manager content into the file, run, then delete it. The file belongs to uid 70
+   (`postgres` in the backup image), which the test runs as; owned by root it reports the file as missing.
    ```bash
-   install -m 600 /dev/null /etc/changelens/backup-identity.txt && nano /etc/changelens/backup-identity.txt
+   install -m 600 -o 70 /dev/null /etc/changelens/backup-identity.txt && nano /etc/changelens/backup-identity.txt
    ```
    ```bash
    docker compose --profile tools run --rm restore-test
@@ -218,9 +225,13 @@ Record each with its date:
 
 - [ ] A2's IONOS answers (DPA, encryption at rest, region), including support's answer on the Cube volume
 - [ ] an uploaded original showing `ServerSideEncryption: AES256`
-- [ ] the restore test's `RESTORE OK` line
-- [ ] the admin console unreachable from outside (C6's third command times out)
-- [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in)
+- [x] the restore test's `RESTORE OK` line: 2026-11-16, `RESTORE OK started=2026-11-16T09:21:57Z
+      finished=2026-11-16T09:22:04Z base=20261116T074356Z.tar.age`, schema `0005_limits`; `logto.users rows 1`
+      came from WAL replay (the admin account was created after the 07:43 base backup)
+- [x] the admin console unreachable from outside: 2026-11-16, `212.132.90.61:3002` timed out; `api` 401,
+      `auth` 200 (C6)
+- [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the
+      monitor's alert mail arrived through IONOS SMTP; a real sign-in code is still open
 - [ ] the first `logto audit entries deleted=` line
 - [ ] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
       Google and Apple on S4's path
