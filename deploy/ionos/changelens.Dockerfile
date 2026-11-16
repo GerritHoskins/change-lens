@@ -15,5 +15,8 @@ COPY alembic.ini .
 COPY migrations ./migrations
 COPY changelens ./changelens
 
-RUN useradd --system --uid 10001 --no-create-home changelens
+# The group is fixed at 10001 too: the sign-in secrets on the host are root:10001 (README C8). Without --gid,
+# useradd --system gives the user a system group (gid below 1000), which can't read them.
+RUN groupadd --system --gid 10001 changelens \
+    && useradd --system --uid 10001 --gid 10001 --no-create-home changelens
 USER changelens

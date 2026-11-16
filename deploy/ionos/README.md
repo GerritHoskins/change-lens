@@ -191,18 +191,38 @@ cd /opt/changelens/deploy/ionos
       ```bash
       install -d -m 750 -o root -g 10001 /etc/changelens/signin
       ```
-   2. **The files.** Google's web client secret (one line) and Apple's `.p8` key, pasted with `nano`, then
-      the keyring for stored Apple refresh tokens (a fresh random 32-byte key):
-      ```bash
-      nano /etc/changelens/signin/google-client-secret && nano /etc/changelens/signin/apple-signin.p8
-      ```
-      ```bash
-      printf '{"active":"k1","keys":{"k1":"%s"}}\n' "$(openssl rand 32 | basenc --base64url | tr -d '=')" > /etc/changelens/signin/apple-token-keys.json && chown root:10001 /etc/changelens/signin/* && chmod 640 /etc/changelens/signin/*
-      ```
-      Keep a copy of `apple-token-keys.json` in your password manager: without it, stored Apple tokens can't
-      be revoked when an account is deleted. To rotate, add a key and move `active`; never remove an old one.
-   3. **The settings.** Uncomment the Google and Apple lines in `/etc/changelens/changelens.env` and fill in
-      the client ID, Team ID and Key ID (all of a provider's lines or none), then:
+   2. **The files.**
+      - **Google's web client secret.** Google Cloud no longer shows an existing secret: on the web client
+        (Google Auth Platform → Clients), use **Add secret**, copy it with the copy icon, then paste it here,
+        at a prompt that shows nothing and keeps it out of the shell history, and press Enter:
+        ```bash
+        read -rs S && printf '%s\n' "$S" > /etc/changelens/signin/google-client-secret && unset S
+        ```
+        Check its shape without printing it: one line, `xxxxxx-` and 28 more characters, 36 bytes. An empty
+        file or a different length means the paste didn't land:
+        ```bash
+        sed 's/[A-Za-z0-9]/x/g' /etc/changelens/signin/google-client-secret | cat -A; wc -c < /etc/changelens/signin/google-client-secret
+        ```
+        Then ask Google directly. `invalid_grant` means the secret is accepted (only the made-up code is
+        refused); `invalid_client` means a wrong secret or one from another project's client:
+        ```bash
+        curl -s https://oauth2.googleapis.com/token -d grant_type=authorization_code -d code=not-a-real-code -d client_id=<google-web-client-id> --data-urlencode "client_secret=$(cat /etc/changelens/signin/google-client-secret)" -d redirect_uri=
+        ```
+      - **Apple's `.p8` key**, copied from your PC (PowerShell there, not on the server):
+        ```powershell
+        scp "$env:USERPROFILE\Downloads\AuthKey_<KEY_ID>.p8" root@<cube-ip>:/etc/changelens/signin/apple-signin.p8
+        ```
+      - **The keyring** for stored Apple refresh tokens (a fresh random 32-byte key), and the owner and mode of
+        all three files:
+        ```bash
+        printf '{"active":"k1","keys":{"k1":"%s"}}\n' "$(openssl rand 32 | basenc --base64url | tr -d '=')" > /etc/changelens/signin/apple-token-keys.json && chown root:10001 /etc/changelens/signin/* && chmod 640 /etc/changelens/signin/*
+        ```
+        Keep a copy of `apple-token-keys.json` (`cat` it once) in your password manager: without it, stored
+        Apple tokens can't be revoked when an account is deleted. To rotate, add a key and move `active`; never
+        remove an old one.
+   3. **The settings.** Uncomment the Google and Apple lines in `/etc/changelens/changelens.env` (a file made
+      from an older template doesn't have them: copy them from `env/changelens.env.example`) and fill in the
+      client ID, Team ID and Key ID (all of a provider's lines or none), then:
       ```bash
       docker compose up -d --force-recreate api worker retention
       ```
@@ -211,6 +231,11 @@ cd /opt/changelens/deploy/ionos
       means the provider refused our client ID, secret or key (or couldn't be reached):
       ```bash
       for p in google apple; do curl -s -o /dev/null -w "$p %{http_code}\n" -X POST -H 'content-type: application/json' -d "{\"provider\":\"$p\",\"code\":\"not-a-real-code\"}" https://api.pixeltronic.dev/session; done
+      ```
+      If the api restarts with `… file cannot be read`, check what the container sees; it must list all three
+      files as `0 10001` (the image's user is uid and gid 10001):
+      ```bash
+      docker compose run --rm --no-deps --entrypoint ls api -ln /run/signin
       ```
       A real sign-in needs the app (I-18); record it in E.
 
@@ -266,6 +291,10 @@ Record each with its date:
 - [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the
       monitor's alert mail arrived through IONOS SMTP; a real sign-in code is still open
 - [ ] the first `logto audit entries deleted=` line
+- [x] C8 sign-in configured: 2026-11-16, a made-up code answered `google 401` and `apple 401`; Google's token
+      endpoint answered `invalid_grant` with the web client's secret; api healthy, retention without errors
+      after the restart. The first start crash-looped (`Google client secret file cannot be read`): the image's
+      user had a system group, not 10001, fixed in `changelens.Dockerfile` (commit e191ad5)
 - [ ] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
       Google and Apple on S4's path
 - [ ] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
