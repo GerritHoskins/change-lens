@@ -873,4 +873,120 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onbStartNext => 'Next: create a project and compare two briefs.';
+
+  @override
+  String get signInTitle => 'Sign in to ChangeLens';
+
+  @override
+  String get signInIntro =>
+      'Your projects and comparisons belong to your account. Choose how you sign in.';
+
+  @override
+  String get signInApple => 'Continue with Apple';
+
+  @override
+  String get signInGoogle => 'Continue with Google';
+
+  @override
+  String get signInEmail => 'Continue with email';
+
+  @override
+  String get signInEmailHint => 'We email you a one-time code. No password.';
+
+  @override
+  String get signInWorking => 'Signing in…';
+
+  @override
+  String get signInUnavailable =>
+      'Sign-in isn\'t reachable right now. Check your connection and try again.';
+
+  @override
+  String get signInFailed =>
+      'Sign-in didn\'t work. Try again, or choose another method.';
+
+  @override
+  String get signInRejected =>
+      'This sign-in can\'t be used for a ChangeLens account. Choose another method.';
+
+  @override
+  String get signedOutExpired =>
+      'Your session ended. Sign in again to continue.';
+
+  @override
+  String get signedOutDone => 'You\'re signed out.';
+
+  @override
+  String get accountDeletedNotice =>
+      'Your account and all its projects were deleted.';
+
+  @override
+  String get accountDeletionPendingNotice =>
+      'Your account is deleted. Removing the last stored copies finishes in the background.';
+
+  @override
+  String get linkFailedNotice =>
+      'The accounts weren\'t linked. Sign in with the method you already use, or start again.';
+
+  @override
+  String get linkTitle => 'You already have an account';
+
+  @override
+  String linkBody(String provider) {
+    return 'This email already has a ChangeLens account. To add $provider sign-in, sign in once the way you usually do. We link $provider after that.';
+  }
+
+  @override
+  String get linkCancel => 'Use a different method';
+
+  @override
+  String get linkAppleElsewhere =>
+      'This account also signs in with Apple. Use an iPhone or iPad for that.';
+
+  @override
+  String get providerApple => 'Apple';
+
+  @override
+  String get providerGoogle => 'Google';
+
+  @override
+  String get restoringSession => 'Opening your account…';
+
+  @override
+  String get sessionOffline =>
+      'ChangeLens can\'t reach your account right now. Check your connection.';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String accountSignedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String get accountSignedIn => 'You\'re signed in.';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountIntro =>
+      'Deleting your account removes every project, document, comparison and review, and the sign-in methods linked to it. This can\'t be undone.';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Delete your account?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'Everything in ChangeLens goes: all projects, documents, comparisons and reviews. You can\'t undo this.';
+
+  @override
+  String get deleteAccountFailed =>
+      'The account wasn\'t deleted. Check your connection and try again.';
+
+  @override
+  String get deletingAccount => 'Deleting…';
 }

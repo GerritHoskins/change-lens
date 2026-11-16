@@ -21,17 +21,26 @@ abstract final class ParseLimits {
 }
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key, required this.mode});
+  const OnboardingScreen({super.key, required this.mode, this.resumeAt, this.onStep, this.onFinish});
 
   final OnboardingMode mode;
   static const steps = 6;
+
+  /// First run: the account's saved step (1-based, O-23), clamped to the current step count.
+  final int? resumeAt;
+
+  /// First run: called with the step reached (1-based) so the account can resume there.
+  final ValueChanged<int>? onStep;
+
+  /// First run as the app's first screen: Start or Skip completes onboarding instead of popping.
+  final VoidCallback? onFinish;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  int step = 0;
+  late int step = ((widget.resumeAt ?? 1) - 1).clamp(0, OnboardingScreen.steps - 1);
   final titleFocus = FocusNode(debugLabel: 'onboarding-title');
 
   bool get replay => widget.mode == OnboardingMode.replay;
@@ -42,10 +51,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _go(int to) {
     setState(() => step = to);
+    if (!replay) widget.onStep?.call(to + 1); // the replay never writes (O-23)
     WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) titleFocus.requestFocus(); });
   }
 
-  void _leave() => Navigator.of(context).pop();
+  void _leave() {
+    final finish = widget.onFinish;
+    if (finish != null && !replay) return finish();
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {

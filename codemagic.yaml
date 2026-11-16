@@ -173,7 +173,9 @@ workflows:
 
   # Owner device checks (M1): an ad hoc IPA signed for devices registered in the Apple Developer
   # portal, installed from Codemagic's install link. Nothing is uploaded to App Store Connect.
-  # The app's API URL is set on the device (developer settings), e.g. the PC's Wi-Fi address.
+  # With CHANGELENS_LOGTO_APP_ID set (group `logto` in the app's Codemagic environment variables; the
+  # Logto native app's ID, not a secret) the build signs in against production (I-18); without it, the
+  # API URL is set on the device (developer settings), e.g. the PC's Wi-Fi address.
   ios-device-check:
     name: App ad hoc IPA for owner device checks
     <<: *real_app
@@ -181,6 +183,8 @@ workflows:
       app_store_connect: ChangeLens App Store Connect
     environment:
       <<: *flutter
+      groups:
+        - logto
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: dev.changelens.app
@@ -193,7 +197,7 @@ workflows:
       - name: Apply ad hoc signing profiles
         script: xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Build ad hoc IPA
-        script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+        script: flutter build ipa --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID=${CHANGELENS_LOGTO_APP_ID:-} --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
 

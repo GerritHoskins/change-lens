@@ -71,6 +71,16 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connects to the ChangeLens development server on your local network.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<!-- Google sign-in (I-18): the reversed iOS client ID. -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.309116612443-oh1htaf8uod7hhu1srki9h85ubrmi89f</string>
+			</array>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
