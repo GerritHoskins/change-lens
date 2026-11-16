@@ -159,7 +159,7 @@ theme typography, wrapped actions, scrollable dialogs, picker cleanup and privac
 ## Validation evidence and limits
 
 Evidence directory on the current host:
-`C:\Users\Gerrit\.codex\visualizations\2026\11\07\01a1b698-3344-78f2-9b9c-2e9ce25c0885\baseline-ui`.
+a local visualization folder outside the repository (`baseline-ui`).
 Its README records exact commands, harness, fonts, dimensions and outputs.
 
 - Analyzer with existing dependencies, `analyze --no-pub`: exit 0, no issues.

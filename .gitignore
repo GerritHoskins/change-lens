@@ -10,3 +10,15 @@ files/
 .env
 .env.*
 !.env.example
+
+# Product plans stay local and private (not in the public repository)
+/PRODUCT.md
+/ChangeLens_Planning_Agent_Handoff*.md
+/docs/01-product-decision.md
+/docs/04-validation-plan.md
+/docs/05-backlog.md
+/docs/06-decision-log.md
+
+# Local agent and browser-automation state
+.claude-flow/
+.playwright-mcp/

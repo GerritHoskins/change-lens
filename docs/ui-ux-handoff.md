@@ -1,6 +1,6 @@
 # ChangeLens UI/UX overhaul handoff
 
-Prepared 2026-11-07. Repository: `C:\Users\Gerrit\job-search\POCs\change-lens`.
+Prepared 2026-11-07. Repository: this repository.
 Assessed HEAD: `0031578787fcb24556c5d8292d2aaea5ec6e42ec`.
 Purpose: give the receiving UI/UX agent the product truth, design brief, current
 implementation map, migration dependencies, and acceptance gates for a complete
@@ -10,13 +10,13 @@ overhaul. This task produced context/review artifacts, not the redesign itself.
 
 Read, in order:
 
-1. [PRODUCT.md](../PRODUCT.md): confirmed audience, purpose, platform and invariants.
+1. `PRODUCT.md` (private): confirmed audience, purpose, platform and invariants.
 2. This handoff: owner decisions, target journeys, scope and migration gates.
 3. [Design critique](../.impeccable/critique/2026-11-07T15-30-15Z__app-lib-main-dart.md)
    and [native technical audit](ui-ux-audit.md).
-4. [Decision log](06-decision-log.md): O-14–O-18 and dated owner rows, especially
+4. Decision log (`06-decision-log.md`, private): O-14–O-18 and dated owner rows, especially
    2026-10-31 build-first/defaults and 2026-11-01 redesign decisions.
-5. [MVP specification](02-mvp-spec.md), [backlog](05-backlog.md) M1b–M5,
+5. [MVP specification](02-mvp-spec.md), backlog (`05-backlog.md`, private) M1b–M5,
    [SOP](SOP.md), [app README](../app/README.md), and relevant ADRs.
 6. Production widgets and existing tests, then source references from section 4.
 
@@ -71,9 +71,9 @@ of product copy and runtime payloads.
 
 ### Prior Claude designs supplied by the owner
 
-- [Claude design A](https://claude.ai/artifact/2oxDXfdjVheCfHT7NbrPGW?org=9fa5e83c-15b7-4533-adf4-75445b144fdb)
-- [Claude design B](https://claude.ai/artifact/V9325dymoruEtTngXEULo5)
-- [Claude design C](https://claude.ai/artifact/Dhhsup9qRnHA7uyn8cvoYm)
+- Claude design A (private Claude design artifact)
+- Claude design B (private Claude design artifact)
+- Claude design C (private Claude design artifact)
 
 All three were inspected after owner sign-in. [Design reference review](ui-ux-references.md)
 maps the 78-artboard canvas, the proposed Calm Bold system, the older Material/POC
@@ -287,7 +287,7 @@ A targeted settings-save probe reproduced a LateInitializationError and collecte
 it intentionally; its exit 0 is not a passing settings test.
 
 Evidence directory:
-`C:\Users\Gerrit\.codex\visualizations\2026\11\07\01a1b698-3344-78f2-9b9c-2e9ce25c0885\baseline-ui`.
+a local visualization folder outside the repository (`baseline-ui`).
 Read its `README.md`, images, exact harness and `*-output.txt`. It records the direct
 installed-SDK workaround for the sandbox launcher/cache-lock limitation.
 The renders use real widgets + synthetic mocks, Android fonts, no OS insets, screens

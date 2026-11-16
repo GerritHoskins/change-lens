@@ -1,6 +1,6 @@
 # I-8 in slices: overview
 
-Prepared 2026-11-14. Repository `C:\Users\Gerrit\job-search\POCs\change-lens`, branch `m1-iphone`,
+Prepared 2026-11-14. Repository this repository, branch `m1-iphone`,
 baseline commit `b8e3778` (onboarding account fields built: `account_onboarding`, `GET` / `PUT
 /me/onboarding`, the 422 key-name fix). HEAD may be one commit ahead: the commit that adds these files.
 
