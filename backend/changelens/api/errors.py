@@ -18,6 +18,7 @@ TITLES = {
     "unauthenticated": "Authentication required",
     "spend_cap_reached": "Monthly spend cap reached",
     "rate_limited": "Too many requests",
+    "provider_unavailable": "Sign-in provider unavailable",  # I-8 S4: Google, Apple or Logto failed; retry
     # Codes added by I-22 for cases 03 §9.4 does not list (see 06, I-22 row):
     "invalid_request": "Request is malformed",
     "method_not_allowed": "Method not allowed",

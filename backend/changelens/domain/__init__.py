@@ -76,6 +76,13 @@ class Database:
         with self._pre_tenant() as s:
             yield IdentityRepo(s)
 
+    @contextmanager
+    def social_scope(self):
+        """Pre-tenant parked Apple tokens and pending links for native sign-in (I-8 S4); no tenant is set."""
+        from changelens.domain.social import SocialRepo  # social imports the auth package
+        with self._pre_tenant() as s:
+            yield SocialRepo(s)
+
     def claim_job(self):
         """The next ready job (IDs only), marked running; None when the queue is empty."""
         from changelens import jobs  # jobs imports the models only

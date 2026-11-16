@@ -66,10 +66,11 @@ ON_SIGN_IN(idp_identity):                                    # email code | Goog
   an active session's response carries onboarding ← {completed, step} of the account, read in the same transaction  # O-23; no row → {false, null}
 
 # As built for email one-time code (I-8 S2). Invites and teams are not built in v1: every first sign-in
-# creates its own tenant. Google, Apple and link_required follow in S4.
-#   user ← find_user(subject); if none: insert user, new tenant and owner membership in one savepoint;
-#   a concurrent first call that loses the unique-subject race re-reads the winner's rows (one user, one tenant).
+# creates its own tenant. user ← find_user(subject); if none: insert user, new tenant and owner membership in one
+#   savepoint; a concurrent first call that loses the unique-subject race re-reads the winner's rows (one user, one tenant).
 #   A deleted user, or a user with no active membership, is rejected (unauthenticated); never a second tenant.
+# As built for Google and Apple (I-8 S4, 03 §9.4 POST /session): backend code exchange; Logto user by identity → one-time
+#   token; else by verified email → link_required + pending link (1 h, once; target only); else new Logto user. No connector.
 # App sequence (I-18): Logto sign-in → POST /session → onboarding if not completed (resume at step) → Projects.
 # On start with a stored session the app calls POST /session again; an expired Logto session returns to sign-in (O-22).
 
@@ -390,9 +391,9 @@ DELETE_TENANT(tenant) / DELETE_ACCOUNT(user):                 # in-app (Apple 5.
            DELETE_ACCOUNT for every member (user rows, IdP users, linked identities, device tokens with I-27), then
            delete memberships, invites, share view logs and audit rows that hold personal data  [AC-22]
   end of pilot contract: the operator runs DELETE_TENANT within 30 days unless the agency renews
-  # As built (I-8 S5), sole owner in v1, each step resumable: freeze (receipt, deleted_at, membership inactive)
-  # → Apple revoke (S4) → DELETE_PROJECT for every project → onboarding row → delete the Logto user (404 = done)
-  # → tombstone (subject cleared) and membership deleted. 204 when all done, 202 while pending; maintenance retries.
+  # As built (I-8 S5; Apple step S4), each step resumable: freeze (receipt, deleted_at, membership inactive) → Apple revoke,
+  # then null the token (failure: pending, kept) → every project → onboarding row, pending links deleted, parks expired for
+  # revocation → Logto user (404 = done) → tombstone and membership deleted. 204 when done, 202 while pending; maintenance retries.
 
 INVENTORY_CHECK():                                            # run in CI and before the pilot
   stores ← {postgres (incl. PITR), object_storage (incl. object versions, replicas), backups,

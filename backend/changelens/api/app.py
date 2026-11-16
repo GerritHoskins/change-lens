@@ -21,6 +21,7 @@ from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.api.limits import MemoryCounters, RateLimiter
 from changelens.auth.logto_management import idp_for
+from changelens.domain.social import social_for
 from changelens.config import Settings
 from changelens.domain import Database
 from changelens.storage import ObjectStore, S3ObjectStore
@@ -105,7 +106,8 @@ class BodyLimitMiddleware:
 
 
 def create_app(settings: Settings, db: Optional[Database] = None, store: Optional[ObjectStore] = None,
-               keys: Optional[JwksKeyHolder] = None, idp=_DEFAULT, limiter: Optional[RateLimiter] = None) -> FastAPI:
+               keys: Optional[JwksKeyHolder] = None, idp=_DEFAULT, limiter: Optional[RateLimiter] = None,
+               providers=_DEFAULT, apple=_DEFAULT) -> FastAPI:
     max_body = max(settings.limits.max_pdf_bytes, settings.limits.max_text_bytes) + _OVERHEAD
     # Uploads stay in memory: never spool document bytes to a temp file on disk (03 §9.1 `storage`).
     # The parser sees the full multipart stream before per-slot validation. Even a
@@ -129,6 +131,11 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     app.state.limiter = limiter
     # Deletes the IdP user on account deletion (I-8 S5); None leaves that step pending.
     app.state.idp = idp_for(settings) if idp is _DEFAULT else idp
+    # Native Google and Apple sign-in (I-8 S4): provider clients by name, and Apple token handling for
+    # parking, attaching and revoking. Unconfigured providers are absent; dev mode has none.
+    configured_providers, configured_apple = social_for(settings) if _DEFAULT in (providers, apple) else ({}, None)
+    app.state.providers = configured_providers if providers is _DEFAULT else providers
+    app.state.apple = configured_apple if apple is _DEFAULT else apple
     if settings.auth_mode == "logto":
         keys = keys or JwksKeyHolder(JwtPolicy(settings.logto_issuer, settings.logto_audience),
                                      settings.logto_jwks_url)

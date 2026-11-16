@@ -229,9 +229,10 @@ def maintenance_snapshot(db, *, now=None, limit=100):
     return db.maintenance_candidates(now or utcnow(), limit)
 
 
-def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None) -> dict:
+def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None, apple=None) -> dict:
     """Independent maintenance entry point. Default is a content-free dry run. `idp` deletes Logto users
-    for pending account deletions (I-8 S5); without it that step stays pending."""
+    for pending account deletions (I-8 S5); without it that step stays pending. `apple`
+    (`domain.social.AppleTokens`) revokes Apple tokens of deleted accounts and expired parks (I-8 S4)."""
     now = now or utcnow()
     projects, deletions, purges = maintenance_snapshot(db, now=now, limit=limit)
     result = {"execute": execute, "candidate_projects": len(projects), "pending_project_deletions": len(deletions),
@@ -253,5 +254,7 @@ def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None) 
     result["pruned_rate_limit_windows"] = db.rate_limit_prune()  # hashed counters older than 3 days
     from changelens.domain.accounts import run_account_deletions  # accounts imports this module
     result["completed_account_deletions"], result["pending_account_deletions"] = run_account_deletions(
-        db, store, idp, now=now, limit=limit)
+        db, store, idp, now=now, limit=limit, apple=apple)
+    from changelens.domain.social import run_apple_parks  # expired parks and pending links (AR-5, AR-6)
+    result.update(run_apple_parks(db, apple, now=now, limit=limit))
     return result

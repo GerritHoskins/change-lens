@@ -20,5 +20,6 @@ router = APIRouter()
 def delete_account(request: Request, principal: Principal = Depends(current_principal)):
     state = request.app.state
     request_account_deletion(state.db, principal)
-    done = process_account_deletion(state.db, state.store, state.idp, principal.tenant_id, principal.user_id)
+    done = process_account_deletion(state.db, state.store, state.idp, principal.tenant_id, principal.user_id,
+                                    apple=state.apple)
     return Response(status_code=204 if done else 202)
