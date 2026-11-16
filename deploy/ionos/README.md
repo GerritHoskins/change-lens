@@ -288,15 +288,22 @@ Record each with its date:
       came from WAL replay (the admin account was created after the 07:43 base backup)
 - [x] the admin console unreachable from outside: 2026-11-16, `<cube-ip>:3002` timed out; `api` 401,
       `auth` 200 (C6)
-- [ ] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the
-      monitor's alert mail arrived through IONOS SMTP; a real sign-in code is still open
+- [x] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the
+      monitor's alert mail and Logto's connector test mail arrived; the app's (I-18) email sign-in code arrived
+      at a Gmail inbox. Registration stays off (O-21): Logto answers a code request for an unknown email with
+      200 and sends nothing, so owner and test users are added first in the console (User management → Add
+      user, email only)
 - [ ] the first `logto audit entries deleted=` line
 - [x] C8 sign-in configured: 2026-11-16, a made-up code answered `google 401` and `apple 401`; Google's token
       endpoint answered `invalid_grant` with the web client's secret; api healthy, retention without errors
       after the restart. The first start crash-looped (`Google client secret file cannot be read`): the image's
       user had a system group, not 10001, fixed in `changelens.Dockerfile` (commit e191ad5)
 - [ ] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
-      Google and Apple on S4's path
+      Google and Apple on S4's path. 2026-11-16: `exp − iat` = 900 s on a production token after email sign-in
+      (Android, Fairphone 5, debug build's account screen); onboarding saved per step and completed. Google on
+      Android: a new account signed in through `POST /session` and Logto's one-time token (audit log
+      `Interaction.SignIn.Verification.OneTimeToken.Submit`); Google with the email account's address answered
+      `link_required` (the app's "You already have an account")
 - [ ] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
       30 days), the outside uptime check
 
