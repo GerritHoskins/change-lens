@@ -72,7 +72,8 @@ class PlatformDocumentPicker implements DocumentPicker {
 }
 
 class Services extends ChangeNotifier {
-  Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth}) {
+  Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth,
+      this.consentFlow = const bool.fromEnvironment('CHANGELENS_CONSENT')}) {
     auth?.addListener(_authChanged);
   }
 
@@ -84,6 +85,10 @@ class Services extends ChangeNotifier {
 
   /// The account session in production builds; null in development builds, which use the dev settings.
   final AuthSession? auth;
+
+  /// The usage-events consent screen and Settings switch (D-18 tier B). Off unless the build sets
+  /// `--dart-define=CHANGELENS_CONSENT=true`, which waits for the I-20 legal review of the texts.
+  final bool consentFlow;
   String baseUrl = '';
   String token = '';
   Api? _api;

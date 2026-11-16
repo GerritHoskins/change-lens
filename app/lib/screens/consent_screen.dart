@@ -3,8 +3,8 @@
 // nothing preselected (refusal as easy as acceptance: the recorded exception to one main action).
 // Nothing is sent before an answer, and the answer is stored on the account, not the device.
 //
-// GATED: the account consent field and its write endpoint (D-18) don't exist yet (owner, 2026-11-16).
-// No route reaches this screen and no [UsageConsent] implementation exists, so it can't ship by accident.
+// FLAGGED: `GET`/`PUT /me/consent` exist (Task 2; [AccountConsent]). The gate routes here only with
+// `CHANGELENS_CONSENT=true` ([Services.consentFlow]), off until the I-20 legal review of the texts.
 import 'package:flutter/material.dart';
 
 import '../design/calm_actions.dart';

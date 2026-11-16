@@ -1,13 +1,16 @@
 // The app's first screen (I-18; 03a P1 app sequence, O-22, O-23): sign-in first, then onboarding until the
-// account has completed it (resuming at the saved step), then Projects. Development builds without an
+// account has completed it (resuming at the saved step), then the usage-events consent until the account
+// has answered it (D-18 tier B; only with [Services.consentFlow]), then Projects. Development builds without an
 // account session go straight to Projects and the dev settings. A session that ends while the app is in
 // use shows the sign-in sheet over the current screen (WP-A), so in-memory work stays.
 import 'package:flutter/material.dart';
 
+import '../auth/account_consent.dart';
 import '../auth/session.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
+import 'consent_screen.dart';
 import 'onboarding_screen.dart';
 import 'projects_screen.dart';
 import 'sign_in_screen.dart';
@@ -71,7 +74,8 @@ class _AccountGateState extends State<AccountGate> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ServicesScope.of(context).auth;
+    final services = ServicesScope.of(context);
+    final session = services.auth;
     if (session == null) return const ProjectsScreen();
     return ListenableBuilder(listenable: session, builder: (context, _) => switch (session.state) {
       AuthRestoring() => const _Waiting(),
@@ -81,6 +85,9 @@ class _AccountGateState extends State<AccountGate> {
           when !onboarding.completed => OnboardingScreen(
         key: const ValueKey('first-run-onboarding'), mode: OnboardingMode.firstRun,
         resumeAt: onboarding.step, onStep: session.saveOnboardingStep, onFinish: session.completeOnboarding),
+      // The answer updates the session, which rebuilds this into Projects; onDone has nothing left to do.
+      SignedIn(consent: null) when services.consentFlow => ConsentScreen(
+        key: const ValueKey('first-run-consent'), consent: AccountConsent(session), onDone: () {}),
       // Same widget as signed in, so the screens above and their state stay while the sheet is up.
       // Keyed by account: a different account gets a fresh Projects, never the previous one's list.
       SignedIn() || ReauthRequired() => ProjectsScreen(key: ValueKey('projects-${session.account}')),
