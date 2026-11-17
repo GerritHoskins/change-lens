@@ -1,6 +1,6 @@
 # The ChangeLens backend image: api, worker, retention and the one-off database tools (I-8 S7).
 # Build context: backend/. Dependencies install from hash-pinned wheels only (requirements.txt).
-FROM python:3.10.19-slim-bookworm@sha256:23f63358922e79a794f71be8f3723c84e5ccca9638af3f74456dc73d6184499e
+FROM python:3.10.22-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
