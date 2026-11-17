@@ -1,7 +1,7 @@
 # Draft API contracts: timeline, allowance, D-18 feedback
 
 **Status: owner-approved policies; operational contract specified for review (2026-11-16).**
-O-25–O-28 in [06](06-decision-log.md) record the approved policies. This revision specifies their
+O-25–O-28 in 06 (the private decision log) record the approved policies. This revision specifies their
 remaining details: heavy classification, history paging/cap recovery, queue/refund accounting and
 survey eligibility/offer. These are concrete contract defaults, not additional owner approvals.
 This task changes documentation only; runtime implementation and verification belong to a subsequent
