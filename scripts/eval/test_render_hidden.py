@@ -1,14 +1,17 @@
 """Hidden-text fixtures: labels, hiding measured by PDFium, determinism and fail-closed validation."""
+import base64
 import builtins
 from contextlib import closing
 import copy
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import unittest
 from unittest import mock
+import zlib
 
 import pdf_ink
 import pypdfium2
@@ -17,7 +20,23 @@ import render_hidden
 import validate
 from test_render import semantic_digest
 
-GOLDEN = '0eb2b0d4c83c24cbaec1fe7c4ffcdbd635d02b8e9663c6e8eb4d96160ecb1b28'
+GOLDEN = '0ea05fd624ea488c836b876bcd3de25a024e5ed7a3f69524406f48fb70680d03'
+PDF = re.compile(rb'(?P<head>.*?)/Length \d+(?P<dict>[^>]*>>\s*)stream\r?\n(?P<body>.*?)endstream(?P<tail>.*?)\nxref\n.*', re.S)
+
+
+def canonical(data: bytes) -> bytes:
+    """One fixture PDF with its content stream decoded and its size bookkeeping removed.
+
+    The compressed bytes, their /Length, the xref offsets and the trailer ID depend on the zlib build
+    (Python 3.14 on Windows ships a different one), although the page is the same. Everything else,
+    and the decoded page content, is compared byte for byte.
+    """
+    match = PDF.fullmatch(data)
+    if not match or data.count(b'endstream') != 1 or not match['head'].rstrip().endswith(b'[ /ASCII85Decode /FlateDecode ]'):
+        raise AssertionError('fixture PDF is no longer one ASCII85 and Flate content stream')
+    body = match['body'].strip()
+    content = zlib.decompress(base64.a85decode(body[:-2] if body.endswith(b'~>') else body))
+    return match['head'] + match['dict'] + content + match['tail']
 
 
 def source_texts():
@@ -112,7 +131,9 @@ class HiddenFixtures(unittest.TestCase):
         hidden = [validate.pdf_texts(data)[span['page'] - 1][span['start']:span['end']]
                   for data, span in map(self.hidden_bytes, self.records)]
         # The PDF bytes pin how the text is hidden (colour, size, opacity, panel), not just what it says.
-        pdfs = sorted(r[s]['sha256'] for r in self.records for s in ('old', 'new'))
+        # They are compared in canonical form, so the golden holds on every zlib build.
+        pdfs = sorted(hashlib.sha256(canonical((self.root / r[s]['storage_ref']).read_bytes())).hexdigest()
+                      for r in self.records for s in ('old', 'new'))
         digest = hashlib.sha256(json.dumps([semantic_digest(self.records), hidden, pdfs]).encode()).hexdigest()
         self.assertEqual(digest, GOLDEN)
         with tempfile.TemporaryDirectory() as tmp:
