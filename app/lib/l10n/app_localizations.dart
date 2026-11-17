@@ -2083,6 +2083,12 @@ abstract class AppLocalizations {
   /// **'Comparison of {earlier} with {newer}: {status}'**
   String historyComparisonDone(String earlier, String newer, String status);
 
+  /// No description provided for @comparisonFailedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'This comparison couldn\'t be completed.'**
+  String get comparisonFailedShort;
+
   /// No description provided for @kindPdf.
   ///
   /// In en, this message translates to:

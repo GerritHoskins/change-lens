@@ -268,7 +268,9 @@ class _FindingScreenState extends State<FindingScreen> {
           CalmPageHeader(title: topicLabel(l, f.topic), subtitle: reportIndex < 0 ? null :
             l.findingPosition(reportIndex + 1, widget.report.findings.length)),
           Row(children: [
-            Expanded(child: Text('${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
+            // The title already names the topic; repeat the category only when it says more.
+            Expanded(child: Text(categoryLabel(l, f.category) == topicLabel(l, f.topic) ? typeLabel(l, f.changeType)
+                : '${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
               style: Theme.of(context).textTheme.titleMedium)),
             CalmInfoButton(key: const Key('info-change-types'), term: l.defChangeTypesTitle,
               sheet: (_) => const ChangeTypeDefinitionSheet()),

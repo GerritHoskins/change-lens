@@ -128,6 +128,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ]),
         const SizedBox(width: 8),
       ]),
+      // The main action sits in the thumb zone, as on Finding and the review summary.
+      bottomNavigationBar: s.configured && projects.isNotEmpty ? SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: FilledButton.icon(key: const Key('compare-briefs'),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))) : null,
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))
           : SafeArea(top: false, child: RefreshIndicator(
@@ -140,10 +146,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
-                if (projects.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 24),
-                  child: FilledButton.icon(key: const Key('compare-briefs'),
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
-                    icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))),
                 if (!loading && error == null && projects.isEmpty)
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 for (final p in projects)

@@ -87,9 +87,9 @@ partial processing, personal review and client approval always have explicit tex
 
 ## Components and state map
 
-- **Projects:** prominent Compare action; simple project rows with actual server
+- **Projects:** Compare is the main action, pinned at the bottom like every other screen's; simple project rows with actual server
   comparison counts. Empty state, creation, refresh and connection recovery remain.
-- **Project:** comparison entry points and immutable versions; deletion remains a
+- **Project:** Compare pinned at the bottom as the main action, and immutable versions; deletion remains a
   distinct destructive confirmation using the existing server behavior.
 - **History (P6, WP-D, 2026-11-16; owner-approved drafts on the WP-D/E canvas):** one list
   replaces Versions and Comparisons. Versions are placed only by the comparisons the user ran,
@@ -102,7 +102,7 @@ partial processing, personal review and client approval always have explicit tex
   row says "Compare from here" under its details and opens Compare with it preset as Earlier; a
   rejected version shows its reason instead and offers no comparison. A card opens the comparison; a
   failed card gives the cause from the comparison's warnings, or the generic next step, and when
-  both versions can be read offers "Compare again" (the same pair preset, scope still unset). A
+  both versions can be read offers "Compare again" (the generic advice then shortens to "couldn't be completed" so it doesn't repeat the button) (the same pair preset, scope still unset). A
   comparison that finishes while the project is open is announced once. "Compare from here" is
   muted body text so it never outweighs the version names, and the rail carries no arrows. The arrow
   in "earlier → newer" is a Lucide icon (the bundled Roboto has no U+2192). Only Failed and Partial
@@ -125,6 +125,7 @@ partial processing, personal review and client approval always have explicit tex
   separate client-approval record. The footer places the fallback warning before
   Confirm in visual and semantic order. It can scroll at large text sizes.
   Confirm and next labels actual progression; uncertain findings stay open.
+  The topic is the title; the change label adds the category only when it differs from the topic.
 - **Recovery:** failed source checks block review. Failed reload after a successful
   save retains visible evidence but disables mutations until Retry succeeds.
   Superseded revisions reload without silently resubmitting the rejected action.

@@ -1213,6 +1213,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get comparisonFailedShort =>
+      'Dieser Vergleich konnte nicht abgeschlossen werden.';
+
+  @override
   String get kindPdf => 'PDF';
 
   @override
