@@ -457,10 +457,11 @@ and it is supported until October 2030. 3.11 to 3.13 are security-only, so Windo
 
 **Verification:**
 - [x] All three workflows green on GitHub on 3.14.10 (commit `f6d9571`: 884 backend unit tests, the integration suite on Linux, 185 evaluation, release and playbook tests, and a clean audit of all four pin files)
-- [ ] The owner's PC: install Python 3.14.10, recreate `.venv` and `backend/.venv` (`py -3.14 -m venv …`) and run `./scripts/ci.ps1` and the integration command
+- [x] The owner's PC: Python 3.14.10 installed, `.venv` and `backend/.venv` recreated, `./scripts/ci.ps1` reports `CI PASS` (2026-11-17, checkout at `main` `430414f`: 884 backend unit tests, 185 evaluation, release and playbook tests)
+- [ ] The owner's PC: the integration command (`cd backend; docker compose up -d --wait; .venv\Scripts\python -m pytest tests/integration -q -rs`)
 - [ ] The server: the next deploy rebuilds the image on 3.14.10 (runbook F), followed by the checks of L10
 
-**Built 2026-11-17 on branch `l21-python`.** Not run locally: no Python 3.14 on the PC, by the owner's choice.
+**Built 2026-11-17 on branch `l21-python`.** Run on the owner's PC the same day, after the merge.
 - Version changes: numpy 2.2.6 to 2.5.5 (3.14 wheels), pillow 12.3.0 to 13.0.0 and filelock 4.1.0 to 4.2.11 (the 59 advisories of L20). The audit now fails on a finding in any file.
 - `scripts/ci/pin_hashes.py` rewrites a pin file's hashes from PyPI; for 3.10 it reproduced 53 of the 54 old pins exactly (cffi gains one macOS wheel).
 - Two tests held only on 3.10 and were made independent of it: one forced a parser error with deeply nested JSON, which 3.14 parses; one hashed raw PDF bytes, which differ with the interpreter's compression library. The canonical digest is the same on 3.10, 3.11 and 3.14, so the fixtures did not change.
