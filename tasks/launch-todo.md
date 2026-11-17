@@ -127,7 +127,7 @@ Open the pull request and merge it. The uncommitted app edits of the second sess
 **Verification:**
 - [x] `gh run list --branch main --limit 2` shows two successes
 
-**Done 2026-11-17.** Pull request 34 (16 commits, head `12f8319`, with L7, L11 and L12) was merged by the owner as merge commit `7ee8667`; both workflows are green on it.
+**Done 2026-11-17.** Pull request 34 (16 commits, head `12f8319`, with L7, L11 and L12) was merged by the owner as merge commit `7ee8667` (`f7fb186` after the L6 rewrite); both workflows are green on it.
 
 **Dependencies:** None · **Files likely touched:** none · **Estimated scope:** XS
 
@@ -160,12 +160,12 @@ clone, and force-push. This is irreversible and changes every commit ID. Check t
 `git-filter-repo` manual and GitHub's "Removing sensitive data from a repository" before running them.
 
 **Acceptance criteria:**
-- [ ] The seven files are copied outside the repository before anything else
-- [ ] A fresh clone has no commit touching the seven paths: `git log --all --oneline -- PRODUCT.md docs/06-decision-log.md` prints nothing
+- [x] The seven files are copied outside the repository before anything else
+- [x] A fresh clone has no commit touching the seven paths: `git log --all --oneline -- PRODUCT.md docs/06-decision-log.md` prints nothing
 - [ ] Old commits are unreachable on GitHub: support confirmed the purge (route A), or the repository was recreated (route B)
 
 **Verification:**
-- [ ] `git ls-remote origin` shows only rewritten branch heads; CI is green on the new `main`
+- [x] `git ls-remote origin` shows only rewritten branch heads; CI is green on the new `main`
 - [ ] Manual: `https://github.com/GerritHoskins/change-lens/commit/a8280b9` returns 404
 
 ```powershell
@@ -191,6 +191,13 @@ git reset --hard origin/main
 git switch m1-iphone
 git reset --hard origin/m1-iphone
 ```
+
+**Rewritten and force-pushed 2026-11-17; the purge is still open.** 215 commits became 195 (20 touched only the
+private paths); `main` is `f7fb186` and `m1-iphone` is `68578c8`, with the same file trees as before. Every commit
+ID changed, so IDs quoted in older text (such as `f27ccfa` and `a8280b9`) are the old ones; the old-to-new list is
+`filter-repo/commit-map` in `C:\Users\Gerrit\change-lens-rewrite.git`. The old commits stay readable by ID on
+GitHub, and the 34 pull-request refs still point at them, until GitHub support purges them (the owner sends the
+request). Other clones must be reset, never merged or pulled (the IONOS server: see L10).
 
 **Dependencies:** L1, L8, L9 · **Files likely touched:** none (history only) · **Estimated scope:** S
 
