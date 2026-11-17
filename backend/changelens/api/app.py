@@ -114,7 +114,12 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     # The parser sees the full multipart stream before per-slot validation. Even a
     # malformed oversized part within a two-input body must never spill onto disk.
     MultiPartParser.spool_max_size = 2 * max_body
-    app = FastAPI(title="ChangeLens dev API (I-22)", version="0.0.1-dev")
+    if settings.auth_mode == "logto":
+        # A deployment serves no interactive documentation and no schema: without these three routes the
+        # paths answer `not_found` like any other unknown path. `app.openapi()` still works in process.
+        app = FastAPI(title="ChangeLens API", version="0.0.1", docs_url=None, redoc_url=None, openapi_url=None)
+    else:
+        app = FastAPI(title="ChangeLens dev API (I-22)", version="0.0.1-dev")
     app.state.settings = settings
     app.state.db = db or Database(settings.database_url)
     if store is None:

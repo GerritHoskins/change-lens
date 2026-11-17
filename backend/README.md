@@ -130,7 +130,7 @@ Authentication settings. `dev` is the default mode, and `Settings.from_env` refu
 
 Logto access tokens must live at most 900 s (`JwtPolicy`; set this on the API resource in Logto, D-8 C5) and be signed with RS256 (the verifier also accepts PS256 and ES256 keys, nothing else).
 
-Optional environment variables:
+Optional environment variables. In `logto` mode six of them have no default: `CHANGELENS_DATABASE_URL`, the four `CHANGELENS_S3_*` variables and `CHANGELENS_LLM` must be set, and `CHANGELENS_LLM=fake` is refused, so a deployment never falls back to a local development value. `logto` mode also serves no `/docs`, `/redoc` or `/openapi.json`.
 
 | Variable | Default |
 |---|---|

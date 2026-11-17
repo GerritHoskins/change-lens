@@ -202,6 +202,9 @@ def test_social_settings_come_from_the_environment(monkeypatch):
            "CHANGELENS_LOGTO_JWKS_URL": "https://auth.example.test/oidc/jwks",
            "CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT": "https://auth.example.test", "CHANGELENS_LOGTO_M2M_APP_ID": "a",
            "CHANGELENS_LOGTO_M2M_APP_SECRET": "s", "CHANGELENS_RATE_LIMIT_KEY": "k" * 40,
+           "CHANGELENS_DATABASE_URL": "postgresql+psycopg://changelens_app:pw@postgres:5432/changelens",
+           "CHANGELENS_S3_ENDPOINT": "https://s3.example.test", "CHANGELENS_S3_ACCESS_KEY": "a",
+           "CHANGELENS_S3_SECRET_KEY": "s", "CHANGELENS_S3_BUCKET": "b", "CHANGELENS_LLM": "ionos",
            "CHANGELENS_GOOGLE_CLIENT_ID": "g", "CHANGELENS_GOOGLE_CLIENT_SECRET_FILE": "/run/secrets/google"}
     for name, value in env.items():
         monkeypatch.setenv(name, value)

@@ -111,7 +111,7 @@ Pass the define in both, and make the offline check fail when a release workflow
 - [x] Release config command passes; a new case in `test_release.py` removes the define and expects `FAIL`
 - [x] Manual: none (the device proof is L25)
 
-**Built 2026-11-17 (not committed, not yet run on Codemagic).** The ID is defined once as `logto_app` in `codemagic.yaml`; 11 release tests and `./scripts/ci.ps1` pass.
+**Built 2026-11-17 (not yet run on Codemagic).** The ID is defined once as `logto_app` in `codemagic.yaml`; 11 release tests and `./scripts/ci.ps1` pass.
 
 **Dependencies:** None · **Files likely touched:** `codemagic.yaml`, `scripts/release/check_config.py`, `scripts/release/test_release.py`, `scripts/release/README.md` · **Estimated scope:** S
 
@@ -239,13 +239,15 @@ missing: `CHANGELENS_LLM` becomes `fake`, and the S3 endpoint, keys and bucket b
 Make each a start-up error in `logto` mode; `dev` mode keeps its defaults.
 
 **Acceptance criteria:**
-- [ ] In `logto` mode a missing `CHANGELENS_LLM`, `CHANGELENS_S3_ENDPOINT`, `_ACCESS_KEY`, `_SECRET_KEY` or `_BUCKET` raises at start with the variable's name and no value
-- [ ] `CHANGELENS_LLM=fake` is refused in `logto` mode
-- [ ] Every newly required name is present in the env example files that the `api` and the `worker` load (`deploy/ionos/env/`)
+- [x] In `logto` mode a missing `CHANGELENS_LLM`, `CHANGELENS_S3_ENDPOINT`, `_ACCESS_KEY`, `_SECRET_KEY` or `_BUCKET` raises at start with the variable's name and no value
+- [x] `CHANGELENS_LLM=fake` is refused in `logto` mode
+- [x] Every newly required name is present in the env example files that the `api` and the `worker` load (`deploy/ionos/env/`)
 
 **Verification:**
-- [ ] Backend unit: one new test per variable in `tests/unit/test_guard_logto.py` (or a new `test_settings_deployed.py`)
+- [x] Backend unit: one new test per variable in `tests/unit/test_guard_logto.py` (or a new `test_settings_deployed.py`)
 - [ ] Backend integration suite still green
+
+**Built 2026-11-17.** `CHANGELENS_DATABASE_URL` is required too (six names, `DEPLOYED_REQUIRED` in `config.py`). Unit suite 884 passed. Not done: the integration suite (Docker was off; CI runs it on push). Before the next deploy, check that `/etc/changelens/changelens.env` sets all six.
 
 **Dependencies:** None · **Files likely touched:** `backend/changelens/config.py`, `backend/tests/unit/test_guard_logto.py`, `deploy/ionos/env/*.example`, `deploy/ionos/README.md` · **Estimated scope:** S
 
@@ -255,12 +257,14 @@ Make each a start-up error in `logto` mode; `dev` mode keeps its defaults.
 without a token and Caddy proxies them. Turn all three off in `logto` mode and name the app without "dev API".
 
 **Acceptance criteria:**
-- [ ] In `logto` mode the three paths return the same `not_found` problem body as any unknown path
-- [ ] In `dev` mode they still work
+- [x] In `logto` mode the three paths return the same `not_found` problem body as any unknown path
+- [x] In `dev` mode they still work
 
 **Verification:**
-- [ ] Backend unit: a new case in `tests/unit/test_api_unit.py` for each mode
+- [x] Backend unit: a new case for each mode (in `tests/unit/test_guard_logto.py`, which has both modes' helpers)
 - [ ] Manual after L10: `curl -s -o /dev/null -w '%{http_code}' https://api.pixeltronic.dev/openapi.json` prints 404
+
+**Built 2026-11-17 (not deployed).**
 
 **Dependencies:** None (deploy with L10 or the next release) · **Files likely touched:** `backend/changelens/api/app.py`, `backend/tests/unit/test_api_unit.py` · **Estimated scope:** XS
 
