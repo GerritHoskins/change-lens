@@ -70,6 +70,21 @@ def check(root: Path) -> list[str]:
     require("flutter build appbundle --release" in android, "Android release must produce a signed bundle")
     require("bundle_identifier: dev.changelens.changelensPoc" in workflow(config, "poc-ios-testflight"),
             "PoC signing must stay in its separately named workflow")
+
+    # Without the Logto app ID the app is a development build: no sign-in, and the developer settings
+    # (API address, dev token) are in the menu (app/lib/auth/logto.dart). A store build must never be one.
+    require(re.search(r"^  logto_app: &logto_app\n    CHANGELENS_LOGTO_APP_ID: [A-Za-z0-9]+\n", config, re.M)
+            is not None, "the sign-in app ID must be defined once and must not be empty")
+    define = '--dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID"'
+    guard = ': "${CHANGELENS_LOGTO_APP_ID:?'
+    for name in ("app-android-release", "ios-testflight"):
+        block = workflow(config, name)
+        builds = [line for line in block.splitlines() if "flutter build " in line]
+        require("      vars: *logto_app\n" in block, name + " must set the sign-in app ID")
+        require(bool(builds) and all(define in line for line in builds),
+                name + " must pass the sign-in app ID to every flutter build")
+        require(-1 < block.find(guard) < block.find("flutter build "),
+                name + " must stop before building when the sign-in app ID is empty")
     return errors
 
 

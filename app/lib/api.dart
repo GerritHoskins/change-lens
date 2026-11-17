@@ -129,6 +129,19 @@ class OnboardingState {
   final int? step;
 }
 
+/// The usage-events consent (D-18 tier B): `GET`/`PUT /me/consent`. [granted] is null when the account
+/// hasn't answered for the current [policyVersion].
+class ConsentState {
+  const ConsentState({required this.granted, required this.policyVersion});
+
+  ConsentState.fromJson(Map<String, dynamic> j)
+      : granted = (j['usage_events'] as Map<String, dynamic>)['granted'] as bool?,
+        policyVersion = (j['usage_events'] as Map<String, dynamic>)['policy_version'] as String;
+
+  final bool? granted;
+  final String policyVersion;
+}
+
 class Api {
   Api(this.baseUrl, this.token, {http.Client? client}) : _client = client ?? http.Client();
 
@@ -152,6 +165,15 @@ class Api {
         headers: {..._auth, 'Content-Type': 'application/json'},
         body: jsonEncode(completed ? {'completed': true} : {'step': step}))));
   }
+
+  Future<ConsentState> consent() async =>
+      ConsentState.fromJson(await _json(_client.get(_u('/me/consent'), headers: _auth)));
+
+  /// Answers for [policyVersion], which must be the server's current one (else `policy_version_stale`).
+  Future<ConsentState> saveConsent({required bool granted, required String policyVersion}) async =>
+      ConsentState.fromJson(await _json(_client.put(_u('/me/consent'),
+          headers: {..._auth, 'Content-Type': 'application/json'},
+          body: jsonEncode({'usage_events': {'granted': granted, 'policy_version': policyVersion}}))));
 
   /// `DELETE /me` (I-8 S5): true when every step finished, false when the rest is pending. Both mean the
   /// account is gone for the app: every later call is rejected.
@@ -276,10 +298,14 @@ class Review {
         evidenceModeBefore = (j['evidence_mode'] as Map?)?['before'] as String?,
         evidenceModeAfter = (j['evidence_mode'] as Map?)?['after'] as String?,
         pageOpened = j['page_opened'] as bool?,
+        dismissalReason = j['dismissal_reason'] as String?,
         at = DateTime.parse(j['at'] as String);
 
   final String action;
   final String? note;
+  /// Why a dismissal was made (WP-C): reworded | wrong_passage | irrelevant | other. Null on other
+  /// actions and on dismissals recorded before the field existed.
+  final String? dismissalReason;
   // Historical reviews have unknown observations; never infer them from the action.
   final String? evidenceModeBefore, evidenceModeAfter;
   final bool? pageOpened;
@@ -380,12 +406,15 @@ extension ReportApi on Api {
   Future<FindingDetail> finding(String id) async =>
       FindingDetail(await _json(_client.get(_u('/findings/$id'), headers: _auth)));
 
-  /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15).
+  /// confirmed | corrected | dismissed | note. A correction returns the new revision (AC-15). A
+  /// dismissal needs its [dismissalReason], and only a dismissal takes one (WP-C).
   Future<Finding> review(String findingId, String action, {required Map<String, String?> evidenceMode,
-      required bool pageOpened, String? note, Map<String, String>? correction}) async {
+      required bool pageOpened, String? note, Map<String, String>? correction, String? dismissalReason}) async {
+    assert((action == 'dismissed') == (dismissalReason != null), 'a dismissal needs a reason, and only a dismissal');
     final j = await _json(_client.post(_u('/findings/$findingId/reviews'),
         headers: {..._auth, 'Content-Type': 'application/json'},
         body: jsonEncode({'action': action, 'note': note, 'correction': correction,
+          'dismissal_reason': ?dismissalReason,
           'evidence_mode': evidenceMode, 'page_opened': pageOpened})));
     return Finding(j['finding'] as Map<String, dynamic>);
   }

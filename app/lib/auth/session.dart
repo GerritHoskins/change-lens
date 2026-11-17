@@ -51,9 +51,24 @@ class LinkRequired extends AuthState {
 }
 
 class SignedIn extends AuthState {
-  const SignedIn(this.onboarding, {this.email});
+  const SignedIn(this.onboarding, {this.email, this.linked, this.consent});
   final OnboardingState onboarding;
   final String? email;
+
+  /// The usage-events consent answer for the current policy version (D-18 tier B); null = not answered.
+  final bool? consent;
+
+  /// The provider the backend just linked to the account (announced once as `linkDone`).
+  final SignInMethod? linked;
+}
+
+/// The session ended while the app was in use (WP-A, direction §2): a sign-in sheet over the current
+/// screen, so work held only in memory (a compare draft, AC-25) survives. [subject] is the account it
+/// belonged to: a different account signing in ends the old one as a sign-out would.
+class ReauthRequired extends AuthState {
+  const ReauthRequired(this.previous, this.subject);
+  final SignedIn previous;
+  final String? subject;
 }
 
 enum AuthFailureKind { unavailable, failed, rejected }
@@ -75,6 +90,9 @@ class AuthSession extends ChangeNotifier {
   }
 
   static const refreshKey = 'logto_refresh_token';
+
+  /// The method name only ("email", "google", "apple"), so re-sign-in can offer it first.
+  static const lastMethodKey = 'last_sign_in_method';
   static const _expiryMargin = Duration(seconds: 60);
 
   final AuthConfig config;
@@ -97,6 +115,13 @@ class AuthSession extends ChangeNotifier {
 
   DateTime Function() clock = DateTime.now;
 
+  /// The method of the last successful sign-in on this device, if any.
+  SignInMethod? lastMethod;
+
+  /// Changes whenever a different account (or the first one) signs in, so screens keyed on it start
+  /// fresh; unchanged when the same account signs in again from the expired-session sheet.
+  int account = 0;
+
   void _set(AuthState next) {
     _state = next;
     notifyListeners();
@@ -107,11 +132,13 @@ class AuthSession extends ChangeNotifier {
   /// On start: the stored session, refreshed, then `POST /session` (03a P1 app sequence).
   Future<void> restore() async {
     _set(const AuthRestoring());
+    lastMethod = signInMethodOf(await store.read(lastMethodKey) ?? '');
     final stored = await store.read(refreshKey);
     if (stored == null || stored.isEmpty) return _set(const SignedOut());
     try {
       await _keep(await logto.refresh(stored));
-      _set(SignedIn(await _bootstrap(), email: _tokens?.email));
+      final (onboarding, consent) = await _bootstrap();
+      _set(SignedIn(onboarding, email: _tokens?.email, consent: consent));
     } on SessionExpired {
       await _forget();
       _set(const SignedOut(SignedOutReason.expired));
@@ -130,7 +157,10 @@ class AuthSession extends ChangeNotifier {
   /// existing account signs in this way.
   Future<void> signInWithEmail() => _attempt(() async {
     final link = _state is LinkRequired ? _state as LinkRequired : null;
-    await _establish(await logto.signIn(), linkId: link?.linkId);
+    // Signing in again after an expired session: Logto's page starts at the same address.
+    final email = switch (_state) { ReauthRequired(:final previous) => previous.email, _ => null };
+    await _establish(await logto.signIn(extraParams: {'login_hint': ?email}),
+      method: SignInMethod.email, linkId: link?.linkId);
   });
 
   /// Native Google or Apple: the provider's code goes to the backend, which answers with a Logto
@@ -147,7 +177,7 @@ class AuthSession extends ChangeNotifier {
         final token = answer['one_time_token'], hint = answer['login_hint'];
         if (token is! String || hint is! String) throw const AuthFailure(AuthFailureKind.failed, 'session_malformed');
         await _establish(await logto.signIn(extraParams: {'one_time_token': token, 'login_hint': hint}),
-          linkId: link?.linkId);
+          method: method, linkId: link?.linkId);
       case 'link_required':
         final linkId = answer['link_id'];
         final methods = [
@@ -200,10 +230,23 @@ class AuthSession extends ChangeNotifier {
   }
 
   /// Keeps the tokens of a finished Logto sign-in and opens the account with `POST /session`.
-  Future<void> _establish(TokenSet tokens, {String? linkId}) async {
+  Future<void> _establish(TokenSet tokens, {required SignInMethod method, String? linkId}) async {
+    final before = _state;
     await _keep(tokens);
     try {
-      _set(SignedIn(await _bootstrap(linkId: linkId), email: tokens.email));
+      final (onboarding, consent) = await _bootstrap(linkId: linkId);
+      lastMethod = method;
+      await store.write(lastMethodKey, method.name);
+      final subject = _subjectOf(tokens.accessToken);
+      // Same account only when both subjects are known and equal; anything else fails closed.
+      final sameAccount = before is ReauthRequired && before.subject != null && before.subject == subject;
+      if (!sameAccount) {
+        account++;
+        // Another account: nothing of the previous one stays on screen or in memory.
+        if (before is ReauthRequired) _set(const SignedOut());
+      }
+      _set(SignedIn(onboarding, email: tokens.email, consent: consent,
+        linked: linkId != null && before is LinkRequired ? before.provider : null));
     } on ApiException catch (e) {
       if (e.status != 401) rethrow;
       // A deleted account, or a link completed by another account than its target: nothing is linked.
@@ -214,14 +257,19 @@ class AuthSession extends ChangeNotifier {
     }
   }
 
-  Future<OnboardingState> _bootstrap({String? linkId}) async {
+  /// `POST /session`: the onboarding state and the usage-events consent answer (null = ask).
+  Future<(OnboardingState, bool?)> _bootstrap({String? linkId}) async {
     final token = await accessToken();
     final body = decodeApiResponse(await _inner.post(_u('/session'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode(linkId == null ? {} : {'link_id': linkId})));
     if (body is! Map || body['status'] != 'active') throw ApiException(200, 'session_malformed');
     final onboarding = body['onboarding'];
-    return onboarding is Map<String, dynamic> ? OnboardingState.fromJson(onboarding) : OnboardingState.notStarted;
+    final consent = body['consent'];
+    return (
+      onboarding is Map<String, dynamic> ? OnboardingState.fromJson(onboarding) : OnboardingState.notStarted,
+      consent is Map && consent['usage_events'] is bool ? consent['usage_events'] as bool : null,
+    );
   }
 
   Future<void> _keep(TokenSet tokens) async {
@@ -239,16 +287,24 @@ class AuthSession extends ChangeNotifier {
   /// `exp - iat` of the current access token, for the deployment evidence (deploy/ionos E; 900 expected).
   /// Read from the token's claims; the token itself is never shown.
   int? get accessTokenLifetime {
-    final parts = _tokens?.accessToken.split('.');
+    final claims = _claims(_tokens?.accessToken);
+    if (claims == null || claims['exp'] is! int || claims['iat'] is! int) return null;
+    return (claims['exp'] as int) - (claims['iat'] as int);
+  }
+
+  static Map? _claims(String? token) {
+    final parts = token?.split('.');
     if (parts == null || parts.length != 3) return null;
     try {
       final claims = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
-      if (claims is! Map || claims['exp'] is! int || claims['iat'] is! int) return null;
-      return (claims['exp'] as int) - (claims['iat'] as int);
+      return claims is Map ? claims : null;
     } on FormatException {
       return null;
     }
   }
+
+  /// The token's subject, compared in memory only to tell whether re-sign-in is the same account.
+  static String? _subjectOf(String? token) => _claims(token)?['sub'] as String?;
 
   /// A valid API access token, refreshed shortly before it expires. One refresh at a time: with
   /// rotation, a second use of the same refresh token would fail.
@@ -278,8 +334,8 @@ class AuthSession extends ChangeNotifier {
     try {
       if (_state is! SignedIn) return;
       await _refresh();
-      final onboarding = await _bootstrap();
-      if (_state case SignedIn(:final email)) _set(SignedIn(onboarding, email: email));
+      final (onboarding, consent) = await _bootstrap();
+      if (_state case SignedIn(:final email)) _set(SignedIn(onboarding, email: email, consent: consent));
     } on SessionExpired {
       await _expire();
     } on ApiException catch (e) {
@@ -291,10 +347,13 @@ class AuthSession extends ChangeNotifier {
     }
   }();
 
+  /// Mid-session: the sign-in sheet over the current screen, not a reset to the sign-in route.
   Future<void> _expire() async {
-    if (_state is! SignedIn) return;
+    final current = _state;
+    if (current is! SignedIn) return;
+    final subject = _subjectOf(_tokens?.accessToken);
     await _forget();
-    _set(const SignedOut(SignedOutReason.expired));
+    _set(ReauthRequired(current, subject));
   }
 
   /// Saves the last onboarding step reached (1-based). Best effort: a failed save only means resuming
@@ -311,11 +370,26 @@ class AuthSession extends ChangeNotifier {
   Future<void> completeOnboarding() async {
     final current = _state;
     if (current is! SignedIn) return;
-    _set(SignedIn(const OnboardingState(completed: true), email: current.email));
+    _set(SignedIn(const OnboardingState(completed: true), email: current.email, consent: current.consent));
     try {
       await api.saveOnboarding(completed: true);
     } on Exception {
       // not saved: onboarding shows again on the next start, at the saved step
+    }
+  }
+
+  /// Answers the usage-events consent (D-18 tier B) for the policy version the server names now; a policy
+  /// change in between is retried once with the new version. Throws when it couldn't be saved.
+  Future<void> answerUsageEvents(bool allow) async {
+    var current = await api.consent();
+    try {
+      current = await api.saveConsent(granted: allow, policyVersion: current.policyVersion);
+    } on ApiException catch (e) {
+      if (e.status != 409) rethrow;
+      current = await api.saveConsent(granted: allow, policyVersion: (await api.consent()).policyVersion);
+    }
+    if (_state case SignedIn(:final onboarding, :final email)) {
+      _set(SignedIn(onboarding, email: email, consent: current.granted));
     }
   }
 

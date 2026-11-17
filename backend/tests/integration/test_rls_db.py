@@ -71,7 +71,7 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
     policies = {(t, cmd): (using, check) for t, cmd, using, check in env.sql(
         "SELECT tablename, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public'")}
     covered = tenant_tables(env)
-    assert len(covered) == 15
+    assert len(covered) == 16
     for name, (rls, forced, tenant) in tables.items():
         if not tenant:
             assert name in EXCEPTIONS, "%s has no tenant_id and is not an explicit exception" % name
@@ -99,9 +99,11 @@ def test_the_app_role_has_only_row_rights_on_tenant_tables_and_none_on_users(env
 
 # 2 and 3. Direct SQL as the app role, and a deliberately unfiltered query ------------------------
 def _fill_every_tenant_table(env):
-    """Rows for tenants A and B in all 14 tables, through the routes and worker where they exist."""
+    """Rows for tenants A and B in every tenant table, through the routes and worker where they exist."""
     for token in (TOKEN_A, TOKEN_B):
         env.client.put("/me/onboarding", json={"step": 2}, headers=auth(token))
+        assert env.client.put("/me/consent", json={"usage_events": {"granted": True, "policy_version": "2026-11-13"}},
+                              headers=auth(token)).status_code == 200
         pid = env.project(token)
         a = env.upload(pid, token, label="v1", text="\n".join(EARLIER_LINES)).json()["id"]
         b = env.upload(pid, token, label="v2", text="\n".join(LATER_LINES)).json()["id"]
@@ -184,7 +186,8 @@ def test_an_unfiltered_orm_query_in_tenant_scope_returns_only_that_tenant(env):
 
 # 4. Every route ------------------------------------------------------------------------------------
 NO_RESOURCE_ID = {("POST", "/session"), ("DELETE", "/me"), ("GET", "/projects"), ("POST", "/projects"),
-                  ("GET", "/me/onboarding"), ("PUT", "/me/onboarding")}
+                  ("GET", "/me/onboarding"), ("PUT", "/me/onboarding"), ("GET", "/me/consent"),
+                  ("PUT", "/me/consent")}
 
 
 def _requests(a, b, cid, finding):

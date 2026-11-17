@@ -557,7 +557,7 @@ abstract class AppLocalizations {
   /// No description provided for @comparisonPartial.
   ///
   /// In en, this message translates to:
-  /// **'Partial: some content could not be processed'**
+  /// **'Some content couldn\'t be read'**
   String get comparisonPartial;
 
   /// No description provided for @comparisonFailed.
@@ -689,7 +689,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Selected summary — {count, plural, =0{no other differences} =1{1 other difference} other{{count} other differences}}, including presentation-only edits'**
+  /// **'{count, plural, =0{No other differences} =1{1 more difference, including moved or reformatted text} other{{count} more differences, including moved or reformatted text}}'**
   String selectedSummary(int count);
 
   /// No description provided for @showAllDifferences.
@@ -1741,6 +1741,365 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deleting…'**
   String get deletingAccount;
+
+  /// No description provided for @signInPromise.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed, and which changes matter?'**
+  String get signInPromise;
+
+  /// No description provided for @signInPromiseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare two versions of a client brief and see each change next to the passage it comes from.'**
+  String get signInPromiseBody;
+
+  /// Quiet status line, not an error banner. Cancelling is the user's choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in with {method} was cancelled. Choose a method to try again.'**
+  String signInCancelled(String method);
+
+  /// No description provided for @sessionExpiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get sessionExpiredTitle;
+
+  /// No description provided for @sessionExpiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has ended. Sign in again to continue.'**
+  String get sessionExpiredBody;
+
+  /// No description provided for @sessionLastMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'You last signed in with {method}.'**
+  String sessionLastMethod(String method);
+
+  /// No description provided for @sessionOtherMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Other ways to sign in'**
+  String get sessionOtherMethods;
+
+  /// No description provided for @linkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{method} is now linked to your account.'**
+  String linkDone(String method);
+
+  /// Announced once when onboarding reopens at a saved step. The step is stored on the account (no device storage, AC-25).
+  ///
+  /// In en, this message translates to:
+  /// **'Picked up where you left off.'**
+  String get onbResumed;
+
+  /// No description provided for @consentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share usage events?'**
+  String get consentTitle;
+
+  /// No description provided for @consentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If you allow it, the app sends usage events to ChangeLens: which screens you open, which report filters you use and how long your first comparison takes. Never document content.'**
+  String get consentBody;
+
+  /// No description provided for @consentDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is sent unless you allow it. You can change this later in Settings.'**
+  String get consentDefault;
+
+  /// No description provided for @consentAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get consentAllow;
+
+  /// No description provided for @consentDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t allow'**
+  String get consentDecline;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsAccount;
+
+  /// No description provided for @settingsSignedInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in with {method}'**
+  String settingsSignedInWith(String method);
+
+  /// No description provided for @settingsPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get settingsPrivacy;
+
+  /// No description provided for @settingsUsageEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Share usage events'**
+  String get settingsUsageEvents;
+
+  /// No description provided for @settingsUsageEventsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Which screens you open, which report filters you use and how long your first comparison takes. Never document content.'**
+  String get settingsUsageEventsHint;
+
+  /// Method name inside sessionLastMethod and settingsSignedInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'email'**
+  String get providerEmail;
+
+  /// P5 dismissal sheet (WP-C). Dismissing is a review, never client approval.
+  ///
+  /// In en, this message translates to:
+  /// **'Why dismiss this finding?'**
+  String get dismissTitle;
+
+  /// No description provided for @dismissLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissing records your review only. The finding stays in the report, dimmed.'**
+  String get dismissLead;
+
+  /// Must not say the versions are equivalent: a dismissed finding is never relabelled as equivalent.
+  ///
+  /// In en, this message translates to:
+  /// **'Only reworded, nothing to act on'**
+  String get dismissReasonReworded;
+
+  /// No description provided for @dismissReasonWrongPassage.
+  ///
+  /// In en, this message translates to:
+  /// **'It quotes the wrong passage'**
+  String get dismissReasonWrongPassage;
+
+  /// No description provided for @dismissReasonIrrelevant.
+  ///
+  /// In en, this message translates to:
+  /// **'Not relevant to the work'**
+  String get dismissReasonIrrelevant;
+
+  /// No description provided for @dismissReasonOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Another reason'**
+  String get dismissReasonOther;
+
+  /// No description provided for @dismissNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get dismissNote;
+
+  /// No description provided for @dismissAndNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss and next'**
+  String get dismissAndNext;
+
+  /// No description provided for @dismissReasonLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String dismissReasonLine(String reason);
+
+  /// P7 review summary (WP-C). Counts come from the server; never client approval.
+  ///
+  /// In en, this message translates to:
+  /// **'Every finding reviewed'**
+  String get completeTitle;
+
+  /// No description provided for @completeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Your review of this comparison:'**
+  String get completeLead;
+
+  /// No description provided for @completeConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get completeConfirmed;
+
+  /// No description provided for @completeCorrected.
+  ///
+  /// In en, this message translates to:
+  /// **'Corrected'**
+  String get completeCorrected;
+
+  /// No description provided for @completeDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed'**
+  String get completeDismissed;
+
+  /// No description provided for @completeNotApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your own review, not client approval. Record client approval on each finding, in the client\'s words.'**
+  String get completeNotApproval;
+
+  /// No description provided for @completeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the project'**
+  String get completeBack;
+
+  /// No description provided for @consentSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer wasn\'t saved. Check your connection and try again.'**
+  String get consentSaveFailed;
+
+  /// No description provided for @historyLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first, in the order you set when comparing.'**
+  String get historyLead;
+
+  /// No description provided for @historyEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No versions yet'**
+  String get historyEmptyTitle;
+
+  /// No description provided for @historyEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare two versions of the brief to start the history. They appear here in the order you choose, never by upload time or file name.'**
+  String get historyEmptyBody;
+
+  /// No description provided for @historyForkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These were each compared with an earlier version, but not with each other, so neither is shown as newer.'**
+  String get historyForkNote;
+
+  /// No description provided for @historyBothWays.
+  ///
+  /// In en, this message translates to:
+  /// **'You compared these versions in both directions, so their order isn\'t settled.'**
+  String get historyBothWays;
+
+  /// No description provided for @historyNotCompared.
+  ///
+  /// In en, this message translates to:
+  /// **'Not compared yet'**
+  String get historyNotCompared;
+
+  /// No description provided for @historyNotComparedLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Their place isn\'t known until you compare them.'**
+  String get historyNotComparedLead;
+
+  /// No description provided for @historyVersionA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {meta}. Compare from this version'**
+  String historyVersionA11y(String label, String meta);
+
+  /// No description provided for @historyLinkA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison of {earlier} with the newer {newer}. {scope}. {status}'**
+  String historyLinkA11y(
+    String earlier,
+    String newer,
+    String scope,
+    String status,
+  );
+
+  /// No description provided for @historyCompareFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare from here'**
+  String get historyCompareFrom;
+
+  /// No description provided for @errorConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens can\'t be reached. Check your connection and try again.'**
+  String get errorConnection;
+
+  /// No description provided for @errorSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sign-in has ended. Sign in again to continue.'**
+  String get errorSignedOut;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This no longer exists. It may have been deleted.'**
+  String get errorNotFound;
+
+  /// No description provided for @errorRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This wasn\'t accepted. Check what you entered and try again.'**
+  String get errorRejected;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens had a problem on its side. Try again in a moment.'**
+  String get errorServer;
+
+  /// No description provided for @projectComparisons.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 comparison} other{{count} comparisons}}: {status}'**
+  String projectComparisons(int count, String status);
+
+  /// No description provided for @historyCompareAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare again'**
+  String get historyCompareAgain;
+
+  /// No description provided for @historyComparisonDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison of {earlier} with {newer}: {status}'**
+  String historyComparisonDone(String earlier, String newer, String status);
+
+  /// No description provided for @comparisonFailedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'This comparison couldn\'t be completed.'**
+  String get comparisonFailedShort;
+
+  /// No description provided for @kindPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get kindPdf;
+
+  /// No description provided for @kindText.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasted text'**
+  String get kindText;
 }
 
 class _AppLocalizationsDelegate

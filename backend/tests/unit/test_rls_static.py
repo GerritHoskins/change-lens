@@ -24,7 +24,8 @@ def _migration(name="0003_rls"):
 
 def test_the_migrations_cover_every_model_with_tenant_id():
     with_tenant = {t.name for t in Base.metadata.tables.values() if "tenant_id" in t.c}
-    covered = set(_migration().TENANT_TABLES) | set(_migration("0004_account_deletion").TENANT_TABLES)
+    covered = (set(_migration().TENANT_TABLES) | set(_migration("0004_account_deletion").TENANT_TABLES)
+               | set(_migration("0008_consent_events").TENANT_TABLES))
     assert covered == with_tenant
     assert {t.name for t in Base.metadata.tables.values()} - with_tenant == {
         "users", "rate_limit_counters", *_migration("0006_social_sign_in").PRE_TENANT_TABLES}

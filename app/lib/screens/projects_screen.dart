@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../auth/account_consent.dart';
 import '../design/calm_controls.dart';
 import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
@@ -13,7 +14,7 @@ import 'project_screen.dart';
 import 'compare_screen.dart';
 import 'comparison_screen.dart';
 import 'onboarding_screen.dart';
-import 'account_screen.dart';
+import 'settings_screen.dart';
 
 enum _ProjectsMenu { howItWorks, account, devSettings }
 
@@ -69,7 +70,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       if (!mounted || !identical(api, s.api)) return;
       setState(() {
         loading = false;
-        error = '$e';
+        error = userErrorMessage(AppLocalizations.of(context), e);
       });
     } finally { _fetching = false; }
   }
@@ -93,7 +94,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           clientLabel: client.text.trim().isEmpty ? null : client.text.trim());
       await _load();
     } on Exception catch (e) {
-      setState(() => error = '$e');
+      if (mounted) setState(() => error = userErrorMessage(AppLocalizations.of(context), e));
     }
   }
 
@@ -111,7 +112,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
             _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
-            _ProjectsMenu.account => AccountScreen(session: s.auth!),
+            _ProjectsMenu.account => SettingsScreen(session: s.auth!,
+                consent: s.consentFlow ? AccountConsent(s.auth!) : null),
             _ProjectsMenu.devSettings => const DevSettingsScreen(),
           })),
           itemBuilder: (_) => [
@@ -119,13 +121,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               child: Text(l.onbReplayEntry)),
             // Signed-in builds never show the dev connection (ui-ux-handoff §5).
             if (s.auth != null)
-              PopupMenuItem(key: const Key('account'), value: _ProjectsMenu.account, child: Text(l.account))
+              PopupMenuItem(key: const Key('account'), value: _ProjectsMenu.account, child: Text(l.settingsTitle))
             else
               PopupMenuItem(key: const Key('settings'), value: _ProjectsMenu.devSettings,
                 child: Text(l.devSettings)),
           ]),
         const SizedBox(width: 8),
       ]),
+      // The main action sits in the thumb zone, as on Finding and the review summary.
+      bottomNavigationBar: s.configured && projects.isNotEmpty ? SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: FilledButton.icon(key: const Key('compare-briefs'),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))) : null,
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))
           : SafeArea(top: false, child: RefreshIndicator(
@@ -138,10 +146,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
-                if (projects.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 24),
-                  child: FilledButton.icon(key: const Key('compare-briefs'),
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
-                    icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))),
                 if (!loading && error == null && projects.isEmpty)
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 for (final p in projects)
@@ -149,7 +153,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     borderRadius: BorderRadius.circular(CalmRadius.md),
                     onTap: () async {
                       final deleted = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(builder: (_) => ProjectScreen(project: p)));
+                        MaterialPageRoute(settings: const RouteSettings(name: ProjectScreen.routeName),
+                          builder: (_) => ProjectScreen(project: p)));
                       if (!mounted) return;
                       await _load();
                       if (!context.mounted || deleted == null) return;
@@ -167,7 +172,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           if (p.comparisonCounts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8),
                             child: Text([
                               for (final entry in p.comparisonCounts.entries)
-                                '${comparisonStatusLabel(l, entry.key)} (${entry.value})',
+                                l.projectComparisons(entry.value, comparisonStatusLabel(l, entry.key)),
                             ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
                         ])),
                         const SizedBox(width: 12),

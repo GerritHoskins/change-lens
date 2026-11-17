@@ -20,6 +20,12 @@ The manual `ios-testflight` workflow builds the real app using App Store signing
 preserves the separate PoC build. These are artifact-preparation workflows: **none publishes**.
 Signing identities, integration access, and a physical-device run are still required.
 
+Both store workflows build a **signed-in** app: they pass the Logto native app ID (`logto_app` in
+`codemagic.yaml`, a public identifier) as `--dart-define=CHANGELENS_LOGTO_APP_ID` to every
+`flutter build` and stop when it is empty. Without that define the app is a development build with
+no sign-in and the developer settings in the menu; `check_config.py` fails a store workflow that
+could produce one. Only `ios-device-check` may be built without it, for a check against a local backend.
+
 Configuration follows [Codemagic Android signing](https://docs.codemagic.io/yaml-code-signing/signing-android/),
 [iOS signing](https://docs.codemagic.io/yaml-code-signing/signing-ios/), and
 [Android Gradle signing](https://developer.android.com/build/building-cmdline).

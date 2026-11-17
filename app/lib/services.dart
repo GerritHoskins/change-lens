@@ -72,7 +72,8 @@ class PlatformDocumentPicker implements DocumentPicker {
 }
 
 class Services extends ChangeNotifier {
-  Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth}) {
+  Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth,
+      this.consentFlow = const bool.fromEnvironment('CHANGELENS_CONSENT')}) {
     auth?.addListener(_authChanged);
   }
 
@@ -84,17 +85,27 @@ class Services extends ChangeNotifier {
 
   /// The account session in production builds; null in development builds, which use the dev settings.
   final AuthSession? auth;
+
+  /// The usage-events consent screen and Settings switch (D-18 tier B). Off unless the build sets
+  /// `--dart-define=CHANGELENS_CONSENT=true`, which waits for the I-20 legal review of the texts.
+  final bool consentFlow;
   String baseUrl = '';
   String token = '';
   Api? _api;
   ComparisonSubmission? pendingComparison;
 
-  bool get configured => auth != null ? auth!.state is SignedIn : baseUrl.isNotEmpty && token.isNotEmpty;
+  /// Signed in, or signing in again over the current screen (the screens and drafts stay).
+  bool get configured => auth != null
+      ? auth!.state is SignedIn || auth!.state is ReauthRequired
+      : baseUrl.isNotEmpty && token.isNotEmpty;
 
   Api get api => auth?.api ?? (_api ??= apiFactory(baseUrl, token));
 
   void _authChanged() {
-    if (auth!.state is! SignedIn) pendingComparison = null; // nothing of one account survives sign-out
+    final state = auth!.state;
+    // Nothing of one account survives sign-out; an expired session keeps the in-memory draft until
+    // the same account signs in again (a different account passes through SignedOut first).
+    if (state is! SignedIn && state is! ReauthRequired) pendingComparison = null;
     notifyListeners();
   }
 

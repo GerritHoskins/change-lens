@@ -44,6 +44,7 @@ Map<String, dynamic> version(String id, String label, {String status = 'parsed'}
 /// A tiny in-memory backend; records every request.
 class Backend {
   final requests = <http.Request>[];
+  String comparisonsJson = '{"comparisons": []}';
   final versions = [version('v1', 'Brief v1'), version('v2', 'Brief v2')];
   bool failUploads = false;
   bool failComparisonOnce = false;
@@ -61,7 +62,7 @@ class Backend {
     if (r.method == 'GET' && p.startsWith('/versions/')) {
       return http.Response(jsonEncode(versions.firstWhere((v) => v['id'] == p.split('/').last)), 200);
     }
-    if (r.method == 'GET' && p == '/projects/p1/comparisons') return http.Response('{"comparisons": []}', 200);
+    if (r.method == 'GET' && p == '/projects/p1/comparisons') return http.Response(comparisonsJson, 200);
     if (r.method == 'POST' && p == '/projects/p1/versions') {
       if (failUploads) return http.Response('{"code":"limit_exceeded","detail":"bytes"}', 413);
       final v = version('v${versions.length + 1}', 'new', status: 'uploaded');
@@ -139,6 +140,38 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets('P6: a version chosen from the history is preset as Earlier, and nothing else', (tester) async {
+    await pumpApp(tester, () => CompareScreen(project: project, versions: ready, earlierId: 'v1'));
+    expect(find.byKey(const ValueKey('earlier-v1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('newer-new')), findsOneWidget);
+    expect(startEnabled(tester), isFalse);
+  });
+
+  testWidgets('P6: Compare again presets the failed pair, never the scope', (tester) async {
+    await pumpApp(tester, () => CompareScreen(project: project, versions: ready, earlierId: 'v1', laterId: 'v2'));
+    expect(find.byKey(const ValueKey('earlier-v1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('newer-v2')), findsOneWidget);
+    expect(startEnabled(tester), isFalse); // the scope is still the user's decision
+  });
+
+  testWidgets('P6: a comparison that finishes while the project is open is announced once', (tester) async {
+    final (_, backend, _) = await pumpApp(tester, () => ProjectScreen(project: project));
+    String one(String status) => '{"comparisons": [{"id": "c9", "earlier_id": "v1", "later_id": "v2", '
+        '"scope": "complete", "status": "$status"}]}';
+    backend.comparisonsJson = one('running');
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    tester.takeAnnouncements();
+    backend.comparisonsJson = one('complete');
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect([for (final a in tester.takeAnnouncements()) a.message], ['Comparison of Brief v1 with Brief v2: Complete']);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(tester.takeAnnouncements(), isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('AC-14: scope alone is not enough', (tester) async {
     await pumpApp(tester, () => CompareScreen(project: project, versions: ready));
     await tester.ensureVisible(find.byKey(const Key('scope-unknown')));
@@ -158,6 +191,8 @@ void main() {
       expect(find.byIcon(icon), findsNothing);
     }
     await tester.scrollUntilVisible(find.textContaining('cannot be edited'), 150);
+    await tester.ensureVisible(find.textContaining('cannot be edited'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('cannot be edited').hitTestable(), findsOneWidget);
   });
 
@@ -211,7 +246,7 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-import')));
     await tester.pumpAndSettle();
     expect(picker.purges, 1);
-    expect(find.textContaining('limit_exceeded'), findsOneWidget);
+    expect(find.textContaining('the file exceeds the size limit'), findsOneWidget);
   });
 
   testWidgets('AC-24: pasted text is imported with its label', (tester) async {
@@ -297,12 +332,12 @@ void main() {
     backend.comparisonCounts = {'waiting_for_versions': 1};
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('Reading versions (1)'), findsOneWidget);
+    expect(find.text('1 comparison: Reading versions'), findsOneWidget);
     backend.comparisonCounts = {'queued': 1};
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('Queued (1)'), findsOneWidget);
-    expect(find.text('Reading versions (1)'), findsNothing);
+    expect(find.text('1 comparison: Queued'), findsOneWidget);
+    expect(find.text('1 comparison: Reading versions'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

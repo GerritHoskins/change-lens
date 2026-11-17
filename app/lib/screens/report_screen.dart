@@ -102,14 +102,6 @@ class _ReportScreenState extends State<ReportScreen> {
                   child: TextButton(onPressed: loading ? null : _load, child: Text(l.retry))),
                 ...warnings(l, r),
                 TopicFilters(counts: r.topicCounts, selected: topic, onSelected: (value) => setState(() => topic = value)),
-                if (needsReview.isNotEmpty) Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(children: [
-                    const CalmReviewDisc(),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text('${l.groupNeedsReview} · ${needsReview.length}',
-                      style: Theme.of(context).textTheme.titleSmall)),
-                  ])),
                 Row(children: [
                   Expanded(child: TextButton(onPressed: _allDifferences,
                     style: TextButton.styleFrom(alignment: AlignmentDirectional.centerStart,
@@ -119,15 +111,16 @@ class _ReportScreenState extends State<ReportScreen> {
                     sheet: (_) => SummaryDefinitionSheet(otherDifferences: r.otherDifferences,
                       onShowAll: _allDifferences)),
                 ]),
+                // What needs the user's judgement leads; topic selection never hides it (P-rule: uncertainty
+                // stays as reachable as the headline findings).
+                if (needsReview.isNotEmpty) ...[
+                  SectionHeader('${l.groupNeedsReview} · ${needsReview.length}', hint: l.reviewAcrossTopics),
+                  ...topicFindings(l, needsReview, null, _open),
+                ],
                 SectionHeader(l.groupPrioritised),
                 if (!r.inGroup('prioritised').any((f) => topic == null || f.topic == topic))
                   Text(topic == null ? l.noPrioritised : l.noTopicChanges),
                 ...topicFindings(l, r.inGroup('prioritised'), topic, _open),
-                if (needsReview.isNotEmpty) ...[
-                  SectionHeader(l.groupNeedsReview, hint: l.reviewAcrossTopics),
-                  // Topic selection never hides uncertainty from the main report.
-                  ...topicFindings(l, needsReview, null, _open),
-                ],
               ]),
             ),
     );
@@ -198,7 +191,7 @@ class _AllDifferencesScreenState extends State<AllDifferencesScreen> {
           scope: report.scope ?? widget.scope),
         ...warnings(l, report),
         TopicFilters(counts: report.topicCounts, selected: topic, onSelected: (value) => setState(() => topic = value)),
-        for (final (group, title) in [('prioritised', l.groupPrioritised), ('needs_review', l.groupNeedsReview),
+        for (final (group, title) in [('needs_review', l.groupNeedsReview), ('prioritised', l.groupPrioritised),
                                       ('other', l.groupOther)])
           if (report.inGroup(group).any((f) => topic == null || f.topic == topic)) ...[
             SectionHeader(title),

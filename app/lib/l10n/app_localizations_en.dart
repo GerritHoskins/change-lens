@@ -268,8 +268,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonComplete => 'Complete';
 
   @override
-  String get comparisonPartial =>
-      'Partial: some content could not be processed';
+  String get comparisonPartial => 'Some content couldn\'t be read';
 
   @override
   String get comparisonFailed => 'Failed';
@@ -357,11 +356,11 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count other differences',
-      one: '1 other difference',
-      zero: 'no other differences',
+      other: '$count more differences, including moved or reformatted text',
+      one: '1 more difference, including moved or reformatted text',
+      zero: 'No other differences',
     );
-    return 'Selected summary — $_temp0, including presentation-only edits';
+    return '$_temp0';
   }
 
   @override
@@ -989,4 +988,228 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deletingAccount => 'Deleting…';
+
+  @override
+  String get signInPromise => 'What changed, and which changes matter?';
+
+  @override
+  String get signInPromiseBody =>
+      'Compare two versions of a client brief and see each change next to the passage it comes from.';
+
+  @override
+  String signInCancelled(String method) {
+    return 'Sign-in with $method was cancelled. Choose a method to try again.';
+  }
+
+  @override
+  String get sessionExpiredTitle => 'Sign in again';
+
+  @override
+  String get sessionExpiredBody =>
+      'Your session has ended. Sign in again to continue.';
+
+  @override
+  String sessionLastMethod(String method) {
+    return 'You last signed in with $method.';
+  }
+
+  @override
+  String get sessionOtherMethods => 'Other ways to sign in';
+
+  @override
+  String linkDone(String method) {
+    return '$method is now linked to your account.';
+  }
+
+  @override
+  String get onbResumed => 'Picked up where you left off.';
+
+  @override
+  String get consentTitle => 'Share usage events?';
+
+  @override
+  String get consentBody =>
+      'If you allow it, the app sends usage events to ChangeLens: which screens you open, which report filters you use and how long your first comparison takes. Never document content.';
+
+  @override
+  String get consentDefault =>
+      'Nothing is sent unless you allow it. You can change this later in Settings.';
+
+  @override
+  String get consentAllow => 'Allow';
+
+  @override
+  String get consentDecline => 'Don\'t allow';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsAccount => 'Account';
+
+  @override
+  String settingsSignedInWith(String method) {
+    return 'Signed in with $method';
+  }
+
+  @override
+  String get settingsPrivacy => 'Privacy';
+
+  @override
+  String get settingsUsageEvents => 'Share usage events';
+
+  @override
+  String get settingsUsageEventsHint =>
+      'Which screens you open, which report filters you use and how long your first comparison takes. Never document content.';
+
+  @override
+  String get providerEmail => 'email';
+
+  @override
+  String get dismissTitle => 'Why dismiss this finding?';
+
+  @override
+  String get dismissLead =>
+      'Dismissing records your review only. The finding stays in the report, dimmed.';
+
+  @override
+  String get dismissReasonReworded => 'Only reworded, nothing to act on';
+
+  @override
+  String get dismissReasonWrongPassage => 'It quotes the wrong passage';
+
+  @override
+  String get dismissReasonIrrelevant => 'Not relevant to the work';
+
+  @override
+  String get dismissReasonOther => 'Another reason';
+
+  @override
+  String get dismissNote => 'Note (optional)';
+
+  @override
+  String get dismissAndNext => 'Dismiss and next';
+
+  @override
+  String dismissReasonLine(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get completeTitle => 'Every finding reviewed';
+
+  @override
+  String get completeLead => 'Your review of this comparison:';
+
+  @override
+  String get completeConfirmed => 'Confirmed';
+
+  @override
+  String get completeCorrected => 'Corrected';
+
+  @override
+  String get completeDismissed => 'Dismissed';
+
+  @override
+  String get completeNotApproval =>
+      'This is your own review, not client approval. Record client approval on each finding, in the client\'s words.';
+
+  @override
+  String get completeBack => 'Back to the project';
+
+  @override
+  String get consentSaveFailed =>
+      'Your answer wasn\'t saved. Check your connection and try again.';
+
+  @override
+  String get historyLead =>
+      'Newest first, in the order you set when comparing.';
+
+  @override
+  String get historyEmptyTitle => 'No versions yet';
+
+  @override
+  String get historyEmptyBody =>
+      'Compare two versions of the brief to start the history. They appear here in the order you choose, never by upload time or file name.';
+
+  @override
+  String get historyForkNote =>
+      'These were each compared with an earlier version, but not with each other, so neither is shown as newer.';
+
+  @override
+  String get historyBothWays =>
+      'You compared these versions in both directions, so their order isn\'t settled.';
+
+  @override
+  String get historyNotCompared => 'Not compared yet';
+
+  @override
+  String get historyNotComparedLead =>
+      'Their place isn\'t known until you compare them.';
+
+  @override
+  String historyVersionA11y(String label, String meta) {
+    return '$label, $meta. Compare from this version';
+  }
+
+  @override
+  String historyLinkA11y(
+    String earlier,
+    String newer,
+    String scope,
+    String status,
+  ) {
+    return 'Comparison of $earlier with the newer $newer. $scope. $status';
+  }
+
+  @override
+  String get historyCompareFrom => 'Compare from here';
+
+  @override
+  String get errorConnection =>
+      'ChangeLens can\'t be reached. Check your connection and try again.';
+
+  @override
+  String get errorSignedOut =>
+      'Your sign-in has ended. Sign in again to continue.';
+
+  @override
+  String get errorNotFound =>
+      'This no longer exists. It may have been deleted.';
+
+  @override
+  String get errorRejected =>
+      'This wasn\'t accepted. Check what you entered and try again.';
+
+  @override
+  String get errorServer =>
+      'ChangeLens had a problem on its side. Try again in a moment.';
+
+  @override
+  String projectComparisons(int count, String status) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count comparisons',
+      one: '1 comparison',
+    );
+    return '$_temp0: $status';
+  }
+
+  @override
+  String get historyCompareAgain => 'Compare again';
+
+  @override
+  String historyComparisonDone(String earlier, String newer, String status) {
+    return 'Comparison of $earlier with $newer: $status';
+  }
+
+  @override
+  String get comparisonFailedShort => 'This comparison couldn\'t be completed.';
+
+  @override
+  String get kindPdf => 'PDF';
+
+  @override
+  String get kindText => 'Pasted text';
 }

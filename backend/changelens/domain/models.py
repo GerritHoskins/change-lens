@@ -205,6 +205,8 @@ class ReviewEvent(Base):
                         "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_before"),
         CheckConstraint("evidence_mode_after IS NULL OR evidence_mode_after IN "
                         "('pdf_highlight', 'text_fallback', 'text_only')", name="ck_review_evidence_after"),
+        CheckConstraint("dismissal_reason IS NULL OR (action = 'dismissed' AND dismissal_reason IN "
+                        "('reworded', 'wrong_passage', 'irrelevant', 'other'))", name="ck_review_dismissal_reason"),
     )
     id: Mapped[uuid.UUID] = _id()
     tenant_id: Mapped[uuid.UUID] = _tenant()
@@ -216,6 +218,9 @@ class ReviewEvent(Base):
     evidence_mode_before: Mapped[Optional[str]] = mapped_column(String(20))
     evidence_mode_after: Mapped[Optional[str]] = mapped_column(String(20))
     page_opened: Mapped[Optional[bool]] = mapped_column(Boolean)
+    # WP-C (owner, 2026-11-16): why a finding was dismissed. Required on new dismissals, no default;
+    # null on other actions and on dismissals recorded before the field existed.
+    dismissal_reason: Mapped[Optional[str]] = mapped_column(String(16))
     created_at: Mapped[datetime] = _now()
 
 
@@ -286,6 +291,24 @@ class AccountOnboarding(Base):
     onboarding_step: Mapped[Optional[int]] = mapped_column(SmallInteger)  # last step reached, 1-based
     onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # set once
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ConsentEvent(Base):
+    """One consent answer of one account (D-18 tier B; contracts draft C1): purpose, choice, policy version and
+    time only (AC-23). Append-only: never updated; the newest row is the answer. Deleted with the account."""
+    __tablename__ = "consent_events"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('usage_events')", name="ck_consent_events_purpose"),
+        Index("ix_consent_events_account_purpose", "account_id", "purpose", "decided_at"),
+    )
+    id: Mapped[uuid.UUID] = _id()
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_consent_events_user"),
+                                                  nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class AccountDeletion(Base):

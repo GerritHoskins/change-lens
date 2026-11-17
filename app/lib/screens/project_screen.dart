@@ -1,4 +1,5 @@
-// A project's versions and comparisons, plus import by paste or PDF picker (AC-24).
+// A project's history (P6 timeline: versions linked by the comparisons the user ran), plus import
+// by paste or PDF picker (AC-24).
 // Versions are immutable (AC-15): there is no edit or delete action, only "import a new version".
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -10,11 +11,15 @@ import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
-import 'comparison_screen.dart';
 import 'compare_screen.dart';
+import 'comparison_screen.dart' show comparisonStatusLabel, rejectionReasonLabel;
+import 'project_timeline.dart';
 
 class ProjectScreen extends StatefulWidget {
   const ProjectScreen({super.key, required this.project});
+
+  /// Names this screen's route, so the review summary can return here ("Back to the project").
+  static const routeName = 'project';
 
   final Project project;
 
@@ -54,6 +59,16 @@ class _ProjectScreenState extends State<ProjectScreen> {
       final v = await api.versions(widget.project.id);
       final c = await api.comparisons(widget.project.id);
       if (!mounted || _deleteStarted) return;
+      // A comparison that finishes while this screen is open is announced once (cards update silently).
+      final l = AppLocalizations.of(context);
+      final before = {for (final old in comparisons) old.id: old.finished};
+      String label(String id) => v.where((x) => x.id == id).firstOrNull?.label ?? l.sourceUnavailable;
+      for (final now in c) {
+        if (now.finished && before[now.id] == false) {
+          calmAnnounce(context, l.historyComparisonDone(label(now.earlierId), label(now.laterId),
+            comparisonStatusLabel(l, now.status)));
+        }
+      }
       setState(() {
         versions = v;
         comparisons = c;
@@ -64,7 +79,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       if (!mounted || _deleteStarted) return;
       setState(() {
         loading = false;
-        error = '$e';
+        error = userErrorMessage(AppLocalizations.of(context), e);
       });
     } finally { _fetching = false; }
   }
@@ -151,24 +166,26 @@ class _ProjectScreenState extends State<ProjectScreen> {
       }
       await _load();
     } on Exception catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(l.importFailed('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(l.importFailed(
+        // A limit the server enforces names the limit and the way out, like any rejected input.
+        e is ApiException && e.code == 'limit_exceeded' && e.detail != null
+            ? rejectionReasonLabel(l, 'limit_exceeded_${e.detail}') : userErrorMessage(l, e)))));
     } finally {
       if (mounted) setState(() => importing = false);
     }
   }
 
-  String _status(AppLocalizations l, Version v) => switch (v.status) {
-        'parsed' => l.statusParsed,
-        'rejected' => l.statusRejected(v.rejectReason ?? ''),
-        _ => l.statusUploaded,
-      };
+  Future<void> _compare({String? earlierId, String? laterId}) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+        CompareScreen(project: widget.project, versions: versions, earlierId: earlierId, laterId: laterId)));
+    if (mounted) await _load();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
-    final byId = {for (final v in versions) v.id: v.label};
     return PopScope(
       canPop: !_deleting,
       child: Scaffold(
@@ -182,6 +199,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
             style: text.labelLarge?.copyWith(color: Theme.of(context).colorScheme.error)))],
         )),
       ]),
+      // The main action sits in the thumb zone, as on Finding and the review summary.
+      bottomNavigationBar: _deleteStarted ? null : SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: FilledButton.icon(key: const Key('compare'), onPressed: _compare,
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))),
       body: _deleteStarted ? Center(child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -201,17 +223,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
           if (loading) const LinearProgressIndicator(),
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
             child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
-          FilledButton.icon(
-            key: const Key('compare'),
-            onPressed: () async {
-              await Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CompareScreen(project: widget.project, versions: versions)));
-              if (mounted) await _load();
-            },
-            icon: const Icon(CalmIcons.compare),
-            label: Text(l.compareBriefs),
-          ),
-          const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton.icon(
                 key: const Key('paste'),
@@ -227,54 +238,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
           if (importing) Padding(padding: const EdgeInsets.only(top: 12),
             child: Semantics(liveRegion: true, child: Text(l.uploading))),
           const SizedBox(height: 32),
-          Semantics(header: true, child: Text(l.comparisonsTitle, style: text.titleLarge)),
-          const SizedBox(height: 12),
-          if (!loading && comparisons.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(l.comparisonsEmpty, style: text.bodyMedium?.copyWith(color: colors.muted))),
-          for (final c in comparisons)
-            Material(color: Colors.transparent, child: InkWell(
-              borderRadius: BorderRadius.circular(CalmRadius.md),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ComparisonScreen(comparisonId: c.id, versions: versions))),
-              child: Container(padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  SourcePairSummary(framed: false,
-                    earlier: byId[c.earlierId] ?? l.sourceUnavailable,
-                    newer: byId[c.laterId] ?? l.sourceUnavailable,
-                    scope: c.scope),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: Text(comparisonStatusLabel(l, c.status), style: text.labelLarge?.copyWith(
-                      color: c.status == 'failed' ? Theme.of(context).colorScheme.error
-                        : c.status == 'partial' ? colors.warning : colors.muted))),
-                    const SizedBox(width: 12),
-                    Icon(CalmIcons.chevronRight, color: colors.muted),
-                  ]),
-                ])),
-            )),
-          const SizedBox(height: 28),
-          Semantics(header: true, child: Text(l.versionsTitle, style: text.titleLarge)),
-          const SizedBox(height: 8),
-          if (!loading && versions.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(l.versionsEmpty, style: text.bodyMedium?.copyWith(color: colors.muted))),
-          for (final v in versions)
-            Container(
-              key: Key('version-${v.id}'),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Padding(padding: const EdgeInsets.only(top: 2),
-                  child: Icon(v.kind == 'pdf' ? CalmIcons.document : CalmIcons.text, color: colors.muted)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(v.label, style: text.titleMedium),
-                  const SizedBox(height: 5),
-                  Text([_status(l, v), if (v.warnings > 0) l.warningsCount(v.warnings)].join(' · '),
-                    style: text.bodyMedium?.copyWith(color: v.status == 'rejected' ? Theme.of(context).colorScheme.error : colors.muted)),
-                ])),
-              ]),
-            ),
+          ProjectTimeline(versions: versions, comparisons: comparisons, loading: loading,
+            onCompareFrom: (version) => _compare(earlierId: version.id),
+            onCompareAgain: (c) => _compare(earlierId: c.earlierId, laterId: c.laterId)),
           const SizedBox(height: 16),
           Text(l.originalsNote, style: text.bodySmall?.copyWith(color: colors.muted)),
         ]),

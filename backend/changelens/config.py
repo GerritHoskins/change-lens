@@ -20,6 +20,11 @@ DEFAULT_DATABASE_URL = "postgresql+psycopg://changelens_app:changelens-app-dev-o
 DEFAULT_MIGRATION_DATABASE_URL = ("postgresql+psycopg://changelens_owner:changelens-owner-dev-only"
                                   "@127.0.0.1:55432/changelens")
 DEFAULT_ADMIN_DATABASE_URL = "postgresql+psycopg://changelens:changelens@127.0.0.1:55432/changelens"
+# What a deployment (logto mode) must set itself. The local defaults for these point at the compose
+# database, MinIO and the fake model; a deployed process that fell back to one would look healthy and
+# serve nothing real, so a missing one stops it at start.
+DEPLOYED_REQUIRED = ("CHANGELENS_DATABASE_URL", "CHANGELENS_S3_ENDPOINT", "CHANGELENS_S3_ACCESS_KEY",
+                     "CHANGELENS_S3_SECRET_KEY", "CHANGELENS_S3_BUCKET", "CHANGELENS_LLM")
 
 
 def database_url_from_env() -> str:
@@ -97,6 +102,9 @@ class Settings:
     signups_per_ip_per_day: int = 5
     trusted_proxies: tuple = ()  # proxy addresses whose X-Forwarded-For is believed
     rate_limit_key: str = field(default="changelens-dev-only-rate-limit-key-0000", repr=False)  # HMAC key
+    # The privacy-policy version a usage-events consent answer must name (D-18 tier B). Changing it makes
+    # every earlier answer read as unanswered, so the app asks again.
+    consent_policy_version: str = "2026-11-13"
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
 
@@ -121,6 +129,9 @@ class Settings:
         for limit in (self.rate_limit_account_per_minute, self.rate_limit_ip_per_minute, self.signups_per_ip_per_day):
             if not isinstance(limit, int) or limit < 1:
                 raise ValueError("rate limits must be positive integers")
+        version = self.consent_policy_version
+        if not isinstance(version, str) or not 1 <= len(version) <= 32 or version != version.strip():
+            raise ValueError("the consent policy version must be 1 to 32 characters")
         if len(self.rate_limit_key) < 32:
             raise ValueError("the rate-limit key needs at least 32 characters")
         object.__setattr__(self, "trusted_proxies", tuple(_ip(p) for p in self.trusted_proxies))
@@ -171,6 +182,12 @@ class Settings:
             # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
             if not auth["logto_management_endpoint"]:
                 raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
+            # Names only in the message: the values are credentials.
+            missing = [name for name in DEPLOYED_REQUIRED if not env.get(name, "").strip()]
+            if missing:
+                raise RuntimeError("logto mode needs " + ", ".join(missing))
+            if env["CHANGELENS_LLM"].strip() == "fake":
+                raise RuntimeError("CHANGELENS_LLM=fake is refused in logto mode")
         else:
             raise RuntimeError("CHANGELENS_AUTH_MODE must be dev or logto")
         try:
@@ -192,6 +209,7 @@ class Settings:
                 rate_limit_account_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_ACCOUNT_PER_MINUTE", "60")),
                 rate_limit_ip_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_IP_PER_MINUTE", "20")),
                 signups_per_ip_per_day=int(env.get("CHANGELENS_SIGNUPS_PER_IP_PER_DAY", "5")),
+                consent_policy_version=env.get("CHANGELENS_CONSENT_POLICY_VERSION", "2026-11-13"),
                 trusted_proxies=tuple(p.strip() for p in env.get("CHANGELENS_TRUSTED_PROXIES", "").split(",") if p.strip()),
                 **auth,
             )

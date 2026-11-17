@@ -34,6 +34,24 @@ String rejectionReasonLabel(AppLocalizations l, String? reason) => switch (reaso
   _ => l.parseFailed, // includes parse_failed/parse_crashed; never expose unknown error text
 };
 
+/// Why a comparison stopped, from its allowlisted warnings: a rejected input with its reason, the cost
+/// limit, or, for a failure without either, the generic next step. Shared with the History cards.
+List<String> comparisonFailureMessages(AppLocalizations l, Comparison c, List<Version> versions) {
+  final messages = <String>[];
+  for (final warning in c.warnings) {
+    if (warning.code == 'cost_ceiling') {
+      messages.add(l.comparisonCostStopped);
+    } else if (warning.code == 'version_rejected' &&
+        [c.earlierId, c.laterId].contains(warning.versionId)) {
+      final version = versions.where((version) => version.id == warning.versionId).firstOrNull;
+      final label = version?.label ?? (warning.versionId == c.earlierId ? l.sideEarlier : l.sideNewer);
+      messages.add(l.comparisonInputRejected(label, rejectionReasonLabel(l, warning.reason ?? version?.rejectReason)));
+    }
+  }
+  if (c.status == 'failed' && messages.isEmpty) messages.add(l.comparisonFailedDetails);
+  return messages.toSet().toList();
+}
+
 class ComparisonScreen extends StatefulWidget {
   const ComparisonScreen({super.key, required this.comparisonId, this.versions = const []});
 
@@ -92,21 +110,6 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
   String _label(String id) => versions.where((v) => v.id == id).map((v) => v.label).firstOrNull ?? '…';
 
-  List<String> _failureMessages(AppLocalizations l, Comparison c) {
-    final messages = <String>[];
-    for (final warning in c.warnings) {
-      if (warning.code == 'cost_ceiling') {
-        messages.add(l.comparisonCostStopped);
-      } else if (warning.code == 'version_rejected' &&
-          [c.earlierId, c.laterId].contains(warning.versionId)) {
-        final version = versions.where((version) => version.id == warning.versionId).firstOrNull;
-        final label = version?.label ?? (warning.versionId == c.earlierId ? l.sideEarlier : l.sideNewer);
-        messages.add(l.comparisonInputRejected(label, rejectionReasonLabel(l, warning.reason ?? version?.rejectReason)));
-      }
-    }
-    if (c.status == 'failed' && messages.isEmpty) messages.add(l.comparisonFailedDetails);
-    return messages.toSet().toList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +130,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           if (c != null) SourcePairSummary(earlier: _label(c.earlierId),
             newer: _label(c.laterId), scope: c.scope),
           if (c != null)
-            for (final message in _failureMessages(l, c))
+            for (final message in comparisonFailureMessages(l, c, versions))
               Padding(padding: const EdgeInsets.only(top: 12),
                 child: Semantics(liveRegion: true, child: CalmWarning(text: message))),
           if (error != null) ...[

@@ -123,8 +123,10 @@ void main() {
       final state = h.session.state as SignedIn;
       expect(state.email, 'person@example.test');
       expect(h.browser.urls.single.queryParameters.containsKey('one_time_token'), isFalse);
-      expect(h.store.values.keys, [AuthSession.refreshKey]);
-      expect(h.store.values.values.single, startsWith('rt-'));
+      // The refresh token, and the method's name so re-sign-in can offer it first: no email, no content.
+      expect(h.store.values.keys, unorderedEquals([AuthSession.refreshKey, AuthSession.lastMethodKey]));
+      expect(h.store.values[AuthSession.lastMethodKey], 'email');
+      expect(h.store.values[AuthSession.refreshKey], startsWith('rt-'));
     });
 
     test('Google: the code goes to POST /session without a bearer, the one-time token to Logto', () async {
@@ -250,13 +252,15 @@ void main() {
       expect(h.session.accessTokenLifetime, 900);
     });
 
-    test('a 401 from the API whose session is gone returns to sign-in', () async {
+    test('a 401 from the API whose session is gone asks to sign in again over the current screen', () async {
       final h = await signedIn();
       h.server.projectsStatus = 401;
       h.server.sessionStatus = 401;
       await expectLater(h.session.api.projects(), throwsA(isA<ApiException>()));
       await pumpEventQueue();
-      expect((h.session.state as SignedOut).reason, SignedOutReason.expired);
+      // WP-A: a sheet over the current route, not a reset; the old session is forgotten.
+      expect(h.session.state, isA<ReauthRequired>());
+      expect(h.store.values[AuthSession.refreshKey], '');
     });
 
     test('onboarding steps and completion are saved to the account (O-23)', () async {

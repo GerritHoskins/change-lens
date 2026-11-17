@@ -46,6 +46,11 @@ definitions:
           - 'app/'
           - 'codemagic.yaml'
           - 'scripts/release/'
+  # The Logto native app's ID (I-18): a public identifier that appears in every sign-in URL, not a
+  # secret. A build without it is a development build with no sign-in and the developer settings in the
+  # menu, so both store builds require it (scripts/release/check_config.py).
+  logto_app: &logto_app
+    CHANGELENS_LOGTO_APP_ID: tda20w39karrwdio6piee
   scripts:
     - &pub_get
       name: Get packages
@@ -130,6 +135,7 @@ workflows:
     <<: *real_app
     environment:
       <<: *flutter
+      vars: *logto_app
       android_signing:
         - changelens_release
     cache: *cache
@@ -141,8 +147,9 @@ workflows:
       - name: Build signed Android artifacts
         script: |
           set -eu
-          flutter build apk --release --build-number=$BUILD_NUMBER
-          flutter build appbundle --release --build-number=$BUILD_NUMBER
+          : "${CHANGELENS_LOGTO_APP_ID:?a store build needs the Logto app ID}"
+          flutter build apk --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID"
+          flutter build appbundle --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID"
     artifacts:
       - $CM_BUILD_DIR/app/build/app/outputs/flutter-apk/*-release.apk
       - $CM_BUILD_DIR/app/build/app/outputs/bundle/release/*.aab
@@ -155,6 +162,7 @@ workflows:
       app_store_connect: ChangeLens App Store Connect
     environment:
       <<: *flutter
+      vars: *logto_app
       ios_signing:
         distribution_type: app_store
         bundle_identifier: dev.changelens.app
@@ -167,15 +175,18 @@ workflows:
       - name: Apply real-app signing profiles
         script: xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Build real-app IPA
-        script: flutter build ipa --release --build-number=$BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+        script: |
+          set -eu
+          : "${CHANGELENS_LOGTO_APP_ID:?a store build needs the Logto app ID}"
+          flutter build ipa --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID" --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
 
   # Owner device checks (M1): an ad hoc IPA signed for devices registered in the Apple Developer
   # portal, installed from Codemagic's install link. Nothing is uploaded to App Store Connect.
-  # Signs in against production (I-18): CHANGELENS_LOGTO_APP_ID is the Logto native app's ID, a public
-  # identifier that appears in every sign-in URL, not a secret. Empty it to build with the developer
-  # settings instead (the API URL is then set on the device, e.g. the PC's Wi-Fi address).
+  # Signs in against production (I-18) with the Logto app ID from `logto_app` above. To build with the
+  # developer settings instead (the API URL is then set on the device, e.g. the PC's Wi-Fi address),
+  # replace `*logto_app` here with a mapping that sets CHANGELENS_LOGTO_APP_ID to an empty string.
   ios-device-check:
     name: App ad hoc IPA for owner device checks
     <<: *real_app
@@ -183,8 +194,7 @@ workflows:
       app_store_connect: ChangeLens App Store Connect
     environment:
       <<: *flutter
-      vars:
-        CHANGELENS_LOGTO_APP_ID: tda20w39karrwdio6piee
+      vars: *logto_app
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: dev.changelens.app

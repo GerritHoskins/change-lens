@@ -15,7 +15,8 @@ from changelens.domain.models import Membership, User
 from changelens.storage import MemoryObjectStore
 from test_guard_logto import AUDIENCE, ISSUER, JWKS_URL, KEY_1, KEY_3, GuardDb, Jwks, logto_settings, sign
 
-NEW = {"status": "active", "onboarding": {"completed": False, "step": None}}
+UNANSWERED = {"usage_events": None}
+NEW = {"status": "active", "onboarding": {"completed": False, "step": None}, "consent": UNANSWERED}
 
 
 @pytest.fixture()
@@ -53,9 +54,11 @@ def test_later_calls_return_the_same_account_and_its_onboarding_state(env):
     assert session(client, token).json() == NEW
     auth = {"Authorization": "Bearer " + token}
     assert client.put("/me/onboarding", json={"step": 3}, headers=auth).status_code == 200
-    assert session(client, token).json() == {"status": "active", "onboarding": {"completed": False, "step": 3}}
+    assert session(client, token).json() == {"status": "active", "onboarding": {"completed": False, "step": 3},
+                                             "consent": UNANSWERED}
     assert client.put("/me/onboarding", json={"completed": True}, headers=auth).status_code == 200
-    assert session(client, token).json() == {"status": "active", "onboarding": {"completed": True, "step": None}}
+    assert session(client, token).json() == {"status": "active", "onboarding": {"completed": True, "step": None},
+                                             "consent": UNANSWERED}
     assert len(rows(db, User)) == 1 and len(rows(db, Membership)) == 1
 
 
@@ -67,6 +70,17 @@ def test_two_subjects_get_two_tenants_and_see_only_their_own_state(env):
     client.put("/me/onboarding", json={"step": 5}, headers={"Authorization": "Bearer " + a})
     assert session(client, b).json() == NEW
     assert session(client, a).json()["onboarding"] == {"completed": False, "step": 5}
+
+
+def test_the_session_carries_the_usage_events_answer_for_the_current_policy(env):
+    client, _ = env
+    token = sign(sub="consent-subject")
+    auth = {"Authorization": "Bearer " + token}
+    assert session(client, token).json()["consent"] == UNANSWERED
+    for granted in (True, False):
+        body = {"usage_events": {"granted": granted, "policy_version": "2026-11-13"}}
+        assert client.put("/me/consent", json=body, headers=auth).status_code == 200
+        assert session(client, token).json()["consent"] == {"usage_events": granted}
 
 
 def _assert_unauthenticated(r):

@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:changelens/api.dart';
+import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/evidence_screen.dart';
 import 'package:changelens/screens/finding_screen.dart';
@@ -65,7 +66,8 @@ class ReportBackend {
         approvals.add({...body, 'id': 'a1', 'finding_id': f['id']});
         return http.Response(jsonEncode(approvals.last), 201);
       }
-      final review = {'action': body['action'], 'note': body['note'], 'at': '2026-10-31T10:00:00Z'};
+      final review = {'action': body['action'], 'note': body['note'], 'dismissal_reason': body['dismissal_reason'],
+        'at': '2026-10-31T10:00:00Z'};
       reviews.add(review);
       var current = {...f, 'review': review};
       if (body['correction'] != null) {
@@ -110,9 +112,12 @@ Future<Report> loadReport(ReportBackend b) async =>
 void main() {
   testWidgets('AC-10/13: material changes first, needs review apart, a selected-summary line', (tester) async {
     await pump(tester, ReportScreen(comparisonId: 'c1', versions: versions));
-    expect(find.textContaining('Selected summary — 5 other differences, including presentation-only edits'), findsOneWidget);
+    expect(find.text('5 more differences, including moved or reformatted text'), findsOneWidget);
     expect(find.text('Changes'), findsOneWidget);
-    expect(find.text('Needs your review'), findsOneWidget);
+    expect(find.textContaining('Needs your review · '), findsOneWidget);
+    // What needs the user's judgement comes before the certain changes.
+    expect(tester.getTopLeft(find.textContaining('Needs your review · ')).dy,
+      lessThan(tester.getTopLeft(find.text('Changes')).dy));
     expect(find.textContaining('Budget: EUR 15,000'), findsOneWidget);
     expect(find.textContaining('Hosting is provided'), findsOneWidget);
     expect(find.textContaining('Explanation of f3'), findsNothing); // "other" is behind the summary link
@@ -123,7 +128,7 @@ void main() {
 
   testWidgets('AC-13/18: all differences lists other findings, unexplained and moved text', (tester) async {
     await pump(tester, ReportScreen(comparisonId: 'c1', versions: versions));
-    await tester.tap(find.textContaining('Selected summary'));
+    await tester.tap(find.textContaining('more differences'));
     await tester.pumpAndSettle();
     expect(find.text('Other findings'), findsOneWidget);
     expect(find.textContaining('Explanation of f3'), findsOneWidget);
@@ -181,7 +186,9 @@ void main() {
     expect(jsonDecode(post.body), {'action': 'corrected', 'note': null, 'correction': {'category': 'other_material'},
       'evidence_mode': {'before': 'text_only', 'after': 'text_only'}, 'page_opened': false});
     expect(b.requests.last.url.path, '/findings/f1r2'); // reloaded the new revision
-    expect(find.text('Changed · Other'), findsOneWidget);
+    // The new revision's topic is the title; the label doesn't repeat it.
+    expect(find.widgetWithText(CalmPageHeader, 'Other'), findsOneWidget);
+    expect(find.text('Changed'), findsOneWidget);
   });
 
   testWidgets('AC-9: text evidence is shown in the parsed text with the exact span marked', (tester) async {

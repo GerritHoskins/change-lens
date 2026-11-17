@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
+import '../api.dart';
 import '../l10n/app_localizations.dart';
 import 'calm_controls.dart';
 import 'calm_icons.dart';
 import 'calm_theme.dart';
+
+/// Announces a state change to TalkBack and VoiceOver without showing anything (a cancelled sign-in,
+/// a linked method).
+void calmAnnounce(BuildContext context, String message) =>
+    SemanticsService.sendAnnouncement(View.of(context), message, Directionality.of(context));
 
 /// Opens a definition sheet in context: a 48px info disc labelled "About {term}".
 class CalmInfoButton extends StatelessWidget {
@@ -49,12 +56,51 @@ class CalmPageHeader extends StatelessWidget {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       // The headline names the route: screens show it once here instead of again in the app bar.
       Semantics(header: true, namesRoute: true, liveRegion: liveRegion,
-        child: Text(title, style: Theme.of(context).textTheme.headlineLarge)),
+        child: CalmFitText(title, style: Theme.of(context).textTheme.headlineLarge!)),
       if (subtitle?.isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 10),
         child: Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)),
     ]),
   );
 }
+
+/// A heading that never breaks inside a word. With large text, when its longest word is wider than
+/// the line, the text scale shrinks just enough for that word to fit, but never below 1×.
+class CalmFitText extends StatelessWidget {
+  const CalmFitText(this.text, {super.key, required this.style});
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+    final scaler = MediaQuery.textScalerOf(context);
+    var fitted = scaler;
+    if (box.maxWidth.isFinite && scaler.scale(10) > 10) {
+      var widest = 0.0;
+      for (final word in text.split(RegExp(r'\s+'))) {
+        final painter = TextPainter(text: TextSpan(text: word, style: style), textScaler: scaler,
+          textDirection: Directionality.of(context), maxLines: 1)..layout();
+        if (painter.width > widest) widest = painter.width;
+        painter.dispose();
+      }
+      if (widest > box.maxWidth) {
+        // Tracking doesn't scale with the text, so aim slightly under the line width.
+        final factor = scaler.scale(10) / 10 * box.maxWidth * 0.97 / widest;
+        fitted = TextScaler.linear(factor < 1 ? 1 : factor);
+      }
+    }
+    return Text(text, style: style, textScaler: fitted);
+  });
+}
+
+/// What went wrong, in the user's words, never the exception's text: no connection, sign-in ended,
+/// gone, not accepted, or a server problem. Callers offer Retry where it makes sense.
+String userErrorMessage(AppLocalizations l, Object error) => switch (error) {
+  ApiException(status: 401 || 403) => l.errorSignedOut,
+  ApiException(status: 404 || 410) => l.errorNotFound,
+  ApiException(:final status) when status >= 400 && status < 500 => l.errorRejected,
+  ApiException() => l.errorServer,
+  _ => l.errorConnection, // transport failures: no response reached the app
+};
 
 class CalmWarning extends StatelessWidget {
   const CalmWarning({super.key, required this.text, this.child});
