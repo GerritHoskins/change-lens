@@ -199,6 +199,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
             style: text.labelLarge?.copyWith(color: Theme.of(context).colorScheme.error)))],
         )),
       ]),
+      // The main action sits in the thumb zone, as on Finding and the review summary.
+      bottomNavigationBar: _deleteStarted ? null : SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: FilledButton.icon(key: const Key('compare'), onPressed: _compare,
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))),
       body: _deleteStarted ? Center(child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -218,13 +223,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
           if (loading) const LinearProgressIndicator(),
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
             child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
-          FilledButton.icon(
-            key: const Key('compare'),
-            onPressed: _compare,
-            icon: const Icon(CalmIcons.compare),
-            label: Text(l.compareBriefs),
-          ),
-          const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton.icon(
                 key: const Key('paste'),

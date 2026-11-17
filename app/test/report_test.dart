@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:changelens/api.dart';
+import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/evidence_screen.dart';
 import 'package:changelens/screens/finding_screen.dart';
@@ -185,7 +186,9 @@ void main() {
     expect(jsonDecode(post.body), {'action': 'corrected', 'note': null, 'correction': {'category': 'other_material'},
       'evidence_mode': {'before': 'text_only', 'after': 'text_only'}, 'page_opened': false});
     expect(b.requests.last.url.path, '/findings/f1r2'); // reloaded the new revision
-    expect(find.text('Changed · Other'), findsOneWidget);
+    // The new revision's topic is the title; the label doesn't repeat it.
+    expect(find.widgetWithText(CalmPageHeader, 'Other'), findsOneWidget);
+    expect(find.text('Changed'), findsOneWidget);
   });
 
   testWidgets('AC-9: text evidence is shown in the parsed text with the exact span marked', (tester) async {

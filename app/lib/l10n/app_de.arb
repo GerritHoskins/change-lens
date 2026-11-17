@@ -449,6 +449,7 @@
   "projectComparisons": "{count, plural, =1{1 Vergleich} other{{count} Vergleiche}}: {status}",
   "historyCompareAgain": "Erneut vergleichen",
   "historyComparisonDone": "Vergleich von {earlier} mit {newer}: {status}",
+  "comparisonFailedShort": "Dieser Vergleich konnte nicht abgeschlossen werden.",
   "kindPdf": "PDF",
   "kindText": "Eingefügter Text"
 }

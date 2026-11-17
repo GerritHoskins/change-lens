@@ -138,6 +138,9 @@ void main() {
         await tester.pumpAndSettle();
       }
       await show([v('a'), v('b')]);
+      // The button is the next step, so the text only says what happened.
+      expect(find.text("This comparison couldn't be completed."), findsOneWidget);
+      expect(find.textContaining('Start a new comparison'), findsNothing);
       await tester.tap(find.byKey(const Key('compare-again-1')));
       expect(again, ['1']);
       await show([v('a'), v('b', status: 'rejected')]);
