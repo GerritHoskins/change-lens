@@ -1,6 +1,7 @@
 # CI entry point, run locally and by .github/workflows/plan-checks.yml. The "build" stage checks the
-# tracked documents and files; the test stage runs the plan checks, evaluation tests and backend unit
-# tests. The Flutter app and the backend integration tests are not run here.
+# tracked documents and files; the test stage runs the plan checks, the evaluation, release and
+# playbook tests, and the backend unit tests. The Flutter app (Codemagic) and the backend integration
+# tests (backend-integration.yml) are not run here; backend/tests/dataset needs the private dataset.
 # Exits 1 if any stage fails. See docs/SOP.md.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -10,8 +11,10 @@ $errors = @()
 $files = git ls-files -- docs scripts '*.md' | Where-Object { $_ -notmatch '\.(png|jpe?g|gif|webp|ico|pdf)$' } | Sort-Object -Unique
 $strict = New-Object System.Text.UTF8Encoding($false, $true)
 
-# Build 1: size limit (project rule: files under 500 lines)
-foreach ($f in $files) {
+# Build 1: size limit (project rule: files under 500 lines). Hand-written backend and app code counts
+# too; the localisation classes Flutter generates from the ARB files are not hand-written.
+$codeFiles = git ls-files -- 'backend/*.py' 'app/lib/*.dart' | Where-Object { $_ -notmatch '^app/lib/l10n/app_localizations(_[a-z]+)?\.dart$' }
+foreach ($f in @($files) + @($codeFiles)) {
     $n = (Get-Content $f | Measure-Object -Line).Lines
     if ($n -gt 500) { $errors += "BUILD $f has $n lines (limit 500)" }
 }
@@ -42,7 +45,7 @@ foreach ($f in (git ls-files)) {
     elseif ((Get-Content $f -Raw -Encoding UTF8) -match $leakPattern) { $errors += "BUILD possible secret in $f" }
 }
 if ($errors) { $errors | ForEach-Object { Write-Host "FAIL $_" } }
-else { Write-Host "PASS build: $($files.Count) files within size, UTF-8, link and secret checks" }
+else { Write-Host "PASS build: $($files.Count) files within size, UTF-8, link and secret checks; $(@($codeFiles).Count) code files within size" }
 
 # Test suite
 foreach ($s in 'check-trace', 'check-verification', 'cost-model') {
@@ -71,13 +74,22 @@ else {
     $global:LASTEXITCODE = -1
     $deps = & $python -c "import reportlab, pypdfium2, PIL" 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { $deps | Write-Host; $errors += 'TEST render: required dependencies not importable' }
-    foreach ($suite in 'generate', 'render', 'render_hidden', 'label_kit', 'label_rounds', 'split') {
+    # Each suite: its label, the folder unittest discovers in, and the file pattern. The release and
+    # playbook suites use the standard library only; they run here so no test file is left out of CI.
+    $suites = @()
+    foreach ($s in 'generate', 'render', 'render_hidden', 'label_kit', 'label_rounds', 'split', 'fresh_cohort') {
+        $suites += , @("eval $s", 'scripts/eval', "test_$s.py")
+    }
+    $suites += , @('release', 'scripts/release', 'test_*.py')
+    $suites += , @('playbooks', '.paseo/plugins/playbooks/tests', 'test_*.py')
+    foreach ($suite in $suites) {
+        $label, $dir, $pattern = $suite
         $global:LASTEXITCODE = -1
-        $out = & $python -m unittest discover -s (Join-Path $PSScriptRoot 'eval') -p "test_$suite.py" 2>&1 | ForEach-Object { "$_" }
-        $code = $LASTEXITCODE
-        Write-Host "eval $suite unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
-        if ($code -ne 0) { $out | Write-Host; $errors += "TEST eval $suite unittest exit $code" }
-        elseif (-not ($out -match '^Ran [1-9]')) { $errors += "TEST eval $suite`: no tests ran" }
+        $out = & $python -m unittest discover -s (Join-Path $root $dir) -p $pattern 2>&1 | ForEach-Object { "$_" }
+        $exit = $LASTEXITCODE
+        Write-Host "$label unittest: $(($out | Select-String '^Ran ') -join '') $(($out | Select-Object -Last 1))"
+        if ($exit -ne 0) { $out | Write-Host; $errors += "TEST $label unittest exit $exit" }
+        elseif (-not ($out -match '^Ran [1-9]')) { $errors += "TEST $label`: no tests ran" }
     }
     $ErrorActionPreference = 'Stop'
 }

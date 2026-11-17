@@ -27,9 +27,9 @@ Everything at once (the same entry point `.github/workflows/plan-checks.yml` run
 powershell -NoProfile -File scripts/ci.ps1
 ```
 
-It runs the build checks (tracked files under 500 lines, strict UTF-8 without mojibake, relative Markdown links resolve, no secrets or `.env` files), then the three checks below and separate text, visual, hidden-text and labelling-kit evaluation test stages (see 07 §3 and §5), and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
+It runs the build checks (tracked documents and scripts, and hand-written `backend/` Python and `app/lib/` Dart, under 500 lines; strict UTF-8 without mojibake; relative Markdown links resolve; no secrets or `.env` files), then the three checks below and separate text, visual, hidden-text and labelling-kit evaluation test stages (see 07 §3 and §5), the release-configuration and playbook tests, and exits 1 if anything fails. New files must be `git add`ed first, because it checks tracked files.
 
-CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py`, `test_label_kit.py`, `test_label_rounds.py` and `test_split.py` as separate stages; an install/import failure, a failing test or zero tests in any stage fails CI. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
+CI creates `.venv/` if necessary and reinstalls every wheel in `scripts/eval/requirements-render.txt` on each run (`pip --force-reinstall --no-deps --require-hashes`, wheels only), because pip skips hash checks for packages already installed. It never changes the global Python. It checks imports and runs `test_generate.py`, `test_render.py`, `test_render_hidden.py`, `test_label_kit.py`, `test_label_rounds.py`, `test_split.py` and `test_fresh_cohort.py` as separate stages, then `scripts/release/test_*.py` and `.paseo/plugins/playbooks/tests/test_*.py` (standard library only) with the same interpreter; an install/import failure, a failing test or zero tests in any stage fails CI. `backend/tests/dataset` is not part of CI: it needs the private constructed dataset and skips without it. `test_label_kit.py` runs the labelling page's offset code under Node.js and fails, rather than skips, when Node is missing (the Windows runner has it). The GitHub workflow pins `actions/setup-python` by SHA and Python 3.10.11 (x64), and installs the same lockfile. Locally, use the project environment for the combined suite:
 
 ```bash
 .venv/Scripts/python -m unittest discover -s scripts/eval
@@ -40,6 +40,8 @@ The backend stage (I-22) creates `backend/.venv/` if necessary, reinstalls `back
 ```powershell
 cd backend; docker compose up -d --wait; .venv\Scripts\python -m pytest tests/integration -q -rs
 ```
+
+A third workflow, `.github/workflows/dependency-audit.yml`, audits every hash-pinned requirements file with `pip-audit` on push, on pull request and every Monday. A known vulnerability in `backend/requirements.txt` fails it; the test, evaluation and audit-tool pins are reported without failing until the Python version moves. Its own tool is pinned in `scripts/ci/requirements-audit.txt`. `.github/dependabot.yml` proposes updates for the SHA-pinned actions and the digest-pinned images.
 
 Run `.venv/Scripts/python scripts/eval/probe_label_rounds.py` to repeat the option A mutation probes. It first requires the full synthetic suite to pass, then tests 21 deliberate regressions in disposable copies; every probe must fail the same complete suite. It changes no worktree source or private data.
 

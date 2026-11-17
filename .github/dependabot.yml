@@ -1,0 +1,42 @@
+# Update proposals for what the repository pins by hand: GitHub Actions (by commit SHA) and container
+# images (by tag and digest). Python requirements are hash-pinned per platform and stay manual; the
+# dependency-audit workflow reports when one of them has a known vulnerability.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directories:
+      - /deploy/ionos
+      - /deploy/ionos/backup
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    ignore:
+      # The interpreter version moves with the hashed requirements and CI, never on its own.
+      - dependency-name: python
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      # A new Postgres major needs a dump and restore, and the backup image must match the server.
+      - dependency-name: postgres
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /deploy/ionos
+      - /backend
+      - /scripts/d8-logto
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    ignore:
+      # Logto upgrades are done by hand: the database alteration runs first (deploy/ionos/README.md, F).
+      - dependency-name: svhd/logto
+      - dependency-name: postgres
+        update-types: ['version-update:semver-major']
