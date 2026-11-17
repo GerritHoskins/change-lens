@@ -272,8 +272,13 @@ def test_unknown_model_accepts_explicit_valid_prices():
     assert config.prices() == (Decimal("1"), Decimal("2"))
 
 
-def test_unexpected_content_parser_failure_still_settles_known_usage():
-    llm, seen = adapter([reply("[" * 2000 + "0" + "]" * 2000)])
+def test_unexpected_content_parser_failure_still_settles_known_usage(monkeypatch):
+    # An exception `_call` does not expect, raised after the usage is known. Deeply nested JSON used to
+    # provoke one inside `json.loads`, but Python 3.14 parses 2,000 levels, so the failure is injected.
+    def unexpected(*_):
+        raise RecursionError("unexpected failure while reading the content")
+    monkeypatch.setattr("changelens.llm.ionos.validate", unexpected)
+    llm, seen = adapter([reply(json.dumps(GOOD))])
     meter = CostMeter(Decimal("1"))
     with pytest.raises(RecursionError):
         MeteredLlm(llm, meter).structured("ChangeFindings", "s", ["a"])

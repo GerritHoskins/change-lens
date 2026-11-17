@@ -33,7 +33,7 @@ This starts Postgres 16 on `127.0.0.1:55432` and MinIO on `127.0.0.1:59000`. The
 
 ## 2. Create the venv and install
 
-The venv is created with Python 3.10.11. It is never installed into the global Python.
+The venv is created with Python 3.14.10 (`py -3.14 -m venv .venv`); the pinned wheels install on no other minor version. It is never installed into the global Python.
 
 ```powershell
 cd backend

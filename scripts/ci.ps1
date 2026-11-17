@@ -55,6 +55,10 @@ foreach ($s in 'check-trace', 'check-verification', 'cost-model') {
 
 # Evaluation tests run in a project venv; never install into the global Python.
 $env:PYTHONDONTWRITEBYTECODE = '1'
+# The pinned wheels are for one CPython minor version; a venv made by another one cannot install them.
+$pinned = '3.14'
+function Get-VenvPython($exe) { & $exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null }
+function Get-VenvHint($dir, $exe) { "$dir uses Python $(Get-VenvPython $exe), the pins need $pinned; delete $dir and run: py -$pinned -m venv $dir" }
 $python = Join-Path $root '.venv/Scripts/python.exe'
 if (-not (Test-Path $python)) {
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) { $errors += 'TEST eval: python not found' }
@@ -64,6 +68,7 @@ if (-not (Test-Path $python)) {
     }
 }
 if (-not (Test-Path $python)) { $errors += 'TEST eval: project venv missing' }
+elseif ((Get-VenvPython $python) -ne $pinned) { $errors += "TEST eval: $(Get-VenvHint '.venv' $python)" }
 else {
     $ErrorActionPreference = 'Continue'
     # pip skips hash checks for packages already installed, so reinstall every pinned wheel each run.
@@ -98,6 +103,7 @@ else {
 $bpy = Join-Path $root 'backend/.venv/Scripts/python.exe'
 if (-not (Test-Path $bpy) -and (Get-Command python -ErrorAction SilentlyContinue)) { & python -m venv (Join-Path $root 'backend/.venv') }
 if (-not (Test-Path $bpy)) { $errors += 'TEST backend: venv missing' }
+elseif ((Get-VenvPython $bpy) -ne $pinned) { $errors += "TEST backend: $(Get-VenvHint 'backend/.venv' $bpy)" }
 else {
     $ErrorActionPreference = 'Continue'
     $global:LASTEXITCODE = -1
