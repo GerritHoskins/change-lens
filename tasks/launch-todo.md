@@ -121,16 +121,13 @@ Pass the define in both, and make the offline check fail when a release workflow
 Open the pull request and merge it. The uncommitted app edits of the second session are not part of it.
 
 **Acceptance criteria:**
-- [ ] The pull request is merged with a merge commit, as PRs 10–33 were
-- [ ] `plan-checks` and `backend-integration` are green on `main`
+- [x] The pull request is merged with a merge commit, as PRs 10–33 were
+- [x] `plan-checks` and `backend-integration` are green on `main`
 
 **Verification:**
-- [ ] `gh run list --branch main --limit 2` shows two successes
+- [x] `gh run list --branch main --limit 2` shows two successes
 
-```powershell
-gh pr create --base main --head m1-iphone --fill
-gh pr merge m1-iphone --merge
-```
+**Done 2026-11-17.** Pull request 34 (16 commits, head `12f8319`, with L7, L11 and L12) was merged by the owner as merge commit `7ee8667`; both workflows are green on it.
 
 **Dependencies:** None · **Files likely touched:** none · **Estimated scope:** XS
 
