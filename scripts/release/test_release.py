@@ -84,35 +84,66 @@ class AcceptanceTests(unittest.TestCase):
             self.assertIn("missing passing device evidence: " + key, errors)
 
 
+FILES = ("codemagic.yaml", "app/android/app/build.gradle.kts",
+         "app/android/app/src/main/AndroidManifest.xml",
+         "app/android/app/src/main/res/xml/data_extraction_rules.xml")
+DEFINE = ' --dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID"'
+
+
 class ConfigurationTests(unittest.TestCase):
+    def errors_after(self, relative, before, after):
+        """Run the check on a copy of the release sources with one text replaced."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for source in FILES:
+                target = root / source
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(check_config.ROOT / source, target)
+            target = root / relative
+            original = target.read_text(encoding="utf-8")
+            self.assertIn(before, original)
+            target.write_text(original.replace(before, after), encoding="utf-8")
+            return check_config.check(root)
+
     def test_current_config_has_real_app_release_boundaries(self):
         self.assertEqual(check_config.check(check_config.ROOT), [])
 
     def test_historical_release_regressions_are_rejected(self):
-        files = ("codemagic.yaml", "app/android/app/build.gradle.kts",
-                 "app/android/app/src/main/AndroidManifest.xml",
-                 "app/android/app/src/main/res/xml/data_extraction_rules.xml")
         mutations = (
-            (files[2], '<uses-permission android:name="android.permission.INTERNET" />', ""),
-            (files[1], 'signingConfig = signingConfigs.getByName("release")',
+            (FILES[2], '<uses-permission android:name="android.permission.INTERNET" />', ""),
+            (FILES[1], 'signingConfig = signingConfigs.getByName("release")',
              'signingConfig = signingConfigs.getByName("debug")'),
-            (files[0], "bundle_identifier: dev.changelens.app\n",
+            (FILES[0], "bundle_identifier: dev.changelens.app\n",
              "bundle_identifier: dev.changelens.changelensPoc\n"),
-            (files[0], "name: App signed IPA for TestFlight (prepare only)\n    <<: *real_app",
+            (FILES[0], "name: App signed IPA for TestFlight (prepare only)\n    <<: *real_app",
              "name: App signed IPA for TestFlight (prepare only)\n    <<: *app"),
         )
         for relative, before, after in mutations:
-            with self.subTest(relative=relative, before=before), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                for source in files:
-                    target = root / source
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(check_config.ROOT / source, target)
-                target = root / relative
-                original = target.read_text(encoding="utf-8")
-                self.assertIn(before, original)
-                target.write_text(original.replace(before, after), encoding="utf-8")
-                self.assertTrue(check_config.check(root))
+            with self.subTest(relative=relative, before=before):
+                self.assertTrue(self.errors_after(relative, before, after))
+
+    def test_release_build_without_the_sign_in_app_id_is_rejected(self):
+        """Without the Logto app ID the app is a development build: no sign-in, developer settings shown."""
+        both = ("app-android-release", "ios-testflight")
+        passes, stops, sets = (" must pass the sign-in app ID to every flutter build",
+                               " must stop before building when the sign-in app ID is empty",
+                               " must set the sign-in app ID")
+        cases = (
+            # The define is missing from every release build line.
+            (DEFINE, "", [name + passes for name in both]),
+            # The device-check form accepts an empty value, so it is not enough for a store build.
+            ('"$CHANGELENS_LOGTO_APP_ID"', "${CHANGELENS_LOGTO_APP_ID:-}", [name + passes for name in both]),
+            # One of the two Android artifacts is built without it.
+            ("flutter build appbundle --release --build-number=$BUILD_NUMBER" + DEFINE,
+             "flutter build appbundle --release --build-number=$BUILD_NUMBER", [both[0] + passes]),
+            (': "${CHANGELENS_LOGTO_APP_ID:?', ': "${CHANGELENS_LOGTO_APP_ID:-', [name + stops for name in both]),
+            ("      vars: *logto_app\n", "", [name + sets for name in both]),
+            ("  logto_app: &logto_app\n    CHANGELENS_LOGTO_APP_ID: ", "  logto_app: &logto_app\n    CHANGELENS_LOGTO_APP_ID: '' # ",
+             ["the sign-in app ID must be defined once and must not be empty"]),
+        )
+        for before, after, expected in cases:
+            with self.subTest(before=before):
+                self.assertEqual(self.errors_after("codemagic.yaml", before, after), expected)
 
 
 if __name__ == "__main__":
