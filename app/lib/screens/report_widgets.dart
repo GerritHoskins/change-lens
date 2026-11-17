@@ -51,8 +51,9 @@ class TopicFilters extends StatelessWidget {
       child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(spacing: 8, children: [
         ChoiceChip(label: Text(l.topicAll), selected: selected == null,
           onSelected: (_) => onSelected(null)),
+        // A topic with nothing in it is no filter; it stays only while selected, so it can be cleared.
         for (final topic in findingTopics)
-          ChoiceChip(key: ValueKey('topic-$topic'),
+          if ((counts[topic] ?? 0) > 0 || selected == topic) ChoiceChip(key: ValueKey('topic-$topic'),
             label: Text('${topicLabel(l, topic)} (${counts[topic] ?? 0})'),
             selected: selected == topic, onSelected: (_) => onSelected(topic)),
       ])),
@@ -213,7 +214,7 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 26, bottom: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Semantics(header: true, child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
+          Semantics(header: true, child: CalmFitText(text, style: Theme.of(context).textTheme.titleLarge!)),
           if (hint != null) Padding(padding: const EdgeInsets.only(top: 5),
             child: Text(hint!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: CalmColors.of(context).muted))),

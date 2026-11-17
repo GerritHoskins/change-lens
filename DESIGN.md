@@ -112,8 +112,11 @@ partial processing, personal review and client approval always have explicit tex
 - **Status:** actual reading/queued/running/terminal status; no invented progress
   percentage. The user can return to the project while processing continues.
 - **Report:** source pair/scope, personal-review count, all-differences access,
-  processing warnings and horizontal topic filters. Needs-review findings remain
-  visible across topic selection on the main report. All differences retains its
+  processing warnings and horizontal topic filters (a topic with no findings has no chip unless
+  it is the selected one). "Needs your review · n" comes first, then the changes; needs-review
+  findings remain visible across topic selection on the main report. The summary line reads
+  "n more differences, including moved or reformatted text" and opens All differences, which
+  lists needs-review first too. All differences retains its
   own explicit filtering and the separate unexplained/presentation-only sections.
 - **Finding:** explanation, exact evidence cards, personal review/history, and a
   separate client-approval record. The footer places the fallback warning before
@@ -181,6 +184,14 @@ and Don't allow as two identical outlined ink pills (`CalmEqualPillPair`), nothi
 no Back, because refusing must be as easy as accepting. With `CHANGELENS_CONSENT=true` it follows
 onboarding until the account has answered for the current policy version; without the flag no route
 reaches it. See `docs/onboarding/direction.md`.
+
+**Headings and errors (2026-11-17).** Page headers and section headings use `CalmFitText`: at
+large text, when the longest word is wider than the line, the text scale shrinks just enough for
+it to fit, never below 1×, so German headings never break inside a word. Errors reach users
+through `userErrorMessage` (sign-in ended, not found, not accepted, server problem, no
+connection), never the exception's text; an upload over a server limit names the limit. The
+partial status reads "Some content couldn't be read", so it no longer collides with the
+"Partial update" scope, and project rows say "1 comparison: <status>".
 
 ## Motion and platform behavior
 

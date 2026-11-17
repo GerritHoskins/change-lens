@@ -29,15 +29,25 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('topic-deliverables')));
     await tester.pumpAndSettle();
     final tiles = tester.widgetList<FindingTile>(find.byType(FindingTile)).toList();
-    expect(tiles.map((tile) => tile.finding.id), ['f1', 'f2']);
-    expect(find.text('Needs your review'), findsOneWidget);
-    expect(tester.getTopLeft(find.text('Needs your review')).dy,
+    expect(tiles.map((tile) => tile.finding.id), ['f2', 'f1']); // needs review (f2) leads
+    expect(find.textContaining('Needs your review · '), findsOneWidget);
+    expect(tester.getTopLeft(find.textContaining('Needs your review · ')).dy,
       lessThan(tester.getTopLeft(find.textContaining('Hosting is provided')).dy));
-    await tester.tap(find.textContaining('Selected summary'));
+    await tester.tap(find.textContaining('more differences'));
     await tester.pumpAndSettle();
     expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('topic-deliverables'))).selected, true);
-    expect(tester.widgetList<FindingTile>(find.byType(FindingTile)).map((tile) => tile.finding.id), ['f1', 'f2', 'f3']);
+    expect(tester.widgetList<FindingTile>(find.byType(FindingTile)).map((tile) => tile.finding.id), ['f2', 'f1', 'f3']);
     expect(find.text('Other findings'), findsOneWidget);
+  });
+
+  testWidgets('a topic with no findings offers no filter chip', (tester) async {
+    final backend = await fixture.pump(tester, ReportScreen(comparisonId: 'c1', versions: fixture.versions));
+    final report = await tester.runAsync(() => fixture.loadReport(backend));
+    expect(report!.topicCounts.values, contains(0)); // the fixture has an empty topic to hide
+    for (final topic in findingTopics) {
+      expect(find.byKey(ValueKey('topic-$topic')), (report.topicCounts[topic] ?? 0) > 0 ? findsOneWidget : findsNothing,
+        reason: topic);
+    }
   });
 
   testWidgets('different topic filter hides findings without hiding unmapped source differences', (tester) async {

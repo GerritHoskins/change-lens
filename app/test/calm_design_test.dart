@@ -4,8 +4,11 @@ import 'dart:ui' as ui;
 
 import 'package:changelens/design/calm_controls.dart';
 import 'package:changelens/api.dart';
+import 'package:changelens/design/calm_theme.dart';
 import 'package:changelens/design/calm_widgets.dart';
+import 'package:changelens/l10n/app_localizations_en.dart';
 import 'package:changelens/main.dart';
+import 'package:changelens/screens/report_widgets.dart';
 import 'package:changelens/screens/compare_screen.dart';
 import 'package:changelens/screens/evidence_resolution.dart';
 import 'package:changelens/screens/finding_screen.dart';
@@ -152,5 +155,38 @@ void main() {
     final roboto = manifest.singleWhere((entry) => entry['family'] == 'Roboto');
     expect((roboto['fonts'] as List).map((font) => font['weight']), [400, 600, 700]);
     expect(await rootBundle.loadString('assets/fonts/OFL.txt'), contains('SIL OPEN FONT LICENSE'));
+  });
+
+  testWidgets('German headings at 2× text on 320 px keep every word on one line', (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(MaterialApp(theme: calmTheme(Brightness.light),
+      home: Scaffold(body: ListView(padding: const EdgeInsets.symmetric(horizontal: 20), children: const [
+        CalmPageHeader(title: 'Was sich geändert hat'),
+        SectionHeader('Kundenfreigabe'),
+        CalmPageHeader(title: 'Short'),
+      ]))));
+    for (final p in tester.renderObjectList<RenderParagraph>(find.byType(RichText))) {
+      final s = p.text.toPlainText();
+      for (final word in RegExp(r'\S+').allMatches(s)) {
+        final tops = {for (final box in p.getBoxesForSelection(
+            TextSelection(baseOffset: word.start, extentOffset: word.end))) box.top.round()};
+        expect(tops, hasLength(1), reason: '"${word[0]}" in "$s" breaks inside the word');
+      }
+    }
+    // A heading that already fits keeps the full 2× size; shrinking is only for the long word.
+    expect(tester.widget<Text>(find.text('Short')).textScaler!.scale(10), 20);
+  });
+
+  test('errors reach users as plain sentences, never exception text', () {
+    final l = AppLocalizationsEn();
+    expect(userErrorMessage(l, ApiException(401, 'unauthorized')), l.errorSignedOut);
+    expect(userErrorMessage(l, ApiException(404, 'not_found', 'project')), l.errorNotFound);
+    expect(userErrorMessage(l, ApiException(422, 'invalid')), l.errorRejected);
+    expect(userErrorMessage(l, ApiException(503, 'unavailable')), l.errorServer);
+    expect(userErrorMessage(l, Exception('SocketException: Failed host lookup')), l.errorConnection);
   });
 }

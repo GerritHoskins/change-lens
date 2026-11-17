@@ -220,7 +220,7 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-import')));
     await tester.pumpAndSettle();
     expect(picker.purges, 1);
-    expect(find.textContaining('limit_exceeded'), findsOneWidget);
+    expect(find.textContaining('the file exceeds the size limit'), findsOneWidget);
   });
 
   testWidgets('AC-24: pasted text is imported with its label', (tester) async {
@@ -306,12 +306,12 @@ void main() {
     backend.comparisonCounts = {'waiting_for_versions': 1};
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('Reading versions (1)'), findsOneWidget);
+    expect(find.text('1 comparison: Reading versions'), findsOneWidget);
     backend.comparisonCounts = {'queued': 1};
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('Queued (1)'), findsOneWidget);
-    expect(find.text('Reading versions (1)'), findsNothing);
+    expect(find.text('1 comparison: Queued'), findsOneWidget);
+    expect(find.text('1 comparison: Reading versions'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

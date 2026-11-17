@@ -97,7 +97,7 @@
   "comparisonQueued": "Queued",
   "comparisonRunning": "Processing",
   "comparisonComplete": "Complete",
-  "comparisonPartial": "Partial: some content could not be processed",
+  "comparisonPartial": "Some content couldn't be read",
   "comparisonFailed": "Failed",
   "comparisonFailedDetails": "This comparison could not be completed. Start a new comparison to try again.",
   "comparisonCostStopped": "The cost limit was reached, so processing has stopped.",
@@ -130,7 +130,7 @@
   "openReport": "Open report",
   "reportTitle": "Report",
   "allDifferencesTitle": "All differences",
-  "selectedSummary": "Selected summary — {count, plural, =0{no other differences} =1{1 other difference} other{{count} other differences}}, including presentation-only edits",
+  "selectedSummary": "{count, plural, =0{No other differences} =1{1 more difference, including moved or reformatted text} other{{count} more differences, including moved or reformatted text}}",
   "@selectedSummary": {
     "placeholders": {
       "count": {
@@ -463,6 +463,13 @@
   "historyVersionA11y": "{label}, {meta}. Compare from this version",
   "historyLinkA11y": "Comparison of {earlier} with the newer {newer}. {scope}. {status}",
   "historyCompareFrom": "Compare from here",
+  "errorConnection": "ChangeLens can't be reached. Check your connection and try again.",
+  "errorSignedOut": "Your sign-in has ended. Sign in again to continue.",
+  "errorNotFound": "This no longer exists. It may have been deleted.",
+  "errorRejected": "This wasn't accepted. Check what you entered and try again.",
+  "errorServer": "ChangeLens had a problem on its side. Try again in a moment.",
+  "projectComparisons": "{count, plural, =1{1 comparison} other{{count} comparisons}}: {status}",
+  "@projectComparisons": {"placeholders": {"count": {"type": "int"}, "status": {"type": "String"}}},
   "kindPdf": "PDF",
   "kindText": "Pasted text",
   "@historyVersionA11y": {"placeholders": {"label": {"type": "String"}, "meta": {"type": "String"}}},

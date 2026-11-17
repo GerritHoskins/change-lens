@@ -111,9 +111,12 @@ Future<Report> loadReport(ReportBackend b) async =>
 void main() {
   testWidgets('AC-10/13: material changes first, needs review apart, a selected-summary line', (tester) async {
     await pump(tester, ReportScreen(comparisonId: 'c1', versions: versions));
-    expect(find.textContaining('Selected summary — 5 other differences, including presentation-only edits'), findsOneWidget);
+    expect(find.text('5 more differences, including moved or reformatted text'), findsOneWidget);
     expect(find.text('Changes'), findsOneWidget);
-    expect(find.text('Needs your review'), findsOneWidget);
+    expect(find.textContaining('Needs your review · '), findsOneWidget);
+    // What needs the user's judgement comes before the certain changes.
+    expect(tester.getTopLeft(find.textContaining('Needs your review · ')).dy,
+      lessThan(tester.getTopLeft(find.text('Changes')).dy));
     expect(find.textContaining('Budget: EUR 15,000'), findsOneWidget);
     expect(find.textContaining('Hosting is provided'), findsOneWidget);
     expect(find.textContaining('Explanation of f3'), findsNothing); // "other" is behind the summary link
@@ -124,7 +127,7 @@ void main() {
 
   testWidgets('AC-13/18: all differences lists other findings, unexplained and moved text', (tester) async {
     await pump(tester, ReportScreen(comparisonId: 'c1', versions: versions));
-    await tester.tap(find.textContaining('Selected summary'));
+    await tester.tap(find.textContaining('more differences'));
     await tester.pumpAndSettle();
     expect(find.text('Other findings'), findsOneWidget);
     expect(find.textContaining('Explanation of f3'), findsOneWidget);

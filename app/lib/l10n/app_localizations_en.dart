@@ -268,8 +268,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonComplete => 'Complete';
 
   @override
-  String get comparisonPartial =>
-      'Partial: some content could not be processed';
+  String get comparisonPartial => 'Some content couldn\'t be read';
 
   @override
   String get comparisonFailed => 'Failed';
@@ -357,11 +356,11 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count other differences',
-      one: '1 other difference',
-      zero: 'no other differences',
+      other: '$count more differences, including moved or reformatted text',
+      one: '1 more difference, including moved or reformatted text',
+      zero: 'No other differences',
     );
-    return 'Selected summary — $_temp0, including presentation-only edits';
+    return '$_temp0';
   }
 
   @override
@@ -1165,6 +1164,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyCompareFrom => 'Compare from here';
+
+  @override
+  String get errorConnection =>
+      'ChangeLens can\'t be reached. Check your connection and try again.';
+
+  @override
+  String get errorSignedOut =>
+      'Your sign-in has ended. Sign in again to continue.';
+
+  @override
+  String get errorNotFound =>
+      'This no longer exists. It may have been deleted.';
+
+  @override
+  String get errorRejected =>
+      'This wasn\'t accepted. Check what you entered and try again.';
+
+  @override
+  String get errorServer =>
+      'ChangeLens had a problem on its side. Try again in a moment.';
+
+  @override
+  String projectComparisons(int count, String status) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count comparisons',
+      one: '1 comparison',
+    );
+    return '$_temp0: $status';
+  }
 
   @override
   String get kindPdf => 'PDF';
