@@ -285,7 +285,11 @@ Record each with its date:
 - [ ] an uploaded original showing `ServerSideEncryption: AES256`
 - [x] the restore test's `RESTORE OK` line: 2026-11-16, `RESTORE OK started=2026-11-16T09:21:57Z
       finished=2026-11-16T09:22:04Z base=20261116T074356Z.tar.age`, schema `0005_limits`; `logto.users rows 1`
-      came from WAL replay (the admin account was created after the 07:43 base backup)
+      came from WAL replay (the admin account was created after the 07:43 base backup). Repeated after the
+      migration to head, 2026-11-17: `RESTORE OK started=2026-11-17T18:47:20Z finished=2026-11-17T18:47:58Z
+      base=20261117T074427Z.tar.age`, schema `0008_consent_events`; `changelens.users rows 2`,
+      `logto.users rows 4`. The base backup predates the migration (07:44, schema `0006_social_sign_in`), so
+      the two new revisions came from WAL replay. The key file was shredded after the test
 - [x] the admin console unreachable from outside: 2026-11-16, `<cube-ip>:3002` timed out; `api` 401,
       `auth` 200 (C6)
 - [x] a one-time code delivered through IONOS SMTP (Logto's test mail, then a real sign-in). 2026-11-16: the

@@ -73,15 +73,15 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L7 Release builds carry the sign-in define (built 2026-11-17)
 - [x] L8 Merge `m1-iphone` into `main` (done 2026-11-17: pull request 34, merge commit `f7fb186` after the L6 rewrite)
 - [x] L9 Delete merged branches and extra worktrees (done 2026-11-17: only `main` and `m1-iphone` remain)
-- [ ] L6 Rewrite history (rewritten and force-pushed 2026-11-17; open: GitHub support purges the old commits and pull-request refs)
+- [x] L6 Rewrite history (rewritten and force-pushed 2026-11-17; GitHub Support declined the purge, and the owner accepted that old commits stay readable by ID, recorded in 06)
 
 ### Checkpoint A: after L6–L9
 - [ ] `main` holds all work; CI green on `main`
-- [ ] The private paths are gone from `origin` (or the acceptance is recorded in 06)
+- [x] The private paths are gone from `origin` (or the acceptance is recorded in 06)
 - [ ] Owner review
 
 ### Phase 2: M2 exit on the server and on devices
-- [ ] L10 Migrate the server to head and repeat the restore test
+- [x] L10 Migrate the server to head and repeat the restore test (done 2026-11-17: `main` at `6a90bb5`, schema `0008_consent_events`, `RESTORE OK`)
 - [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
 - [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
 - [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server
