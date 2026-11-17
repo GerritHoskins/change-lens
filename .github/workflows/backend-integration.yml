@@ -18,8 +18,8 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
       COMPOSE_PROJECT_NAME: changelens-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # same pin as plan-checks
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # same pin as plan-checks
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # same pin as plan-checks
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # same pin as plan-checks
         with:
           python-version: '3.10.11'
           architecture: 'x64'
@@ -48,8 +48,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # same pin as plan-checks
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # same pin as plan-checks
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # same pin as plan-checks
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # same pin as plan-checks
         with:
           python-version: '3.10.11'
           architecture: 'x64'
