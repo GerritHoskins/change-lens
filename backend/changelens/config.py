@@ -20,6 +20,11 @@ DEFAULT_DATABASE_URL = "postgresql+psycopg://changelens_app:changelens-app-dev-o
 DEFAULT_MIGRATION_DATABASE_URL = ("postgresql+psycopg://changelens_owner:changelens-owner-dev-only"
                                   "@127.0.0.1:55432/changelens")
 DEFAULT_ADMIN_DATABASE_URL = "postgresql+psycopg://changelens:changelens@127.0.0.1:55432/changelens"
+# What a deployment (logto mode) must set itself. The local defaults for these point at the compose
+# database, MinIO and the fake model; a deployed process that fell back to one would look healthy and
+# serve nothing real, so a missing one stops it at start.
+DEPLOYED_REQUIRED = ("CHANGELENS_DATABASE_URL", "CHANGELENS_S3_ENDPOINT", "CHANGELENS_S3_ACCESS_KEY",
+                     "CHANGELENS_S3_SECRET_KEY", "CHANGELENS_S3_BUCKET", "CHANGELENS_LLM")
 
 
 def database_url_from_env() -> str:
@@ -177,6 +182,12 @@ class Settings:
             # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
             if not auth["logto_management_endpoint"]:
                 raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
+            # Names only in the message: the values are credentials.
+            missing = [name for name in DEPLOYED_REQUIRED if not env.get(name, "").strip()]
+            if missing:
+                raise RuntimeError("logto mode needs " + ", ".join(missing))
+            if env["CHANGELENS_LLM"].strip() == "fake":
+                raise RuntimeError("CHANGELENS_LLM=fake is refused in logto mode")
         else:
             raise RuntimeError("CHANGELENS_AUTH_MODE must be dev or logto")
         try:

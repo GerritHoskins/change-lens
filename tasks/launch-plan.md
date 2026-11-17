@@ -70,7 +70,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] L5 Sign off the contract draft and the Phase 4 order
 
 ### Phase 1: secure what exists (in this order)
-- [x] L7 Release builds carry the sign-in define (built 2026-11-17, not committed)
+- [x] L7 Release builds carry the sign-in define (built 2026-11-17)
 - [ ] L8 Merge `m1-iphone` into `main`
 - [ ] L9 Delete merged branches and extra worktrees
 - [ ] L6 Rewrite history (L1 = rewrite, route A: force-push plus a GitHub support request)
@@ -82,8 +82,8 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 
 ### Phase 2: M2 exit on the server and on devices
 - [ ] L10 Migrate the server to head and repeat the restore test
-- [ ] L11 Deployed configuration fails closed
-- [ ] L12 Interactive API docs off in deployed mode
+- [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
+- [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
 - [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server
 - [ ] L17 Outside uptime check and patch reminder
 
