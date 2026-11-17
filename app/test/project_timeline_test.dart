@@ -126,6 +126,24 @@ void main() {
       expect(find.textContaining('“Scan” could not be read'), findsOneWidget);
     });
 
+    testWidgets('a failed card offers Compare again only when both versions can be read', (tester) async {
+      final again = <String>[];
+      Future<void> show(List<Version> versions) async {
+        await tester.pumpWidget(MaterialApp(theme: calmTheme(Brightness.light),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: ListView(children: [ProjectTimeline(versions: versions, loading: false,
+            comparisons: [c('1', 'a', 'b', status: 'failed')], onCompareFrom: (_) {},
+            onCompareAgain: (x) => again.add(x.id))]))));
+        await tester.pumpAndSettle();
+      }
+      await show([v('a'), v('b')]);
+      await tester.tap(find.byKey(const Key('compare-again-1')));
+      expect(again, ['1']);
+      await show([v('a'), v('b', status: 'rejected')]);
+      expect(find.byKey(const Key('compare-again-1')), findsNothing);
+    });
+
     testWidgets('a fork sits inside one block whose rail joins the version below', (tester) async {
       await pump(tester, [v('a'), v('b'), v('c')], [c('1', 'a', 'b'), c('2', 'a', 'c')]);
       final note = tester.getTopLeft(find.textContaining('neither is shown as newer')).dy;

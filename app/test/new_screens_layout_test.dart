@@ -110,7 +110,7 @@ void main() {
 
             // P6 timeline: a fork, both directions and an unplaced version, with long labels.
             await tester.pumpWidget(localized(Scaffold(body: ListView(padding: const EdgeInsets.all(20), children: [
-              ProjectTimeline(loading: false, onCompareFrom: (_) {}, versions: [
+              ProjectTimeline(loading: false, onCompareFrom: (_) {}, onCompareAgain: (_) {}, versions: [
                 for (final id in ['a', 'b', 'c', 'd', 'e'])
                   Version({'id': id, 'label': 'Kampagnenbriefing Frühjahr, Fassung $id mit Änderungen', 'kind': 'pdf',
                     'status': 'parsed'}),

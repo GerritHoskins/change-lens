@@ -12,13 +12,16 @@ import 'comparison_screen.dart';
 import 'definition_sheets.dart';
 
 class CompareScreen extends StatefulWidget {
-  const CompareScreen({super.key, this.project, this.versions = const [], this.earlierId});
+  const CompareScreen({super.key, this.project, this.versions = const [], this.earlierId, this.laterId});
 
   final Project? project;
   final List<Version> versions;
 
   /// A version the user chose from the project's history: preset as Earlier, nothing else.
   final String? earlierId;
+
+  /// With [earlierId], from a failed comparison's "Compare again": the same pair, scope still unset.
+  final String? laterId;
 
   @override
   State<CompareScreen> createState() => _CompareScreenState();
@@ -56,6 +59,7 @@ class _CompareScreenState extends State<CompareScreen> {
       scope = pending.scope;
     } else if (widget.earlierId != null) {
       earlier = ComparisonInput.existing(widget.earlierId);
+      if (widget.laterId != null) later = ComparisonInput.existing(widget.laterId);
     }
     _load();
   }

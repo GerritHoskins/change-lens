@@ -101,7 +101,10 @@ partial processing, personal review and client approval always have explicit tex
   rail says the order is open. Versions in no comparison sit under "Not compared yet". Each version
   row says "Compare from here" under its details and opens Compare with it preset as Earlier; a
   rejected version shows its reason instead and offers no comparison. A card opens the comparison; a
-  failed card gives the cause from the comparison's warnings, or the generic next step. The arrow
+  failed card gives the cause from the comparison's warnings, or the generic next step, and when
+  both versions can be read offers "Compare again" (the same pair preset, scope still unset). A
+  comparison that finishes while the project is open is announced once. "Compare from here" is
+  muted body text so it never outweighs the version names, and the rail carries no arrows. The arrow
   in "earlier → newer" is a Lucide icon (the bundled Roboto has no U+2192). Only Failed and Partial
   statuses are emphasised. At about 1.3× text and up the card drops its chevron and the rail gaps
   narrow, so German status words never break mid-word (tested with the real font at 320 px, 2×).

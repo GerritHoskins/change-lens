@@ -12,7 +12,7 @@ import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'compare_screen.dart';
-import 'comparison_screen.dart' show rejectionReasonLabel;
+import 'comparison_screen.dart' show comparisonStatusLabel, rejectionReasonLabel;
 import 'project_timeline.dart';
 
 class ProjectScreen extends StatefulWidget {
@@ -59,6 +59,16 @@ class _ProjectScreenState extends State<ProjectScreen> {
       final v = await api.versions(widget.project.id);
       final c = await api.comparisons(widget.project.id);
       if (!mounted || _deleteStarted) return;
+      // A comparison that finishes while this screen is open is announced once (cards update silently).
+      final l = AppLocalizations.of(context);
+      final before = {for (final old in comparisons) old.id: old.finished};
+      String label(String id) => v.where((x) => x.id == id).firstOrNull?.label ?? l.sourceUnavailable;
+      for (final now in c) {
+        if (now.finished && before[now.id] == false) {
+          calmAnnounce(context, l.historyComparisonDone(label(now.earlierId), label(now.laterId),
+            comparisonStatusLabel(l, now.status)));
+        }
+      }
       setState(() {
         versions = v;
         comparisons = c;
@@ -165,9 +175,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
     }
   }
 
-  Future<void> _compare({String? earlierId}) async {
+  Future<void> _compare({String? earlierId, String? laterId}) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
-        CompareScreen(project: widget.project, versions: versions, earlierId: earlierId)));
+        CompareScreen(project: widget.project, versions: versions, earlierId: earlierId, laterId: laterId)));
     if (mounted) await _load();
   }
 
@@ -231,7 +241,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
             child: Semantics(liveRegion: true, child: Text(l.uploading))),
           const SizedBox(height: 32),
           ProjectTimeline(versions: versions, comparisons: comparisons, loading: loading,
-            onCompareFrom: (version) => _compare(earlierId: version.id)),
+            onCompareFrom: (version) => _compare(earlierId: version.id),
+            onCompareAgain: (c) => _compare(earlierId: c.earlierId, laterId: c.laterId)),
           const SizedBox(height: 16),
           Text(l.originalsNote, style: text.bodySmall?.copyWith(color: colors.muted)),
         ]),

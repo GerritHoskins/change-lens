@@ -447,6 +447,8 @@
   "errorRejected": "Das wurde nicht angenommen. Prüfe deine Eingabe und versuche es erneut.",
   "errorServer": "Bei ChangeLens ist ein Problem aufgetreten. Versuche es gleich noch einmal.",
   "projectComparisons": "{count, plural, =1{1 Vergleich} other{{count} Vergleiche}}: {status}",
+  "historyCompareAgain": "Erneut vergleichen",
+  "historyComparisonDone": "Vergleich von {earlier} mit {newer}: {status}",
   "kindPdf": "PDF",
   "kindText": "Eingefügter Text"
 }
