@@ -72,7 +72,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 ### Phase 1: secure what exists (in this order)
 - [x] L7 Release builds carry the sign-in define (built 2026-11-17)
 - [x] L8 Merge `m1-iphone` into `main` (done 2026-11-17: pull request 34, merge commit `7ee8667`)
-- [ ] L9 Delete merged branches and extra worktrees
+- [x] L9 Delete merged branches and extra worktrees (done 2026-11-17: only `main` and `m1-iphone` remain)
 - [ ] L6 Rewrite history (L1 = rewrite, route A: force-push plus a GitHub support request)
 
 ### Checkpoint A: after L6–L9

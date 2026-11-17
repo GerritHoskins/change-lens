@@ -137,23 +137,19 @@ Open the pull request and merge it. The uncommitted app edits of the second sess
 them so L6 has fewer refs to rewrite. `git worktree remove` refuses a worktree with uncommitted work; never add `--force`.
 
 **Acceptance criteria:**
-- [ ] `git worktree list` shows only the main checkout (or worktrees the owner chose to keep)
-- [ ] Local and remote branches are `main` and `m1-iphone` only
-- [ ] Nothing unmerged was deleted: `git branch -d` (lower-case) succeeded for every branch
+- [x] `git worktree list` shows only the main checkout (or worktrees the owner chose to keep)
+- [x] Local and remote branches are `main` and `m1-iphone` only
+- [x] Nothing unmerged was deleted: `git branch -d` (lower-case) succeeded for every branch
 
 **Verification:**
-- [ ] `git branch -a` and `git worktree list`
+- [x] `git branch -a` and `git worktree list`
 
-```powershell
-git switch main
-git pull --ff-only
-git worktree remove C:\Users\Gerrit\job-search\POCs\change-lens-impeccable
-git worktree remove C:\Users\Gerrit\job-search\POCs\change-lens\.claude\worktrees\magical-brahmagupta-f994e0
-git worktree remove C:\Users\Gerrit\.paseo\worktrees\1ewj8izr\t14-iphone-check
-git worktree remove C:\Users\Gerrit\.codex\visualizations\2026\11\07\01a1b695-7928-78d0-bfda-68df53af9f41\evaluation-tooling-checkout
-git branch -d claude/magical-brahmagupta-f994e0 codex/fresh-heldout-preparation d15-mobile-poc d8-logto d8-logto-impeccable i7-eval i7b-development ios-device-check playbooks/t14-iphone-check
-git push origin --delete claude/magical-brahmagupta-f994e0 codex/fresh-heldout-preparation d15-mobile-poc d8-logto d8-logto-impeccable i7-eval i7b-development ios-device-check
-```
+**Done 2026-11-17.** Four worktrees removed without `--force`, nine local and eight remote branches deleted; every
+tip was contained in `origin/main` first. Differences from the planned commands:
+- Local `main` was fast-forwarded with `git fetch origin main:main`, not `git switch main`, because other sessions share this checkout on `m1-iphone`.
+- `i7-eval` was 5 commits ahead of its own remote branch, so `-d` refused it until the remote branch was deleted; its tip `ad72bbc` is in `main`.
+- Windows stopped `git worktree remove` on the Claude worktree at an over-long path after unregistering it; the leftover folder (tracked files and build output only) was deleted with `rd /s /q` on its `\\?\` path.
+- The paseo worktree's three git-ignored run records were copied to this checkout's `.paseo/plugins/playbooks/runs/t14-preparation/` before removal.
 
 **Dependencies:** L8 · **Files likely touched:** none · **Estimated scope:** XS
 
