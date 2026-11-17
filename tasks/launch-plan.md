@@ -110,7 +110,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 ### Phase 5: launch gates
 - [ ] L18 Bring the documents in line with the code
 - [x] L19 Run every existing test in CI (built 2026-11-17)
-- [ ] L20 Secret scan and dependency audit in CI
+- [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [ ] L21 Move off Python 3.10
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link

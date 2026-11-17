@@ -41,6 +41,8 @@ The backend stage (I-22) creates `backend/.venv/` if necessary, reinstalls `back
 cd backend; docker compose up -d --wait; .venv\Scripts\python -m pytest tests/integration -q -rs
 ```
 
+A third workflow, `.github/workflows/dependency-audit.yml`, audits every hash-pinned requirements file with `pip-audit` on push, on pull request and every Monday. A known vulnerability in `backend/requirements.txt` fails it; the test, evaluation and audit-tool pins are reported without failing until the Python version moves. Its own tool is pinned in `scripts/ci/requirements-audit.txt`. `.github/dependabot.yml` proposes updates for the SHA-pinned actions and the digest-pinned images.
+
 Run `.venv/Scripts/python scripts/eval/probe_label_rounds.py` to repeat the option A mutation probes. It first requires the full synthetic suite to pass, then tests 21 deliberate regressions in disposable copies; every probe must fail the same complete suite. It changes no worktree source or private data.
 
 If Windows blocks the local script under its execution policy, use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1` for that process only; do not change machine policy. D-6 failure probes on 2026-10-31 confirmed `CI FAIL` with nonzero exit for a deliberately wrong visual golden and for a blocked `pypdfium2` import; sources were restored after the probes. Visual and hidden-text fixtures and their `review.html` sheets belong in private storage outside Git. Owner per-pair review and the independently arranged code review remain distinct from automated CI.

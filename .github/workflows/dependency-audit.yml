@@ -1,0 +1,51 @@
+name: dependency-audit
+
+# Known-vulnerability audit of every hash-pinned Python requirements file (pip-audit, PyPI advisory data).
+# Secret scanning is not repeated here: the GitGuardian app already checks every push.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '17 5 * * 1'  # Mondays 05:17 UTC: new advisories arrive without a commit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    # Same runner and interpreter as plan-checks: scripts/ci/requirements-audit.txt pins wheels for it.
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # same pin as plan-checks
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # same pin as plan-checks
+        with:
+          python-version: '3.10.11'
+          architecture: 'x64'
+      - name: Install the pinned audit tool in its own venv
+        shell: powershell
+        run: |
+          python -m venv .audit-venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./.audit-venv/Scripts/python.exe -m pip install --disable-pip-version-check --require-hashes -r scripts/ci/requirements-audit.txt
+          exit $LASTEXITCODE
+      - name: Audit what runs in production (any known vulnerability fails the job)
+        shell: powershell
+        run: |
+          ./.audit-venv/Scripts/python.exe -m pip_audit --require-hashes --disable-pip --progress-spinner off -r backend/requirements.txt
+          exit $LASTEXITCODE
+      # Report only for now. On 2026-11-17 these list pillow 12.3.0 (test and evaluation rendering) and
+      # filelock 4.1.0 (the audit tool's cache); the fixed releases need a newer Python than 3.10.
+      # Remove continue-on-error once the Python version has moved and the pins are regenerated.
+      - name: Audit test, evaluation and audit-tool pins (report only)
+        shell: powershell
+        continue-on-error: true
+        run: |
+          $failed = 0
+          foreach ($f in 'backend/requirements-test.txt', 'scripts/eval/requirements-render.txt', 'scripts/ci/requirements-audit.txt') {
+            Write-Host "== $f"
+            ./.audit-venv/Scripts/python.exe -m pip_audit --require-hashes --disable-pip --progress-spinner off -r $f
+            if ($LASTEXITCODE -ne 0) { $failed = 1 }
+          }
+          exit $failed

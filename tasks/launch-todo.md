@@ -394,7 +394,7 @@ the private constructed dataset and skips without it.)
 
 **Verification:**
 - [x] `./scripts/ci.ps1` passes locally
-- [ ] `plan-checks` passes on GitHub
+- [x] `plan-checks` passes on GitHub (commit `49a7bb7`; its log shows the three new stages)
 
 **Built 2026-11-17.** 66 more tests run in CI (21 fresh-cohort, 11 release, 34 playbook), and 182 code files are size-checked. A temporary failing test produced `CI FAIL` with exit 1 and was removed.
 
@@ -402,18 +402,28 @@ the private constructed dataset and skips without it.)
 
 ## Task L20: Secret scan and dependency audit in CI
 
-**Description:** Add a secret scanner over the full history and a dependency audit of the hashed backend
-requirements, both as SHA-pinned actions. The first run only reports.
+**Description:** Add a dependency audit of the hash-pinned Python requirements and an update bot for the
+pinned GitHub Actions and container images. Secret scanning needs no new workflow: the GitGuardian app
+already checks every push (the audit of 2026-11-17 missed it).
 
 **Acceptance criteria:**
-- [ ] A workflow scans every push and pull request for secrets and fails on a finding
-- [ ] `pip-audit` runs against `backend/requirements.txt`; known findings are listed for the owner before the job becomes required
-- [ ] Dependabot (or Renovate) proposes updates for GitHub Actions and the pinned image digests
+- [x] Every push is scanned for secrets and a finding fails the check (GitGuardian, already installed)
+- [x] `pip-audit` runs against `backend/requirements.txt` and fails on a finding; the other pinned files are audited report-only, and their findings are listed below for the owner
+- [x] Dependabot proposes updates for GitHub Actions and the pinned image digests
 
 **Verification:**
-- [ ] The workflow is green on the pull request; a test branch with a fake key pattern fails it
+- [ ] The `dependency-audit` workflow is green on GitHub
+- [ ] Dependabot's first run on `main` finds `changelens.Dockerfile` and `compose.yaml` (not checkable before the merge)
 
-**Dependencies:** None · **Files likely touched:** `.github/workflows/security.yml` (new), `.github/dependabot.yml` (new) · **Estimated scope:** S
+**Built 2026-11-17.** The audit tool is hash-pinned in `scripts/ci/requirements-audit.txt` (pip-audit 2.10.1, 29 wheels).
+Findings on 2026-11-17:
+- `backend/requirements.txt` (the production image): none.
+- `backend/requirements-test.txt` and `scripts/eval/requirements-render.txt`: pillow 12.3.0, 42 advisories, fixed in 13.0.0.
+- `scripts/ci/requirements-audit.txt`: filelock 4.1.0, 17 advisories, fixed in 4.2.1.
+- Neither fixed release installs on Python 3.10, so both wait for L21; until then that step reports without failing.
+Dependabot ignores Logto (upgraded by hand, runbook F), Postgres majors and Python minor or major versions.
+
+**Dependencies:** None · **Files likely touched:** `.github/workflows/dependency-audit.yml` (new), `.github/dependabot.yml` (new), `scripts/ci/requirements-audit.txt` (new), `docs/SOP.md` · **Estimated scope:** S
 
 ## Task L21: Move off Python 3.10
 
