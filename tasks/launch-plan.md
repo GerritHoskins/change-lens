@@ -111,7 +111,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] L18 Bring the documents in line with the code
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
-- [x] L21 Move off Python 3.10 (built 2026-11-17 on branch `l21-python`: Python 3.14.10; `ci.ps1` and the integration tests pass on the PC; open: the server)
+- [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [ ] L24 Close or schedule the open UI findings
