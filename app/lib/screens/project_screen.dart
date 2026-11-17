@@ -12,6 +12,7 @@ import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'compare_screen.dart';
+import 'comparison_screen.dart' show rejectionReasonLabel;
 import 'project_timeline.dart';
 
 class ProjectScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       if (!mounted || _deleteStarted) return;
       setState(() {
         loading = false;
-        error = '$e';
+        error = userErrorMessage(AppLocalizations.of(context), e);
       });
     } finally { _fetching = false; }
   }
@@ -155,7 +156,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
       }
       await _load();
     } on Exception catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(l.importFailed('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(l.importFailed(
+        // A limit the server enforces names the limit and the way out, like any rejected input.
+        e is ApiException && e.code == 'limit_exceeded' && e.detail != null
+            ? rejectionReasonLabel(l, 'limit_exceeded_${e.detail}') : userErrorMessage(l, e)))));
     } finally {
       if (mounted) setState(() => importing = false);
     }

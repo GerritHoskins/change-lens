@@ -70,7 +70,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       if (!mounted || !identical(api, s.api)) return;
       setState(() {
         loading = false;
-        error = '$e';
+        error = userErrorMessage(AppLocalizations.of(context), e);
       });
     } finally { _fetching = false; }
   }
@@ -94,7 +94,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           clientLabel: client.text.trim().isEmpty ? null : client.text.trim());
       await _load();
     } on Exception catch (e) {
-      setState(() => error = '$e');
+      if (mounted) setState(() => error = userErrorMessage(AppLocalizations.of(context), e));
     }
   }
 
@@ -170,7 +170,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           if (p.comparisonCounts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8),
                             child: Text([
                               for (final entry in p.comparisonCounts.entries)
-                                '${comparisonStatusLabel(l, entry.key)} (${entry.value})',
+                                l.projectComparisons(entry.value, comparisonStatusLabel(l, entry.key)),
                             ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
                         ])),
                         const SizedBox(width: 12),

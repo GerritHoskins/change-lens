@@ -557,7 +557,7 @@ abstract class AppLocalizations {
   /// No description provided for @comparisonPartial.
   ///
   /// In en, this message translates to:
-  /// **'Partial: some content could not be processed'**
+  /// **'Some content couldn\'t be read'**
   String get comparisonPartial;
 
   /// No description provided for @comparisonFailed.
@@ -689,7 +689,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Selected summary — {count, plural, =0{no other differences} =1{1 other difference} other{{count} other differences}}, including presentation-only edits'**
+  /// **'{count, plural, =0{No other differences} =1{1 more difference, including moved or reformatted text} other{{count} more differences, including moved or reformatted text}}'**
   String selectedSummary(int count);
 
   /// No description provided for @showAllDifferences.
@@ -2034,6 +2034,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compare from here'**
   String get historyCompareFrom;
+
+  /// No description provided for @errorConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens can\'t be reached. Check your connection and try again.'**
+  String get errorConnection;
+
+  /// No description provided for @errorSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sign-in has ended. Sign in again to continue.'**
+  String get errorSignedOut;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This no longer exists. It may have been deleted.'**
+  String get errorNotFound;
+
+  /// No description provided for @errorRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This wasn\'t accepted. Check what you entered and try again.'**
+  String get errorRejected;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In en, this message translates to:
+  /// **'ChangeLens had a problem on its side. Try again in a moment.'**
+  String get errorServer;
+
+  /// No description provided for @projectComparisons.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 comparison} other{{count} comparisons}}: {status}'**
+  String projectComparisons(int count, String status);
 
   /// No description provided for @kindPdf.
   ///

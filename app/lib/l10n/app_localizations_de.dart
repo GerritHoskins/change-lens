@@ -270,8 +270,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get comparisonComplete => 'Abgeschlossen';
 
   @override
-  String get comparisonPartial =>
-      'Teilweise: Einige Inhalte konnten nicht verarbeitet werden';
+  String get comparisonPartial => 'Einige Inhalte konnten nicht gelesen werden';
 
   @override
   String get comparisonFailed => 'Fehlgeschlagen';
@@ -359,11 +358,12 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count weitere Unterschiede',
-      one: '1 weiterer Unterschied',
-      zero: 'keine weiteren Unterschiede',
+      other:
+          '$count weitere Unterschiede, auch verschobener oder neu formatierter Text',
+      one: '1 weiterer Unterschied, auch verschobener oder neu formatierter Text',
+      zero: 'Keine weiteren Unterschiede',
     );
-    return 'Ausgewählte Zusammenfassung – $_temp0, einschließlich reiner Darstellungsänderungen';
+    return '$_temp0';
   }
 
   @override
@@ -1172,6 +1172,37 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get historyCompareFrom => 'Ab hier vergleichen';
+
+  @override
+  String get errorConnection =>
+      'ChangeLens ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.';
+
+  @override
+  String get errorSignedOut =>
+      'Deine Anmeldung ist abgelaufen. Melde dich erneut an, um weiterzumachen.';
+
+  @override
+  String get errorNotFound =>
+      'Das gibt es nicht mehr. Es wurde vielleicht gelöscht.';
+
+  @override
+  String get errorRejected =>
+      'Das wurde nicht angenommen. Prüfe deine Eingabe und versuche es erneut.';
+
+  @override
+  String get errorServer =>
+      'Bei ChangeLens ist ein Problem aufgetreten. Versuche es gleich noch einmal.';
+
+  @override
+  String projectComparisons(int count, String status) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Vergleiche',
+      one: '1 Vergleich',
+    );
+    return '$_temp0: $status';
+  }
 
   @override
   String get kindPdf => 'PDF';

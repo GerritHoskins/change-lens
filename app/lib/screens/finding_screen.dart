@@ -132,7 +132,7 @@ class _FindingScreenState extends State<FindingScreen> {
         await _load();
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.findingChanged)));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.saveFailed('$e'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.saveFailed(userErrorMessage(l, e)))));
       }
     } finally {
       if (mounted) setState(() => busy = false);

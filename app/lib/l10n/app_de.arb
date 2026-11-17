@@ -97,7 +97,7 @@
   "comparisonQueued": "In der Warteschlange",
   "comparisonRunning": "Wird verarbeitet",
   "comparisonComplete": "Abgeschlossen",
-  "comparisonPartial": "Teilweise: Einige Inhalte konnten nicht verarbeitet werden",
+  "comparisonPartial": "Einige Inhalte konnten nicht gelesen werden",
   "comparisonFailed": "Fehlgeschlagen",
   "comparisonFailedDetails": "Dieser Vergleich konnte nicht abgeschlossen werden. Starte einen neuen Vergleich, um es erneut zu versuchen.",
   "comparisonCostStopped": "Das Kostenlimit wurde erreicht. Die Verarbeitung wurde deshalb gestoppt.",
@@ -130,7 +130,7 @@
   "openReport": "Bericht öffnen",
   "reportTitle": "Bericht",
   "allDifferencesTitle": "Alle Unterschiede",
-  "selectedSummary": "Ausgewählte Zusammenfassung – {count, plural, =0{keine weiteren Unterschiede} =1{1 weiterer Unterschied} other{{count} weitere Unterschiede}}, einschließlich reiner Darstellungsänderungen",
+  "selectedSummary": "{count, plural, =0{Keine weiteren Unterschiede} =1{1 weiterer Unterschied, auch verschobener oder neu formatierter Text} other{{count} weitere Unterschiede, auch verschobener oder neu formatierter Text}}",
   "@selectedSummary": {
     "placeholders": {
       "count": {
@@ -441,6 +441,12 @@
   "historyVersionA11y": "{label}, {meta}. Von dieser Version aus vergleichen",
   "historyLinkA11y": "Vergleich von {earlier} mit der neueren Version {newer}. {scope}. {status}",
   "historyCompareFrom": "Ab hier vergleichen",
+  "errorConnection": "ChangeLens ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
+  "errorSignedOut": "Deine Anmeldung ist abgelaufen. Melde dich erneut an, um weiterzumachen.",
+  "errorNotFound": "Das gibt es nicht mehr. Es wurde vielleicht gelöscht.",
+  "errorRejected": "Das wurde nicht angenommen. Prüfe deine Eingabe und versuche es erneut.",
+  "errorServer": "Bei ChangeLens ist ein Problem aufgetreten. Versuche es gleich noch einmal.",
+  "projectComparisons": "{count, plural, =1{1 Vergleich} other{{count} Vergleiche}}: {status}",
   "kindPdf": "PDF",
   "kindText": "Eingefügter Text"
 }
