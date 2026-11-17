@@ -357,4 +357,3 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
 - Secrets reach the processes as environment variables from root-only files, not as files; `docker inspect`
   shows them to root. Only the sign-in secrets (C8) are files.
 - The images' OS packages (`apt`/`apk`) aren't hash-pinned; the base images and Python wheels are.
-- Python 3.10 reached end of life in October 2026 (no more security fixes); moving to 3.12 needs new wheel pins.

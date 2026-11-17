@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # same pin as plan-checks
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # same pin as plan-checks
         with:
-          python-version: '3.10.11'
+          python-version: '3.14.10'
           architecture: 'x64'
       - name: Install the pinned audit tool in its own venv
         shell: powershell
@@ -30,20 +30,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./.audit-venv/Scripts/python.exe -m pip install --disable-pip-version-check --require-hashes -r scripts/ci/requirements-audit.txt
           exit $LASTEXITCODE
-      - name: Audit what runs in production (any known vulnerability fails the job)
+      # Every file is audited even when an earlier one has a finding, so one run lists them all.
+      # A known vulnerability in any of them fails the job; fix it by bumping the pin and running
+      # scripts/ci/pin_hashes.py (see docs/SOP.md).
+      - name: Audit the production, test, evaluation and audit-tool pins
         shell: powershell
-        run: |
-          ./.audit-venv/Scripts/python.exe -m pip_audit --require-hashes --disable-pip --progress-spinner off -r backend/requirements.txt
-          exit $LASTEXITCODE
-      # Report only for now. On 2026-11-17 these list pillow 12.3.0 (test and evaluation rendering) and
-      # filelock 4.1.0 (the audit tool's cache); the fixed releases need a newer Python than 3.10.
-      # Remove continue-on-error once the Python version has moved and the pins are regenerated.
-      - name: Audit test, evaluation and audit-tool pins (report only)
-        shell: powershell
-        continue-on-error: true
         run: |
           $failed = 0
-          foreach ($f in 'backend/requirements-test.txt', 'scripts/eval/requirements-render.txt', 'scripts/ci/requirements-audit.txt') {
+          foreach ($f in 'backend/requirements.txt', 'backend/requirements-test.txt', 'scripts/eval/requirements-render.txt', 'scripts/ci/requirements-audit.txt') {
             Write-Host "== $f"
             ./.audit-venv/Scripts/python.exe -m pip_audit --require-hashes --disable-pip --progress-spinner off -r $f
             if ($LASTEXITCODE -ne 0) { $failed = 1 }
