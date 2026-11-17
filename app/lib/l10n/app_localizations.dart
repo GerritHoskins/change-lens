@@ -2071,6 +2071,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 comparison} other{{count} comparisons}}: {status}'**
   String projectComparisons(int count, String status);
 
+  /// No description provided for @historyCompareAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare again'**
+  String get historyCompareAgain;
+
+  /// No description provided for @historyComparisonDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison of {earlier} with {newer}: {status}'**
+  String historyComparisonDone(String earlier, String newer, String status);
+
   /// No description provided for @kindPdf.
   ///
   /// In en, this message translates to:

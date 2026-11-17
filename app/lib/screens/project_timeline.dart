@@ -169,7 +169,7 @@ class _ForkItem extends _Item {
 /// The History section of the Project screen.
 class ProjectTimeline extends StatelessWidget {
   const ProjectTimeline({super.key, required this.versions, required this.comparisons,
-    required this.loading, required this.onCompareFrom});
+    required this.loading, required this.onCompareFrom, this.onCompareAgain});
 
   final List<Version> versions;
   final List<Comparison> comparisons;
@@ -177,6 +177,9 @@ class ProjectTimeline extends StatelessWidget {
 
   /// Opens Compare with this version preset as Earlier.
   final void Function(Version version) onCompareFrom;
+
+  /// Opens Compare with a failed comparison's pair preset (both versions readable), scope unset.
+  final void Function(Comparison comparison)? onCompareAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +194,10 @@ class ProjectTimeline extends StatelessWidget {
       version: v, top: top, bottom: bottom, rail: rail,
       onTap: v.status == 'rejected' ? null : () => onCompareFrom(v));
     Widget link(Comparison c, {required bool bottom}) => _LinkTile(comparison: c, bottom: bottom,
-      earlier: label(c.earlierId), newer: label(c.laterId), versions: versions);
+      earlier: label(c.earlierId), newer: label(c.laterId), versions: versions,
+      onCompareAgain: onCompareAgain == null || c.status != 'failed' ||
+          ![c.earlierId, c.laterId].every((id) => versions.any((v) => v.id == id && v.ready))
+          ? null : () => onCompareAgain!(c));
 
     final children = <Widget>[
       Semantics(header: true, child: Text(l.historyTitle, style: text.titleLarge)),
@@ -334,7 +340,8 @@ class _VersionTile extends StatelessWidget {
     Widget compareFrom() => Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(CalmIcons.compare, size: 18, color: ink),
       const SizedBox(width: 6),
-      Flexible(child: Text(l.historyCompareFrom, style: text.labelMedium)),
+      // Quiet on purpose: it repeats on every row and must not outweigh the version names.
+      Flexible(child: Text(l.historyCompareFrom, style: text.bodySmall?.copyWith(color: colors.muted))),
     ]);
     return Semantics(key: Key('version-${version.id}'), button: onTap != null, excludeSemantics: true,
       label: onTap != null ? l.historyVersionA11y(version.label, versionMeta(l, version))
@@ -374,12 +381,13 @@ class _VersionTile extends StatelessWidget {
 
 class _LinkTile extends StatelessWidget {
   const _LinkTile({required this.comparison, required this.bottom, required this.earlier,
-    required this.newer, required this.versions});
+    required this.newer, required this.versions, this.onCompareAgain});
 
   final Comparison comparison;
   final bool bottom;
   final String earlier, newer;
   final List<Version> versions;
+  final VoidCallback? onCompareAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +402,8 @@ class _LinkTile extends StatelessWidget {
     final why = failed ? comparisonFailureMessages(l, comparison, versions).firstOrNull : null;
     return IntrinsicHeight(key: Key('link-${comparison.id}'),
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _Rail(top: true, bottom: bottom, child: Icon(CalmIcons.arrowUp, size: 16, color: colors.muted)),
+        // A plain rail: the card's own "earlier → newer" carries the direction.
+        _Rail(top: true, bottom: bottom, child: const SizedBox.shrink()),
         SizedBox(width: large ? 8 : 12),
         Expanded(child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Semantics(
           button: true, excludeSemantics: true,
@@ -426,6 +435,10 @@ class _LinkTile extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(why, style: text.bodySmall),
                     ],
+                    if (onCompareAgain != null) Padding(padding: const EdgeInsets.only(top: 4),
+                      child: TextButton.icon(key: Key('compare-again-${comparison.id}'), onPressed: onCompareAgain,
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        icon: const Icon(CalmIcons.compare, size: 18), label: Text(l.historyCompareAgain))),
                   ])),
                   if (!large) ...[
                     const SizedBox(width: 12),

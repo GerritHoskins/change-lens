@@ -1197,6 +1197,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get historyCompareAgain => 'Compare again';
+
+  @override
+  String historyComparisonDone(String earlier, String newer, String status) {
+    return 'Comparison of $earlier with $newer: $status';
+  }
+
+  @override
   String get kindPdf => 'PDF';
 
   @override
