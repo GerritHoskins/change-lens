@@ -242,7 +242,8 @@ cd /opt/changelens/deploy/ionos
 ## D. Backups, restore test and monitoring
 
 **Done 2026-11-16:** backups and WAL shipping run, restore test passed (E), monitor cron set, alert mail received.
-Still open: D3's outside uptime check and D4's calendar entry.
+The outside uptime check (D3) is the `uptime` workflow, built 2026-11-17; it starts once it is on `main`.
+Still open: its alert test (stop `caddy` for 20 minutes) and D4's calendar entry.
 
 1. **Backups run.** Within a few minutes the log shows `started`, `wal shipped=…`, `base backup uploaded`,
    `logto audit entries deleted=…`:
@@ -272,8 +273,13 @@ Still open: D3's outside uptime check and D4's calendar entry.
    chmod 700 /opt/changelens/deploy/ionos/monitor.sh && (crontab -l 2>/dev/null; echo '*/10 * * * * /opt/changelens/deploy/ionos/monitor.sh') | crontab -
    ```
    Test the alert mail once by stopping a container for 10 minutes (`docker compose stop retention`, then
-   `docker compose start retention`). The monitor can't report the server itself being down: add an outside
-   uptime check on both domains (a new processor only sees the URLs; record it in the data inventory).
+   `docker compose start retention`). The monitor can't report the server itself being down, so
+   `.github/workflows/uptime.yml` checks both domains from GitHub's runners every 10 minutes: the API must
+   answer 401 without a token and Logto's OpenID configuration 200, three tries each. A failed run mails the
+   person who last changed its schedule (GitHub: Settings, Notifications, Actions, "failed workflows only").
+   GitHub is already a processor of this repository and sees the two URLs only (data inventory). Its limits:
+   scheduled runs start late under load (often 10 to 20 minutes), so an outage shorter than that can pass
+   unseen, and the schedule pauses after 60 days without a commit; GitHub mails a warning first.
 4. **Patch reminder.** A calendar entry: check Logto, PDFium (`pypdfium2`), Caddy, Postgres and Ubuntu
    security releases weekly; apply within 7 days (03 §6).
 
