@@ -428,15 +428,25 @@ Dependabot ignores Logto (upgraded by hand, runbook F), Postgres majors and Pyth
 ## Task L21: Move off Python 3.10
 
 **Description:** Python 3.10 reached end of life in October 2026. Regenerate the hashed requirements for the
-target version (owner picks 3.12 or 3.13), and change CI and the production image together.
+target version, and change CI and the production image together. The owner chose **3.14.10** (2026-11-17): it is
+the only candidate with one exact release for the Windows runner, the Linux runner, the image and a Windows PC,
+and it is supported until October 2030. 3.11 to 3.13 are security-only, so Windows gets no new builds of them.
 
 **Acceptance criteria:**
-- [ ] `backend/requirements.txt`, `requirements-test.txt` and `scripts/eval/requirements-render.txt` install with `--require-hashes` on the new version
-- [ ] Both workflows and `deploy/ionos/changelens.Dockerfile` (tag and digest) use the same version
-- [ ] Unit, integration and eval suites are green; the "Known gaps" line in the runbook is removed
+- [x] `backend/requirements.txt`, `requirements-test.txt` and `scripts/eval/requirements-render.txt` install with `--require-hashes` on the new version
+- [x] All three workflows and `deploy/ionos/changelens.Dockerfile` (tag and digest) use the same version
+- [x] Unit, integration and eval suites are green; the "Known gaps" line in the runbook is removed
 
 **Verification:**
-- [ ] Backend unit and integration commands; `./scripts/ci.ps1`; both workflows green on the pull request
+- [x] All three workflows green on GitHub on 3.14.10 (commit `f6d9571`: 884 backend unit tests, the integration suite on Linux, 185 evaluation, release and playbook tests, and a clean audit of all four pin files)
+- [ ] The owner's PC: install Python 3.14.10, recreate `.venv` and `backend/.venv` (`py -3.14 -m venv …`) and run `./scripts/ci.ps1` and the integration command
+- [ ] The server: the next deploy rebuilds the image on 3.14.10 (runbook F), followed by the checks of L10
+
+**Built 2026-11-17 on branch `l21-python`.** Not run locally: no Python 3.14 on the PC, by the owner's choice.
+- Version changes: numpy 2.2.6 to 2.5.5 (3.14 wheels), pillow 12.3.0 to 13.0.0 and filelock 4.1.0 to 4.2.11 (the 59 advisories of L20). The audit now fails on a finding in any file.
+- `scripts/ci/pin_hashes.py` rewrites a pin file's hashes from PyPI; for 3.10 it reproduced 53 of the 54 old pins exactly (cffi gains one macOS wheel).
+- Two tests held only on 3.10 and were made independent of it: one forced a parser error with deeply nested JSON, which 3.14 parses; one hashed raw PDF bytes, which differ with the interpreter's compression library. The canonical digest is the same on 3.10, 3.11 and 3.14, so the fixtures did not change.
+- Unit tests still run only on Windows in CI; on Linux, the production platform, only the integration suite runs.
 
 **Dependencies:** None (its own pull request; no other backend task in flight) · **Files likely touched:** `backend/requirements*.txt`, `scripts/eval/requirements-render.txt`, `.github/workflows/*.yml`, `deploy/ionos/changelens.Dockerfile` · **Estimated scope:** M
 

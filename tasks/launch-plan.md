@@ -111,7 +111,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] L18 Bring the documents in line with the code
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
-- [ ] L21 Move off Python 3.10
+- [x] L21 Move off Python 3.10 (built 2026-11-17 on branch `l21-python`: Python 3.14.10; open: the PC and the server)
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [ ] L24 Close or schedule the open UI findings
@@ -156,6 +156,6 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - **L3** Organisation account (D-U-N-S, up to 30 days) or a personal account with 12 testers for 14 days?
 - **L5** Are the contract defaults in `docs/api-contracts-draft.md` approved as written (D1–D4 in
   `tasks/plan.md`), and is allowance-before-feedback the order?
-- **L21** Target Python version: 3.12 or 3.13? It depends on wheel availability for every pinned package.
+- **L21** Decided 2026-11-17: Python 3.14.10 (every pinned package has wheels for 3.11 to 3.14; only 3.14 still gets Windows builds).
 - **L22** D-9 lists I-16 and I-19 as dependencies, and both are deferred until after launch. The review
   scope for launch needs the owner's wording.
