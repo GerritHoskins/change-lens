@@ -162,7 +162,7 @@ clone, and force-push. This is irreversible and changes every commit ID. Check t
 **Acceptance criteria:**
 - [x] The seven files are copied outside the repository before anything else
 - [x] A fresh clone has no commit touching the seven paths: `git log --all --oneline -- PRODUCT.md docs/06-decision-log.md` prints nothing
-- [ ] Old commits are unreachable on GitHub: support confirmed the purge (route A), or the repository was recreated (route B)
+- [ ] ~~Old commits are unreachable on GitHub: support confirmed the purge (route A), or the repository was recreated (route B)~~ Not met, accepted by the owner on 2026-11-17 (see below)
 
 **Verification:**
 - [x] `git ls-remote origin` shows only rewritten branch heads; CI is green on the new `main`
@@ -192,18 +192,23 @@ git switch m1-iphone
 git reset --hard origin/m1-iphone
 ```
 
-**Rewritten and force-pushed 2026-11-17; the purge is still open.** 215 commits became 195 (20 touched only the
+**Closed 2026-11-17: rewritten and force-pushed; the purge will not happen and the rest is accepted.** GitHub
+Support closed the request because the account's plan has self-service support only. The owner declined route B
+(it loses the pull requests, the star, the Actions history and the repository settings) and accepted that the
+old commits stay readable by ID and through old pull requests' file views; the reason is in 06. Route B stays
+possible later. What follows describes the rewrite as it was done.
+
+**Rewritten and force-pushed 2026-11-17.** 215 commits became 195 (20 touched only the
 private paths); `main` is `f7fb186` and `m1-iphone` is `68578c8`, with the same file trees as before. Every commit
 ID changed, so IDs quoted in older text (such as `f27ccfa` and `a8280b9`) are the old ones; the old-to-new list is
 `filter-repo/commit-map` in `C:\Users\Gerrit\change-lens-rewrite.git`. The old commits stay readable by ID on
-GitHub, and the 34 pull-request refs still point at them, until GitHub support purges them (the owner sends the
-request). Other clones must be reset, never merged or pulled (the IONOS server: see L10).
+GitHub, and the pull-request refs still point at them. Other clones must be reset, never merged or pulled (the IONOS server: see L10).
 
 **Dependencies:** L1, L8, L9 · **Files likely touched:** none (history only) · **Estimated scope:** S
 
 ### Checkpoint A: after L6–L9
 - [ ] `main` holds all work and CI is green on it
-- [ ] The private paths are gone from `origin`, or the acceptance is in 06
+- [x] The private paths are gone from `origin`, or the acceptance is in 06 (branches are clean; the old commits and pull-request refs are accepted in 06, 2026-11-17)
 - [ ] Owner review before server and device work
 
 ---
@@ -216,12 +221,12 @@ request). Other clones must be reset, never merged or pulled (the IONOS server: 
 the merged `main` as in the runbook's section F, then repeat the restore test of section D2.
 
 **Acceptance criteria:**
-- [ ] The `migrate` run ends at `0008_consent_events`; `api` answers 401 without a token and `auth` answers 200
-- [ ] A new `RESTORE OK` line is recorded in section E with the date and schema `0008_consent_events`
-- [ ] The private key file is shredded after the test
+- [x] The `migrate` run ends at `0008_consent_events`; `api` answers 401 without a token and `auth` answers 200
+- [x] A new `RESTORE OK` line is recorded in section E with the date and schema `0008_consent_events`
+- [x] The private key file is shredded after the test
 
 **Verification:**
-- [ ] `docker compose ps` shows every service running; the monitor sends no alert within 20 minutes
+- [x] `docker compose ps` shows every service running; the monitor sends no alert within 20 minutes
 
 ```bash
 cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
@@ -229,6 +234,17 @@ install -m 600 -o 70 /dev/null /etc/changelens/backup-identity.txt && nano /etc/
 docker compose --profile tools run --rm restore-test
 shred -u /etc/changelens/backup-identity.txt
 ```
+
+**Done 2026-11-17.** The server clone moved from the old `e191ad5` (branch
+`m1-iphone`) to the rewritten `main` at `6a90bb5`; its `git@github.com` remote has no key in a non-interactive
+session, so the fetch ran over HTTPS (`git fetch https://github.com/GerritHoskins/change-lens.git
+"+refs/heads/main:refs/remotes/origin/main"`, then `git checkout -B main origin/main`). The schema went from
+`0006_social_sign_in` to `0008_consent_events`; all eight services run, `api` 401, `auth` 200, and `/docs`,
+`/redoc` and `/openapi.json` answer 404 (L12's manual check). The previous images are kept as
+`changelens-backend:pre-l10` and `changelens-backup:pre-l10`. The owner then ran the
+restore test with the private backup key: `RESTORE OK` at 18:47:58Z from base `20261117T074427Z`, schema
+`0008_consent_events` (runbook section E), and the key file was shredded. The monitor ran five times in the 45
+minutes after the deploy and recorded no alert (`/var/lib/changelens-monitor` has no `last` file).
 
 **Dependencies:** L8 (and L6 if chosen: the server clone then needs `git fetch && git reset --hard origin/main` instead of `git pull`) · **Files likely touched:** `deploy/ionos/README.md` · **Estimated scope:** S
 
