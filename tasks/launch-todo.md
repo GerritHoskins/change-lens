@@ -121,16 +121,13 @@ Pass the define in both, and make the offline check fail when a release workflow
 Open the pull request and merge it. The uncommitted app edits of the second session are not part of it.
 
 **Acceptance criteria:**
-- [ ] The pull request is merged with a merge commit, as PRs 10–33 were
-- [ ] `plan-checks` and `backend-integration` are green on `main`
+- [x] The pull request is merged with a merge commit, as PRs 10–33 were
+- [x] `plan-checks` and `backend-integration` are green on `main`
 
 **Verification:**
-- [ ] `gh run list --branch main --limit 2` shows two successes
+- [x] `gh run list --branch main --limit 2` shows two successes
 
-```powershell
-gh pr create --base main --head m1-iphone --fill
-gh pr merge m1-iphone --merge
-```
+**Done 2026-11-17.** Pull request 34 (16 commits, head `12f8319`, with L7, L11 and L12) was merged by the owner as merge commit `7ee8667` (`f7fb186` after the L6 rewrite); both workflows are green on it.
 
 **Dependencies:** None · **Files likely touched:** none · **Estimated scope:** XS
 
@@ -140,23 +137,19 @@ gh pr merge m1-iphone --merge
 them so L6 has fewer refs to rewrite. `git worktree remove` refuses a worktree with uncommitted work; never add `--force`.
 
 **Acceptance criteria:**
-- [ ] `git worktree list` shows only the main checkout (or worktrees the owner chose to keep)
-- [ ] Local and remote branches are `main` and `m1-iphone` only
-- [ ] Nothing unmerged was deleted: `git branch -d` (lower-case) succeeded for every branch
+- [x] `git worktree list` shows only the main checkout (or worktrees the owner chose to keep)
+- [x] Local and remote branches are `main` and `m1-iphone` only
+- [x] Nothing unmerged was deleted: `git branch -d` (lower-case) succeeded for every branch
 
 **Verification:**
-- [ ] `git branch -a` and `git worktree list`
+- [x] `git branch -a` and `git worktree list`
 
-```powershell
-git switch main
-git pull --ff-only
-git worktree remove C:\Users\Gerrit\job-search\POCs\change-lens-impeccable
-git worktree remove C:\Users\Gerrit\job-search\POCs\change-lens\.claude\worktrees\magical-brahmagupta-f994e0
-git worktree remove C:\Users\Gerrit\.paseo\worktrees\1ewj8izr\t14-iphone-check
-git worktree remove C:\Users\Gerrit\.codex\visualizations\2026\11\07\01a1b695-7928-78d0-bfda-68df53af9f41\evaluation-tooling-checkout
-git branch -d claude/magical-brahmagupta-f994e0 codex/fresh-heldout-preparation d15-mobile-poc d8-logto d8-logto-impeccable i7-eval i7b-development ios-device-check playbooks/t14-iphone-check
-git push origin --delete claude/magical-brahmagupta-f994e0 codex/fresh-heldout-preparation d15-mobile-poc d8-logto d8-logto-impeccable i7-eval i7b-development ios-device-check
-```
+**Done 2026-11-17.** Four worktrees removed without `--force`, nine local and eight remote branches deleted; every
+tip was contained in `origin/main` first. Differences from the planned commands:
+- Local `main` was fast-forwarded with `git fetch origin main:main`, not `git switch main`, because other sessions share this checkout on `m1-iphone`.
+- `i7-eval` was 5 commits ahead of its own remote branch, so `-d` refused it until the remote branch was deleted; its tip `ad72bbc` is in `main`.
+- Windows stopped `git worktree remove` on the Claude worktree at an over-long path after unregistering it; the leftover folder (tracked files and build output only) was deleted with `rd /s /q` on its `\\?\` path.
+- The paseo worktree's three git-ignored run records were copied to this checkout's `.paseo/plugins/playbooks/runs/t14-preparation/` before removal.
 
 **Dependencies:** L8 · **Files likely touched:** none · **Estimated scope:** XS
 
@@ -167,12 +160,12 @@ clone, and force-push. This is irreversible and changes every commit ID. Check t
 `git-filter-repo` manual and GitHub's "Removing sensitive data from a repository" before running them.
 
 **Acceptance criteria:**
-- [ ] The seven files are copied outside the repository before anything else
-- [ ] A fresh clone has no commit touching the seven paths: `git log --all --oneline -- PRODUCT.md docs/06-decision-log.md` prints nothing
+- [x] The seven files are copied outside the repository before anything else
+- [x] A fresh clone has no commit touching the seven paths: `git log --all --oneline -- PRODUCT.md docs/06-decision-log.md` prints nothing
 - [ ] Old commits are unreachable on GitHub: support confirmed the purge (route A), or the repository was recreated (route B)
 
 **Verification:**
-- [ ] `git ls-remote origin` shows only rewritten branch heads; CI is green on the new `main`
+- [x] `git ls-remote origin` shows only rewritten branch heads; CI is green on the new `main`
 - [ ] Manual: `https://github.com/GerritHoskins/change-lens/commit/a8280b9` returns 404
 
 ```powershell
@@ -198,6 +191,13 @@ git reset --hard origin/main
 git switch m1-iphone
 git reset --hard origin/m1-iphone
 ```
+
+**Rewritten and force-pushed 2026-11-17; the purge is still open.** 215 commits became 195 (20 touched only the
+private paths); `main` is `f7fb186` and `m1-iphone` is `68578c8`, with the same file trees as before. Every commit
+ID changed, so IDs quoted in older text (such as `f27ccfa` and `a8280b9`) are the old ones; the old-to-new list is
+`filter-repo/commit-map` in `C:\Users\Gerrit\change-lens-rewrite.git`. The old commits stay readable by ID on
+GitHub, and the 34 pull-request refs still point at them, until GitHub support purges them (the owner sends the
+request). Other clones must be reset, never merged or pulled (the IONOS server: see L10).
 
 **Dependencies:** L1, L8, L9 · **Files likely touched:** none (history only) · **Estimated scope:** S
 
