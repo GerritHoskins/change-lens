@@ -412,7 +412,7 @@ already checks every push (the audit of 2026-11-17 missed it).
 - [x] Dependabot proposes updates for GitHub Actions and the pinned image digests
 
 **Verification:**
-- [ ] The `dependency-audit` workflow is green on GitHub
+- [x] The `dependency-audit` workflow is green on GitHub (commit `2245bc7`: production pins clean, the report-only step lists the 42, 42 and 17 advisories)
 - [ ] Dependabot's first run on `main` finds `changelens.Dockerfile` and `compose.yaml` (not checkable before the merge)
 
 **Built 2026-11-17.** The audit tool is hash-pinned in `scripts/ci/requirements-audit.txt` (pip-audit 2.10.1, 29 wheels).
