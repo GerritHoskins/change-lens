@@ -7,6 +7,8 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
+from check_acceptance import DEFERRED_CHECKS
+
 ROOT = Path(__file__).resolve().parents[2]
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 
@@ -88,6 +90,20 @@ def check(root: Path) -> list[str]:
                 name + " must pass the sign-in app ID to every flutter build")
         require(-1 < block.find(guard) < block.find("flutter build "),
                 name + " must stop before building when the sign-in app ID is empty")
+
+    # The hand-off check is deferred until I-16 (check_acceptance.DEFERRED_CHECKS). It has to come back
+    # together with the share extension, so neither an extension target nor an app group may exist
+    # while it is deferred.
+    if "handoff_file_protection" in DEFERRED_CHECKS["ios"]:
+        project = (root / "app/ios/Runner.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
+        require("com.apple.product-type.app-extension" not in project,
+                "an app extension needs handoff_file_protection back in the iOS acceptance checks")
+        entitlements = [path for path in sorted((root / "app/ios").rglob("*.entitlements"))
+                        if "Pods" not in path.parts]
+        require(bool(entitlements), "the iOS entitlements could not be found")
+        for path in entitlements:
+            require("com.apple.security.application-groups" not in path.read_text(encoding="utf-8"),
+                    "an app group needs handoff_file_protection back in the iOS acceptance checks")
     return errors
 
 

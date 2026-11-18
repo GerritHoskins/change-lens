@@ -22,8 +22,12 @@ CHECKS = {
 }
 PLATFORM_CHECKS = {
     "android": {"backup_and_transfer_excluded", "keystore_backed_tokens"},
-    "ios": {"keychain_this_device_only", "fresh_install_keychain_cleanup", "handoff_file_protection"},
+    "ios": {"keychain_this_device_only", "fresh_install_keychain_cleanup"},
 }
+# Not required yet. Owner's decision, 2026-11-18: `handoff_file_protection` leaves the iOS launch set
+# until I-16. The launch app has no share extension and no app group, so there are no hand-off files
+# to observe. check_config.py fails as soon as either exists while the check is still listed here.
+DEFERRED_CHECKS = {"ios": {"handoff_file_protection"}}
 
 
 def digest(path: Path) -> str:

@@ -636,7 +636,7 @@ done. Account A has since been deleted, and the iPhone sitting's results are not
 **Verification:**
 - [ ] `python scripts/release/check_acceptance.py --platform android --artifact <release.apk> --receipt <receipt.json>` and the same for `ios`
 
-**Dependencies:** L7, L13, L23, L3 (Android), L29 (two iOS checks), and the owner's decision on `handoff_file_protection`, which doesn't apply before I-16 · **Files likely touched:** none in Git (receipts stay outside) · **Estimated scope:** M
+**Dependencies:** L7, L13, L23, L3 (Android), L29 (the two iOS checks; `handoff_file_protection` is not required before I-16, owner's decision 2026-11-18) · **Files likely touched:** none in Git (receipts stay outside) · **Estimated scope:** M
 
 ## Task L26: Usability test with 5 users (D-10; owner)
 
