@@ -286,7 +286,7 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 
 ## Task L13: Device session for the M2 and M1b exits (owner, both phones)
 
-**Description:** One sitting on the iPhone and the Fairphone against the IONOS server, with synthetic documents only. It closes every device check the audit found open. The iPhone half has a step-by-step checklist with a result line per step: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md).
+**Description:** One sitting on the iPhone and the Fairphone against the IONOS server, with synthetic documents only. It closes every device check the audit found open. The iPhone half has a step-by-step checklist with a result line per step: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md). The Fairphone half follows it, with its own checklist: [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md).
 
 **Acceptance criteria:**
 - [ ] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26
