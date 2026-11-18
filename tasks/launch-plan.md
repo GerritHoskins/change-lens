@@ -136,7 +136,7 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
    `--dart-define=CHANGELENS_CONSENT=true`, so L13's consent line can be checked. Step 2 is the next step.
 2. **Build (Codemagic Mac).** Run `ios-device-check` from `main`. This is also the first Codemagic run of L7's
    sign-in define.
-3. **iPhone sitting 1.** L13's iPhone half: Sign in with Apple (iOS only), Google, the email code, the
+3. **iPhone sitting 1** (checklist: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md))**.** L13's iPhone half: Sign in with Apple (iOS only), Google, the email code, the
    `link_required` link, MFA, a PDF comparison from the picker, account deletion, and the consent screen with
    its withdrawal (also the manual check of Task 2 in `tasks/todo.md`). In the same sitting: the VoiceOver check
    of L28 A8 and the M1b exit on the iPhone. This closes the iPhone lines in `docs/verification.md` (AC-12 to
