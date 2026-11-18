@@ -15,110 +15,124 @@ Android: the consent screen, a comparison on the server, MFA and account deletio
 
 **PC (local, PowerShell, in the repository folder; the phone connected by USB with USB debugging on)**
 
-- [ ] Install the debug build. It is built from `main` with sign-in and the consent screen
+- [x] Install the debug build. It is built from `main` with sign-in and the consent screen
       (`--dart-define=CHANGELENS_LOGTO_APP_ID=…` and `--dart-define=CHANGELENS_CONSENT=true`). `-r` keeps the
       app's data if an older debug build is installed.
       ```powershell
       adb install -r app\build\app\outputs\flutter-apk\app-debug.apk
       ```
-      Result:
+      Result: 2026-11-18, pass. Built from c156a99 (= `origin/main`) with both defines; installed on the FP5
+      over USB, `Success`, `dev.changelens.app` updated 16:33. Server before the sitting: `api` 401, `auth` 200.
 
 **Logto console (PC browser at `http://localhost:3002`, through the SSH tunnel of runbook C4)**
 
-- [ ] Account A from the iPhone sitting still exists, with Google linked (iPhone step 6).
+- [x] Account A from the iPhone sitting still exists, with Google linked (iPhone step 6).
+      2026-11-18: one user with the owner's Gmail address, Google identity linked.
 
 **Fairphone**
 
-- [ ] Two synthetic PDFs with a text layer are in the Downloads folder (an earlier and a newer brief).
+- [x] Two synthetic PDFs with a text layer are in the Downloads folder (an earlier and a newer brief).
+      2026-11-18: `P-703-old.pdf` and `P-703-new.pdf` (ReportLab, text extracts: "P-703 (earlier version)" /
+      "(newer version)"); `P-713-old/new.pdf` are there too.
 - [ ] The authenticator app that holds account A's two-step code is at hand (on the iPhone, or on this phone).
-- [ ] The Google account of account A's address is signed in on the phone.
-- [ ] If the app opens signed in from an earlier check: Menu (top right) → Settings → **Sign out**.
+      2026-11-18, fail: no authenticator entry for Logto on any device, so MFA was never set up for account A
+      (the iPhone MFA step did not set it up). Finding, task L30.
+- [x] The Google account of account A's address is signed in on the phone. 2026-11-18: the owner believes
+      so (not checked on the phone).
+- [x] If the app opens signed in from an earlier check: Menu (top right) → Settings → **Sign out**.
+      2026-11-18, after the install: the app opened signed in, on the first-run onboarding ("Schritt 1 von
+      6"; the phone was set to German, then switched to English). Settings showed account A's address. The
+      onboarding state is stored on the server, so account A had not finished onboarding although the iPhone
+      sitting was done (its results are not written down yet). Finding, task L30. Skipped the onboarding, signed out.
 
 ## 1. Sign-in screen and email sign-in (Fairphone)
 
-- [ ] The sign-in screen shows two buttons in this order: Continue with Google, Continue with email. There
+- [x] The sign-in screen shows two buttons in this order: Continue with Google, Continue with email. There
       is no Continue with Apple on Android.
-      Result:
-- [ ] Continue with email → enter account A's address on Logto's page → enter the code from the mail.
-      Result:
+      Result: 2026-11-18, pass.
+- [x] Continue with email → enter account A's address on Logto's page → enter the code from the mail.
+      Result: 2026-11-18, pass. The code arrived and was accepted.
 - [ ] MFA: Logto's page asks for the authenticator code before it returns to the app. If it doesn't ask,
       write that down; it is then a finding.
-      Result:
-- [ ] The app opens the project list directly. The onboarding and the consent screen do not appear, because
+      Result: 2026-11-18, fail. Not asked; account A has no MFA set up (see Before you start). Finding.
+- [x] The app opens the project list directly. The onboarding and the consent screen do not appear, because
       account A answered both on the iPhone, and the project from the iPhone sitting is there.
-      Result:
-- [ ] Menu → Settings: the line "Access token lifetime: 900 s" shows (debug builds only).
-      Result:
+      Result: 2026-11-18, pass (onboarding was skipped on this phone just before, see Before you start).
+- [x] Menu → Settings: the line "Access token lifetime: 900 s" shows (debug builds only).
+      Result: 2026-11-18, pass.
 
 ## 2. Google sign-in with the linked account (Fairphone)
 
-- [ ] Settings → **Sign out**. The sign-in screen says "You're signed out."
-- [ ] Continue with Google, with account A's Gmail address. It signs in directly, because the link was
+- [x] Settings → **Sign out**. The sign-in screen says "You're signed out." 2026-11-18, pass.
+- [x] Continue with Google, with account A's Gmail address. It signs in directly, because the link was
       completed on the iPhone. Settings says "Signed in with Google", with account A's address.
-      Result (was the authenticator code asked for with Google?):
+      Result (was the authenticator code asked for with Google?): 2026-11-18, pass. No authenticator code
+      asked for (account A has no MFA).
 
 ## 3. A PDF comparison from the picker (Fairphone)
 
-- [ ] New project → name it. Then **Compare two briefs** at the bottom of the project list, and choose the
+- [x] New project → name it. Then **Compare two briefs** at the bottom of the project list, and choose the
       project.
-- [ ] Earlier version: Pick a PDF → label → Pick a PDF → choose the earlier PDF in Downloads. Newer version:
+- [x] Earlier version: Pick a PDF → label → Pick a PDF → choose the earlier PDF in Downloads. Newer version:
       the same with the newer PDF.
-      Result (did the Android picker open and return the file?):
-- [ ] Answer "What is the newer version?" and tap **Start comparison**. The status screen ends at Complete
+      Result (did the Android picker open and return the file?): 2026-11-18, pass. `P-703-old.pdf` and
+      `P-703-new.pdf` returned.
+- [x] Answer "What is the newer version?" and tap **Start comparison**. The status screen ends at Complete
       and offers **Open report**.
-      Result (time from Start to Complete):
-- [ ] Open report → open a finding → tap a quote. The PDF page opens with the passage highlighted, and the
+      Result (time from Start to Complete): 2026-11-18, pass. Under 1 minute.
+- [x] Open report → open a finding → tap a quote. The PDF page opens with the passage highlighted, and the
       card said "Highlight located". Switch to **Readable text** and back.
-      Result:
-- [ ] The M1b exit check, as worded in 05 (private): confirm one finding, correct one, dismiss one, add a
+      Result: 2026-11-18, pass.
+- [x] The M1b exit check, as worded in 05 (private): confirm one finding, correct one, dismiss one, add a
       note, and record a client approval.
-      Result:
+      Result: 2026-11-18, pass. All five done.
 
 ## 4. Field messages, background and TalkBack (L27 and L28; Fairphone)
 
 The same checks as steps 4 and 5 of the iPhone sitting, on Android.
 
-- [ ] In the project: Paste text → tap **Import** with both fields empty. A message appears under each field,
+- [x] In the project: Paste text → tap **Import** with both fields empty. A message appears under each field,
       and the sheet stays open.
-      Result:
-- [ ] Turn on Airplane mode. Paste text → label and text → Import. The sheet opens again with your label, your
+      Result: 2026-11-18, pass.
+- [x] Turn on Airplane mode. Paste text → label and text → Import. The sheet opens again with your label, your
       text and the reason. Turn Airplane mode off and tap Import: the version appears once.
-      Result:
-- [ ] Start a second comparison. On the status screen go to the Home screen, wait a minute, and return. The
+      Result: 2026-11-18, pass.
+- [x] Start a second comparison. On the status screen go to the Home screen, wait a minute, and return. The
       status catches up within a few seconds.
-      Result:
-- [ ] Turn TalkBack on (Settings app → Accessibility → TalkBack). Open a quote in **Readable text**: TalkBack
+      Result: 2026-11-18, pass.
+- [x] Turn TalkBack on (Settings app → Accessibility → TalkBack). Open a quote in **Readable text**: TalkBack
       says "Marked passage: …" before the page text. Switch to **PDF page**: it says "PDF page N. Marked
       passage: …".
-      Result:
-- [ ] Turn TalkBack off.
+      Result: 2026-11-18, pass. Both announcements as written.
+- [x] Turn TalkBack off.
 
 ## 5. Account deletion, then the consent screen on a new account (Fairphone, then the Logto console)
 
 Account A is deleted here. Do this section last, after every other check that needs it on either phone.
 
-- [ ] Menu → Settings → **Delete account** → confirm. The app returns to the sign-in screen with "Your
+- [x] Menu → Settings → **Delete account** → confirm. The app returns to the sign-in screen with "Your
       account and all its projects were deleted." (or the notice that the last copies finish in the
       background).
-      Result (which notice):
-- [ ] Logto console: User management no longer lists account A.
-      Result:
-- [ ] Continue with email, with account A's address. No code arrives, because the user is gone and
+      Result (which notice): 2026-11-18, pass. "Your account and all its projects were deleted."
+- [x] Logto console: User management no longer lists account A.
+      Result: 2026-11-18, pass.
+- [x] Continue with email, with account A's address. No code arrives, because the user is gone and
       registration is off.
-      Result:
-- [ ] Continue with Google, with the same Gmail address. A new account starts: the onboarding appears, and
+      Result: 2026-11-18, pass. No code arrived.
+- [x] Continue with Google, with the same Gmail address. A new account starts: the onboarding appears, and
       the project list is empty afterwards.
-      Result:
-- [ ] After the onboarding, the screen "Share usage events?" appears, with Allow and Don't allow, nothing
+      Result: 2026-11-18, pass.
+- [x] After the onboarding, the screen "Share usage events?" appears, with Allow and Don't allow, nothing
       preselected and no Back. Tap **Don't allow**.
-      Result:
-- [ ] Close the app from the recent-apps view and open it again. The consent screen does not come back.
-      Result:
-- [ ] Menu → Settings → Privacy: "Share usage events" is off. Turn it on, leave Settings, open it again: it
+      Result: 2026-11-18, pass for the screen. **Allow** was tapped instead of Don't allow.
+- [x] Close the app from the recent-apps view and open it again. The consent screen does not come back.
+      Result: 2026-11-18, pass.
+- [x] Menu → Settings → Privacy: "Share usage events" is off. Turn it on, leave Settings, open it again: it
       is still on. Turn it off again: this is the withdrawal.
-      Result:
-- [ ] Delete account → confirm, and check in the Logto console that the Google account is gone too.
-      Result:
+      Result: 2026-11-18, pass as reported. Because Allow was tapped, the switch started on rather than off;
+      the change persisted across leaving Settings, and it was turned off at the end (the withdrawal).
+- [x] Delete account → confirm, and check in the Logto console that the Google account is gone too.
+      Result: 2026-11-18, pass. Gone from the console.
 
 ## Not covered in this sitting
 

@@ -554,7 +554,7 @@ line in 06; A5 depends on whether iPad is a target at launch.
 **Acceptance criteria:**
 - [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; not yet built on Codemagic)
 - [x] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
-- [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack (built 2026-11-18; the screen-reader check is open)
+- [x] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack (built 2026-11-18; heard with TalkBack on the Fairphone 2026-11-18, L13 sitting)
 
 **Verification:**
 - [ ] App command passes (no analyzer issues, 300 tests); the screen-reader check is recorded in `docs/ui-ux-audit.md` (open, L13 sitting)
@@ -590,6 +590,24 @@ starts signed in. And the protection of the stored items can only be observed if
 once. Before launch that affects the owner's phones only.
 
 **Dependencies:** None; before L25 · **Files likely touched:** `app/ios/Runner/AppDelegate.swift`, `app/lib/services.dart`, `app/lib/screens/settings_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
+
+## Task L30: MFA and onboarding findings from the L13 Fairphone sitting (owner, iPhone first)
+
+**Description:** The Fairphone sitting (2026-11-18, `docs/device-sitting-1-android.md`) found two fails.
+Account A never had MFA set up: no authenticator entry exists, so Logto asked for no code with email or
+Google, and the iPhone MFA step either wasn't offered MFA or skipped it. And account A arrived on the Fairphone
+with its onboarding unfinished, although onboarding state is stored on the server and the iPhone sitting was
+done. Account A has since been deleted, and the iPhone sitting's results are not written down.
+
+**Acceptance criteria:**
+- [ ] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there
+- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced)
+- [ ] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed
+
+**Verification:**
+- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row
+
+**Dependencies:** None · **Files likely touched:** `docs/device-sitting-1.md`, `deploy/ionos/README.md`, possibly `app/lib/auth/session.dart` · **Estimated scope:** S
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
