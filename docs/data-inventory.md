@@ -1,6 +1,6 @@
 # Data inventory and deletion boundaries
 
-I-13 / AC-22 / AC-23. This inventory describes the local implementation and its external dependencies. It is not evidence that a production deployment, backup service or identity provider has been configured or erased. Recheck it whenever a content store or processor is added, before real-client-data acceptance and before publishing privacy declarations.
+I-13 / AC-22 / AC-23. This inventory describes the implementation, its external dependencies and, in the rows that say so, the IONOS deployment. It is not evidence that a backup service or identity provider has erased anything. Recheck it whenever a content store or processor is added, before real-client-data acceptance and before publishing privacy declarations.
 
 ## Retention contract
 
