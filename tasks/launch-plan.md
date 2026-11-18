@@ -4,7 +4,7 @@ Source: the repository audit of 2026-11-17 (decision matrix, items 1–16). Task
 [`tasks/launch-todo.md`](launch-todo.md).
 
 This plan sits **next to** [`tasks/plan.md`](plan.md) and [`tasks/todo.md`](todo.md), which stay the plan
-for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L28, so the two lists
+for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L29, so the two lists
 never collide. Where the audit names work that T3–T15 already describe, this plan points at those tasks and
 doesn't repeat them.
 
@@ -117,6 +117,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
 - [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)
 - [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8) (built 2026-11-18; open: the screen-reader check on a phone)
+- [ ] L29 iOS Keychain: clear it on a fresh install and show its effective protection (for L25)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
 
@@ -152,9 +153,10 @@ Open before these steps:
   (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations), so the store needs no iPad screenshots. The build in
   step 2 proves the change. An iPad can still run the app as a scaled iPhone app, and App Review may open it
   that way.
-- **L25, before step 4:** the README doesn't say how the three iOS checks (`keychain_this_device_only`,
-  `fresh_install_keychain_cleanup`, `handoff_file_protection`) are observed on a release build. The third names
-  the share extension, which is part of the deferred I-16.
+- **L25, worked out 2026-11-18** (`scripts/release/README.md`, "Observing the iOS-only checks"): none of the
+  three iOS checks can pass today. The Keychain cleanup after a reinstall is not built, and the Keychain
+  protection can only be observed if the app reads it back; both are task L29, before step 4.
+  `handoff_file_protection` doesn't apply before I-16: the owner decides whether it leaves the launch set.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
   sitting 2.
 

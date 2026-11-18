@@ -65,6 +65,35 @@ uploaded IPA/build number and retain its hash. Upload to an owner-only testing c
 to inspect a build, is a separate authorized action. Acceptance gates distribution to external
 testers; this script cannot replace the backend security/quality gates or grant publication approval.
 
+## Observing the iOS-only checks
+
+Worked out on 2026-11-18 from the app source, the pinned `flutter_secure_storage` plugin source (11.2.0,
+darwin 0.4.3) and Apple's developer forums. None of the three can be recorded as a pass today.
+
+| Check | Status | How to observe it on the signed build |
+|---|---|---|
+| `fresh_install_keychain_cleanup` | Expected to fail today: the code is missing (task L29) | Sign in, delete the app, install the same IPA again and open it. Pass: the sign-in screen. Fail: you are still signed in. |
+| `keychain_this_device_only` | Needs a readback in the app (task L29) | The app asks the Keychain for the attributes of its own items and shows them. Pass: every item reports "after first unlock, this device only" and "not synchronised". |
+| `handoff_file_protection` | Does not apply at launch | The app has no share extension and no app group; both come with I-16. The owner decides whether this check leaves the iOS launch set until I-16 or keeps blocking. |
+
+Why these methods:
+
+- iOS keeps an app's Keychain items when the app is deleted. Apple's engineers confirm it in the developer
+  forums ([thread 72271](https://developer.apple.com/forums/thread/72271), still so with iOS 17.5 in June
+  2024) and call it undocumented behaviour. Neither the app nor the plugin clears the items, although 03a P10
+  (`ON_APP_START`) asks for it. So an app that was signed in when it was deleted should start signed in
+  after a reinstall. That is read from the code; `docs/device-sitting-1.md` asks for the observation.
+- The app sets `first_unlock_this_device` (`app/lib/services.dart`), which the plugin maps to
+  `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, with `synchronizable` off by default. That is the
+  intent, not the observation: the plugin updates an existing item without changing its protection, and it
+  reads items of every protection level. An item keeps the class it was first written with.
+- From outside the app there is no dependable way on an unmodified phone. A transfer to another phone is
+  not conclusive: a report on Apple's forums says "this device only" items survived a direct transfer
+  ([thread 802526](https://developer.apple.com/forums/thread/802526), September 2025, unexplained). Whether
+  a release build's log lines show on a connected Mac is not settled in the sources found, so the method
+  doesn't rely on it. The app has to read the attributes back itself.
+- The readback must be part of the inspected artefact, because the receipt binds to its hash.
+
 After inspection, validate the receipt against the retained artifact:
 
 ```text

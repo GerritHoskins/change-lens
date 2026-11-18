@@ -568,6 +568,27 @@ wording is tested. Tests: `app/test/polling_and_spoken_evidence_test.dart`.
 
 **Dependencies:** L27 first (same screens); built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
+## Task L29: iOS Keychain: clear it on a fresh install and show its effective protection (03a P10, for L25)
+
+**Description:** Two of L25's iOS checks can't pass today (`scripts/release/README.md`, "Observing the
+iOS-only checks"). iOS keeps Keychain items when the app is deleted, and nothing clears them, so a reinstall
+starts signed in. And the protection of the stored items can only be observed if the app reads it back.
+
+**Acceptance criteria:**
+- [ ] On the first launch after an install, the app deletes Keychain items left by an earlier install before it restores a session. It waits until protected data is available, so a launch before the first unlock never deletes a valid session
+- [ ] The app reads the protection class and the sync setting of its own Keychain items and shows them in plain words (the owner picks the place: a line in Settings, or hidden)
+- [ ] The readback is in the store build too, because the L25 receipt binds to the inspected artefact
+
+**Verification:**
+- [ ] Codemagic `app-ios-compile-check` passes on the branch before the merge: the change is native Swift and can't be built on the PC
+- [ ] App command passes, with tests for the Dart side
+- [ ] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. The readback says "after first unlock, this device only" and "not synchronised"
+
+**Known effect:** the first launch after updating to this version looks like a fresh install and signs out
+once. Before launch that affects the owner's phones only.
+
+**Dependencies:** None; before L25 · **Files likely touched:** `app/ios/Runner/AppDelegate.swift`, `app/lib/services.dart`, `app/lib/screens/settings_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
+
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
 **Description:** Build the signed artefacts, install them on both phones, and record the receipts that
@@ -581,7 +602,7 @@ wording is tested. Tests: `app/test/polling_and_spoken_evidence_test.dart`.
 **Verification:**
 - [ ] `python scripts/release/check_acceptance.py --platform android --artifact <release.apk> --receipt <receipt.json>` and the same for `ios`
 
-**Dependencies:** L7, L13, L23, L3 (Android) · **Files likely touched:** none in Git (receipts stay outside) · **Estimated scope:** M
+**Dependencies:** L7, L13, L23, L3 (Android), L29 (two iOS checks), and the owner's decision on `handoff_file_protection`, which doesn't apply before I-16 · **Files likely touched:** none in Git (receipts stay outside) · **Estimated scope:** M
 
 ## Task L26: Usability test with 5 users (D-10; owner)
 
