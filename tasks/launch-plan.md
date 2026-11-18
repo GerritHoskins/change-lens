@@ -148,10 +148,10 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
 
 Open before these steps:
 
-- **L28 A5, owner decision before step 2:** is iPad a launch target? The iOS project targets iPhone and iPad
-  (`TARGETED_DEVICE_FAMILY = "1,2"`). A build that targets iPad needs iPad screenshots and is reviewed on an
-  iPad. Removing it is an edit on the PC, proven by the Codemagic build; keeping it needs an iPad or a
-  simulator on the Mac to check the layout.
+- **L28 A5, decided 2026-11-18:** iPad is not a launch target. The iOS project now targets iPhone only
+  (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations), so the store needs no iPad screenshots. The build in
+  step 2 proves the change. An iPad can still run the app as a scaled iPhone app, and App Review may open it
+  that way.
 - **L25, before step 4:** the README doesn't say how the three iOS checks (`keychain_this_device_only`,
   `fresh_install_keychain_cleanup`, `handoff_file_protection`) are observed on a release build. The third names
   the share extension, which is part of the deferred I-16.

@@ -542,14 +542,14 @@ name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
 line in 06; A5 depends on whether iPad is a target at launch.
 
 **Acceptance criteria:**
-- [ ] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit
+- [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; not yet built on Codemagic)
 - [ ] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
 - [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack
 
 **Verification:**
 - [ ] App command passes; the screen-reader check is recorded in `docs/ui-ux-audit.md`
 
-**Dependencies:** L27 first (same screens); the owner's iPad decision for A5; built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
+**Dependencies:** L27 first (same screens); built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
