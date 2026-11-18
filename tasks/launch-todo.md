@@ -579,10 +579,24 @@ starts signed in. And the protection of the stored items can only be observed if
 - [ ] The app reads the protection class and the sync setting of its own Keychain items and shows them in plain words (the owner picks the place: a line in Settings, or hidden)
 - [ ] The readback is in the store build too, because the L25 receipt binds to the inspected artefact
 
+Built 2026-11-18 on branch `l29-keychain`. The Swift part has not been compiled or run, so the criteria stay
+open until the compile check and the iPhone check.
+
+- The cleanup runs in `AppDelegate.swift` before the Flutter engine starts. An empty marker file in
+  Application Support marks an install as seen; iOS deletes the app's files with the app, but not the
+  Keychain. Without the marker the app deletes its Keychain items of every class, then writes the marker.
+  If a delete fails, or protected data is unavailable, that launch decides nothing and the next one tries
+  again. The marker is a file and not a preference, because preferences would need a privacy manifest.
+- The readback is one line in Settings, under "Signed in with" (owner's choice, 2026-11-18), on iOS only and
+  in every build. As intended it reads "Your sign-in is stored on this iPhone only. It can be read once the
+  iPhone has been unlocked after a restart, and it is not synchronised with iCloud." Otherwise it names
+  what iOS reported. No line means no observation: nothing is stored yet, or the readback failed.
+- The readback covers every generic-password item the app can see, not only the plugin's.
+
 **Verification:**
 - [ ] Codemagic `app-ios-compile-check` passes on the branch before the merge: the change is native Swift and can't be built on the PC
-- [ ] App command passes, with tests for the Dart side
-- [ ] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. The readback says "after first unlock, this device only" and "not synchronised"
+- [x] App command passes, with tests for the Dart side (2026-11-18: analyzer clean, 309 tests)
+- [ ] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. Signed in again, Settings shows the sentence above
 
 **Known effect:** the first launch after updating to this version looks like a fresh install and signs out
 once. Before launch that affects the owner's phones only.

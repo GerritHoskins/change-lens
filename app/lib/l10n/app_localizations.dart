@@ -1880,6 +1880,18 @@ abstract class AppLocalizations {
   /// **'Signed in with {method}'**
   String settingsSignedInWith(String method);
 
+  /// No description provided for @settingsKeychainOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sign-in is stored on this iPhone only. It can be read once the iPhone has been unlocked after a restart, and it is not synchronised with iCloud.'**
+  String get settingsKeychainOk;
+
+  /// iOS only; shown to the release inspection if the Keychain readback differs (L29).
+  ///
+  /// In en, this message translates to:
+  /// **'The sign-in stored on this iPhone isn\'t protected as intended ({found}).'**
+  String settingsKeychainDiffers(String found);
+
   /// No description provided for @settingsPrivacy.
   ///
   /// In en, this message translates to:

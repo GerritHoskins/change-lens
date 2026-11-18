@@ -83,10 +83,13 @@ void main() {
             await reachable(tester, 'sign-in-email');
             await reachable(tester, 'session-sign-out');
 
-            // Settings, with the (gated) Privacy section shown.
-            await tester.pumpWidget(localized(SettingsScreen(session: h.session, consent: FakeConsent()), locale, theme));
+            // Settings, with the (gated) Privacy section and the iOS Keychain line shown.
+            await tester.pumpWidget(localized(SettingsScreen(session: h.session, consent: FakeConsent(),
+              keychainProtection: () async => const KeychainProtection({KeychainProtection.intended}, synchronised: false)),
+              locale, theme));
             await tester.pumpAndSettle();
             noError(tester, 'settings');
+            await reachable(tester, 'keychain-protection');
             await reachable(tester, 'delete-account');
             await reachable(tester, 'usage-events');
 
