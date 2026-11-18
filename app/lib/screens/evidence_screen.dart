@@ -118,7 +118,8 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       // The page and its highlight are painted, so a screen reader gets them as one described image.
       body = Semantics(container: true, image: true,
         label: evidencePdfDescription(l, e, marked: presentation!.boxes.isNotEmpty),
-        child: PdfViewer.data(pdf, sourceName: widget.version.label, controller: controller,
+        // The viewer identifies a document by this name; labels can repeat, IDs can't (LR-6).
+        child: PdfViewer.data(pdf, sourceName: widget.version.id, controller: controller,
           params: PdfViewerParams(pagePaintCallbacks: [_paint], onViewerReady: (_, _) => _reveal())));
     } else if (pages != null) {
       body = ParsedTextView(pages: pages!, evidence: e,

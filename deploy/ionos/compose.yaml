@@ -70,6 +70,8 @@ services:
       - log_statement=none
       - -c
       - log_min_error_statement=panic  # never log the failing statement or its parameters (AC-23)
+      - -c
+      - log_error_verbosity=terse  # no DETAIL or CONTEXT lines: they can quote a key value or a JSON fragment (LR-5)
     volumes:
       - pgdata:/var/lib/postgresql/data
       - wal-archive:/wal-archive
