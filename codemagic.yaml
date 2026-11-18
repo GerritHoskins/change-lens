@@ -15,37 +15,10 @@ definitions:
     cache_paths:
       - $HOME/.pub-cache
       - $HOME/.gradle/caches
-  on_app_change: &on_app_change
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: '*'
-          include: true
-    when:
-      changeset:
-        includes:
-          - 'poc/d15/app/'
-          - 'codemagic.yaml'
   real_app: &real_app
     working_directory: app
     max_build_duration: 30
     instance_type: mac_mini_m2
-  on_real_app_change: &on_real_app_change
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: '*'
-          include: true
-    when:
-      changeset:
-        includes:
-          - 'app/'
-          - 'codemagic.yaml'
-          - 'scripts/release/'
   # The Logto native app's ID (I-18): a public identifier that appears in every sign-in URL, not a
   # secret. A build without it is a development build with no sign-in and the developer settings in the
   # menu, so both store builds require it (scripts/release/check_config.py).
@@ -66,10 +39,15 @@ definitions:
       script: python3 "$CM_BUILD_DIR/scripts/release/check_config.py"
 
 workflows:
-  # The real app (I-9): analyze, test and build on every push that touches app/.
+  # Every workflow in this file is started by hand (owner's decision, 2026-11-18). No workflow has a
+  # triggering section, and the GitHub webhook to Codemagic is inactive: on its first day it queued
+  # about 15 builds in half an hour. Codemagic reads this file from the branch that sends an event,
+  # so a trigger added here also has to reach every open branch before the webhook is switched on.
+  #
+  # The real app (I-9): analyze, test and build.
   app-android-check:
     name: App Android check
-    <<: [*real_app, *on_real_app_change]
+    <<: *real_app
     environment:
       <<: *flutter
     cache: *cache
@@ -85,7 +63,7 @@ workflows:
 
   app-ios-compile-check:
     name: App iOS compile check (unsigned)
-    <<: [*real_app, *on_real_app_change]
+    <<: *real_app
     environment:
       <<: *flutter
     cache: *cache
@@ -97,10 +75,12 @@ workflows:
       - name: Build iOS without code signing
         script: flutter build ios --release --no-codesign
 
-  # Every push that touches the app: analyze, test and build a debug APK.
+  # The D-15 proof of concept, started by hand only since 2026-11-18: it is finished, and an
+  # automatic build would run on every event until one build had succeeded.
+  # Analyze, test and build a debug APK.
   android-check:
     name: Android check
-    <<: [*app, *on_app_change]
+    <<: *app
     environment:
       <<: *flutter
     cache: *cache
@@ -113,11 +93,11 @@ workflows:
     artifacts:
       - $CM_BUILD_DIR/poc/d15/app/build/app/outputs/flutter-apk/*.apk
 
-  # Every push that touches the app: prove the iOS build compiles. Unsigned, so it needs no
-  # Apple Developer account and produces nothing installable.
+  # Started by hand only: prove the proof of concept's iOS build compiles. Unsigned, so it needs
+  # no Apple Developer account and produces nothing installable.
   ios-compile-check:
     name: iOS compile check (unsigned)
-    <<: [*app, *on_app_change]
+    <<: *app
     environment:
       <<: *flutter
     cache: *cache

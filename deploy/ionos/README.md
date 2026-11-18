@@ -317,7 +317,12 @@ Record each with its date:
       (Android, Fairphone 5, debug build's account screen); onboarding saved per step and completed. Google on
       Android: a new account signed in through `POST /session` and Logto's one-time token (audit log
       `Interaction.SignIn.Verification.OneTimeToken.Submit`); Google with the email account's address answered
-      `link_required` (the app's "You already have an account")
+      `link_required` (the app's "You already have an account"). 2026-11-18, Fairphone sitting
+      (`docs/device-sitting-1-android.md`): email code and `exp − iat` = 900 again; the linked account signed
+      in directly with Google; account deletion returned "Your account and all its projects were deleted.",
+      the user left the console, an email code request for its address sent nothing, and the same Gmail
+      through Google started a new account (deleted again, gone from the console). Still open: MFA. The test
+      account never had MFA set up, so no authenticator code was asked for with email or Google
 - [x] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
       30 days), the outside uptime check. 2026-11-18: rows written from the deploy files and this runbook
 

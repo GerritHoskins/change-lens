@@ -1,1 +1,1 @@
-PASS 26 acceptance criteria mapped to 32 backlog tasks; 9 architecture decisions have ADRs
+PASS 26 acceptance criteria mapped to 45 backlog tasks; 9 architecture decisions have ADRs

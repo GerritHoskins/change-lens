@@ -59,7 +59,10 @@ from the session response, and add the Settings switch for withdrawal. Keep it b
 
 **Verification:**
 - [x] App: `usage_consent_test.dart` and `consent_gate_test.dart` (new), `pumpGate` gains `consentFlow`; the existing consent-screen and layout tests in `session_settings_test.dart` and `new_screens_layout_test.dart` still pass unchanged. Replay is a separate route from the Projects menu that never passes the gate (no new test)
-- [ ] Manual: device build, first launch and withdrawal in Settings
+- [x] Manual: device build, first launch and withdrawal in Settings. 2026-11-18, Fairphone debug build with the
+  flag (`docs/device-sitting-1-android.md` section 5): a new account saw "Share usage events?" after the
+  onboarding with nothing preselected and no Back; it did not come back after a restart; the Settings switch
+  persisted and was turned off (withdrawal). Allow was tapped, not Don't allow, so Decline was not seen on a device
 
 **Dependencies:** Task 1
 

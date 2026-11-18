@@ -108,7 +108,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] T14, T15 Worth survey
 
 ### Phase 5: launch gates
-- [ ] L18 Bring the documents in line with the code
+- [x] L18 Bring the documents in line with the code (done 2026-11-18; L13 adds its device results to the same rows)
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
@@ -142,7 +142,8 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
    its withdrawal (also the manual check of Task 2 in `tasks/todo.md`). In the same sitting: the VoiceOver check
    of L28 A8 and the M1b exit on the iPhone. This closes the iPhone lines in `docs/verification.md` (AC-12 to
    AC-15, AC-24, AC-25) and unlocks Checkpoint B, L22, L25 and L26. The Fairphone half of L13 needs no Apple
-   hardware and can follow.
+   hardware and can follow (checklist:
+   [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md)).
 4. **iPhone and Mac sitting 2, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
    the `ios-testflight` build: the receipt checks of `scripts/release/README.md`, three of them iOS only.
 5. **iPhone sitting 3.** L26, the usability test.

@@ -1,5 +1,16 @@
-PASS build: 37 files within size, UTF-8, link and secret checks
-PASS 26 acceptance criteria mapped to 34 backlog tasks; 9 architecture decisions have ADRs
-PASS 26 acceptance criteria independently verified; 84 review findings closed
+PASS build: 139 files within size, UTF-8, link and secret checks; 182 code files within size
+PASS 26 acceptance criteria mapped to 45 backlog tasks; 9 architecture decisions have ADRs
+PASS 26 acceptance criteria independently verified; 120 review findings closed
 PASS cost model no worse than baseline 14748b6 and within cost gates
+PASS render dependency install: every pinned wheel reinstalled with --require-hashes
+eval generate unittest: Ran 31 tests in 0.291s OK
+eval render unittest: Ran 27 tests in 19.665s OK
+eval render_hidden unittest: Ran 21 tests in 4.352s OK
+eval label_kit unittest: Ran 13 tests in 0.307s OK
+eval label_rounds unittest: Ran 19 tests in 1.053s OK
+eval split unittest: Ran 8 tests in 0.007s OK
+eval fresh_cohort unittest: Ran 21 tests in 26.513s OK
+release unittest: Ran 11 tests in 0.330s OK
+playbooks unittest: Ran 34 tests in 17.092s OK
+backend unit pytest: 884 passed in 25.41s
 CI PASS
