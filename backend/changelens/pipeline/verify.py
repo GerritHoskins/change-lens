@@ -113,14 +113,34 @@ def _overlaps(a: Locator, b: Locator) -> bool:
     return a.page == b.page and a.char_start < b.char_end and b.char_start < a.char_end
 
 
+# The sequence match below costs up to (pairs of equal blocks across the two versions) times (blocks):
+# every match is found by a scan that can meet all equal pairs again. Two texts built from one repeated
+# line push that to hours inside every input limit: 800 against 1,600 such lines took 18 s on
+# 2026-11-18, eight times more per doubling, in the only worker (review ledger LR-1). Over this bound
+# the order of the blocks is not computed. Measured the same day: about 1 s per 10 million. Ordinary
+# texts are far below it: 2,000 distinct lines give 4 million and take 0.02 s.
+MAX_DIFF_WORK = 30_000_000
+
+
 def block_diff(earlier: ParsedDocument, later: ParsedDocument) -> tuple[list[Evidence], list[Evidence]]:
     """(changed, presentation-only) visible blocks. A block whose text, ignoring list markers and
-    case, is also on the other side only moved or was reformatted; it is not a change."""
+    case, is also on the other side only moved or was reformatted; it is not a change.
+
+    Which blocks changed never depends on their order: a block without a counterpart cannot be in an
+    equal run. So over `MAX_DIFF_WORK` the changed blocks are still exact, and only the
+    presentation-only list is left empty."""
     a = [b for b in earlier.blocks if not b.hidden]
     b = [x for x in later.blocks if not x.hidden]
     changed, moved = [], []
     left, right = Counter(_loose(x.text) for x in a), Counter(_loose(x.text) for x in b)
-    sm = difflib.SequenceMatcher(a=[_norm(x.text) for x in a], b=[_norm(x.text) for x in b], autojunk=False)
+    norm_a, norm_b = [_norm(x.text) for x in a], [_norm(x.text) for x in b]
+    in_b = Counter(norm_b)
+    equal_pairs = sum(n * in_b[text] for text, n in Counter(norm_a).items())
+    if equal_pairs * min(len(a), len(b)) > MAX_DIFF_WORK:
+        for side, blocks, other in (("earlier", a, right), ("later", b, left)):
+            changed += [Evidence(side, blk.locator, blk.text) for blk in blocks if not other[_loose(blk.text)]]
+        return changed, []
+    sm = difflib.SequenceMatcher(a=norm_a, b=norm_b, autojunk=False)
     for op, i1, i2, j1, j2 in sm.get_opcodes():
         if op == "equal":
             continue

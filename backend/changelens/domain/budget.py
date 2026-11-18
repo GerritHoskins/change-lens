@@ -56,7 +56,11 @@ class DbCostMeter:
                 raise CeilingReached()
             if self.settings is not None:
                 from changelens.domain.spend import cap_reached
-                self.spend_cap = cap_reached(repo, self.settings)
+                # Spend is booked to the month the comparison was created in. A run that starts after
+                # the month has turned is also held to that month's caps, or its cost would count
+                # against no cap at all (review ledger LR-2).
+                self.spend_cap = (cap_reached(repo, self.settings)
+                                  or cap_reached(repo, self.settings, now=comparison.created_at))
                 if self.spend_cap is not None:
                     raise CeilingReached()  # stops like the ceiling; the worker marks the run failed
             actual, reserved = self._amounts(comparison)

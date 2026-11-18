@@ -4,7 +4,7 @@ Source: the repository audit of 2026-11-17 (decision matrix, items 1–16). Task
 [`tasks/launch-todo.md`](launch-todo.md).
 
 This plan sits **next to** [`tasks/plan.md`](plan.md) and [`tasks/todo.md`](todo.md), which stay the plan
-for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L29, so the two lists
+for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L34, so the two lists
 never collide. Where the audit names work that T3–T15 already describe, this plan points at those tasks and
 doesn't repeat them.
 
@@ -112,7 +112,11 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
-- [ ] L22 Security review and incident runbook (D-9)
+- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 1 medium fixed, 5 medium open as L31 to L34 and two server checks; runbook drafted)
+- [ ] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3)
+- [ ] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4)
+- [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)
+- [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision, device check)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
 - [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)

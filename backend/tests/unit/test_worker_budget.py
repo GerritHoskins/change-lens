@@ -5,6 +5,7 @@ and numeric storage are covered separately by integration/test_budget.py.
 """
 from contextlib import contextmanager
 from copy import deepcopy
+from datetime import datetime, timezone
 from decimal import Decimal
 from threading import RLock
 from types import SimpleNamespace
@@ -31,6 +32,7 @@ class TransactionalDb:
         comparison = SimpleNamespace(id=self.cid, tenant_id=self.tenant, earlier_id=earlier_id,
                                      later_id=later_id, status="queued", scope_snapshot="complete",
                                      cost_ceiling=Decimal("1"), cost_actual=None, cost_reservations={},
+                                     created_at=datetime.now(timezone.utc),
                                      warnings=[], withheld_count=0, unexplained=[], presentation_only=[])
         versions = {}
         for vid, raw in ((earlier_id, b"Budget: EUR 100"), (later_id, b"Budget: EUR 200")):
@@ -180,6 +182,31 @@ def test_other_tenant_and_missing_comparison_cannot_reserve(db):
     with pytest.raises(CeilingReached):
         DbCostMeter(db, db.tenant, uuid.uuid4()).reserve(Decimal("0.1"))
     assert db.comparison.cost_actual is None and not db.comparison.cost_reservations
+
+
+def test_a_run_after_the_month_turned_is_held_to_the_month_it_was_created_in(db, monkeypatch):
+    """LR-2: its cost is booked to the old month, which no check looked at any more."""
+    created = datetime(2026, 10, 31, 23, 59, tzinfo=timezone.utc)
+    db.comparison.created_at = created
+    asked = []
+
+    def month_spend(self, since):
+        asked.append(since)
+        return Decimal("5") if since == datetime(2026, 10, 1, tzinfo=timezone.utc) else Decimal("0")
+
+    monkeypatch.setattr(TenantRepo, "month_spend", month_spend)
+    settings = Settings(database_url="unused", s3_endpoint="unused", s3_access_key="unused",
+                        s3_secret_key="unused", s3_bucket="unused")
+    meter = DbCostMeter(db, db.tenant, db.cid, settings)
+    with pytest.raises(CeilingReached):
+        meter.reserve(Decimal("0.10"))
+    assert meter.spend_cap == "tenant" and datetime(2026, 10, 1, tzinfo=timezone.utc) in asked
+    assert db.comparison.cost_reservations == {}
+
+    db.comparison.created_at = datetime.now(timezone.utc)  # created this month: only this month counts
+    meter = DbCostMeter(db, db.tenant, db.cid, settings)
+    meter.reserve(Decimal("0.10"))
+    assert meter.spend_cap is None
 
 
 class InterruptedModel(FakeLlm):
