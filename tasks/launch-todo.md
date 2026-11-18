@@ -631,11 +631,11 @@ done. Account A has since been deleted, and the iPhone sitting's results are not
 for up to 15 minutes, and `POST /session` with it creates a fresh account under the deleted subject.
 
 **Acceptance criteria:**
-- [ ] After a completed deletion, `POST /session` with a token issued before it returns 401 and creates no row
-- [ ] The tombstone still ends up without personal data (ID and timestamps only)
-- [ ] The app's notice after deletion matches what the server did (204 or 202)
+- [x] After a completed deletion, `POST /session` with a token issued before it returns 401 and creates no row (built 2026-11-18: before a first sign-in creates an account, the api asks Logto whether the user still exists; Logto unreachable gives 503 and creates nothing)
+- [x] The tombstone still ends up without personal data (ID and timestamps only) (deletion itself is unchanged)
+- [x] The app's notice after deletion matches what the server did (204 or 202) (unchanged: `DELETE /me` answers as before)
 
-**Verification:** backend unit and integration tests pass in CI, with a test for the first criterion.
+**Verification:** backend unit and integration tests pass in CI, with a test for the first criterion (891 unit tests pass locally; the four new ones fail without the check; the integration test runs in CI only).
 
 **Dependencies:** None · **Files likely touched:** `backend/changelens/domain/accounts.py`, a migration or `0004`'s functions, `backend/tests/integration/test_account_deletion_db.py` · **Estimated scope:** S
 

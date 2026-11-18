@@ -12,13 +12,13 @@ logging, secrets and deployment; the mobile app), each finding then checked agai
 checked on the server or on a device. No way was found for one account to read or change another's data, no
 route without authentication, no secret in the repository and no SQL built from input.
 
-Fixed in the same change (rows in [`review-ledger.md`](review-ledger.md)): LR-1 (high), LR-2 (medium), LR-5 to LR-9 (low).
+Fixed in the same change (rows in [`review-ledger.md`](review-ledger.md)): LR-1 (high), LR-2 (medium), LR-5 to LR-9 (low). Fixed afterwards: LR-3 (task L31, 2026-11-18).
 
-Open, medium:
+Medium, open unless the last column says fixed:
 
 | ID | Finding | Checked how | Next |
 |---|---|---|---|
-| LR-3 | A deleted account can be re-created: deletion clears the sign-in subject, and a token issued before the deletion stays valid for up to 15 minutes. `POST /session` with it creates a new account that nobody can sign in to or delete afterwards | Read in `0004_account_deletion.py`, `0003_rls.py` and `api/session.py` | Task L31 |
+| LR-3 | A deleted account can be re-created: deletion clears the sign-in subject, and a token issued before the deletion stays valid for up to 15 minutes. `POST /session` with it creates a new account that nobody can sign in to or delete afterwards | Read in `0004_account_deletion.py`, `0003_rls.py` and `api/session.py` | Fixed in task L31: before a first sign-in creates an account, the api asks Logto whether the user still exists |
 | LR-4 | The worker holds the Logto Management credential and can reach Logto directly, although 03 §6 limits both to the api and retention. The PDF parser runs with resource caps but the worker's user and network, so a parser exploit would reach every account. Listed as a known gap in the runbook | Read in `compose.yaml`, `config.py` and `pipeline/sandbox.py` | Task L32 |
 | LR-10 | No bound per account on uploads, stored bytes or queued work, and one worker serves one queue in order: one account can keep everyone else waiting and fill the disk without any model cost. Uploads are also held in memory with no limit on how many run at once | Read in `api/routes.py`, `api/comparisons.py`, `api/app.py`; the remaining cost of one hostile comparison was measured at about 3 s | Task L33 |
 | LR-11 | Android: signing out relies on a private browser tab, which the pinned plugin requests but the phone's browser may not honour. Where it doesn't, "Continue with email" after sign-out can enter without a code | Read in the plugin source (`flutter_web_auth_2` 5.1.0) and `auth/logto.dart` | Task L34 |
