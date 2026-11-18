@@ -2,7 +2,7 @@
 # Host monitor (I-8 S7 §3.8), run by root's cron every 10 minutes (README step D3). Checks the public endpoints,
 # the containers, the backup job's last successes, the disk, and the global spend cap event. Mails ALERT_TO
 # through IONOS SMTP when something is wrong: again when the problem list changes, otherwise every 6 hours.
-# It can't see the server being down: keep an outside uptime check too (README step D3).
+# It can't see the server being down: an outside uptime check covers that (README step D3).
 set -u
 . /etc/changelens/monitor.env
 cd "$(dirname "$0")"
