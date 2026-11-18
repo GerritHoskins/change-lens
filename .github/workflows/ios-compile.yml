@@ -22,7 +22,9 @@ concurrency:
 
 jobs:
   compile:
-    runs-on: macos-latest
+    # An Intel Mac: on 2026-11-18 GitHub's arm64 Macs were short of capacity and the job was never
+    # picked up ("not acquired by Runner of type hosted").
+    runs-on: macos-15-intel
     timeout-minutes: 30
     env:
       # The version pinned in codemagic.yaml and used on the PC; bump all three together.
