@@ -10,6 +10,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api.dart';
 import 'auth/session.dart';
 
+/// False while the app is in the background or covered by the system. The screens that poll skip
+/// their timer ticks then and catch up on the first tick after the app is back (audit A6).
+bool appInForeground() {
+  final state = WidgetsBinding.instance.lifecycleState;
+  return state == null || state == AppLifecycleState.resumed;
+}
+
 /// Key-value store for the dev connection. Production: Keychain / Keystore only (03a P10).
 abstract class SettingsStore {
   Future<String?> read(String key);

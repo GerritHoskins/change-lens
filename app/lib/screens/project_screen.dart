@@ -43,7 +43,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       _initialized = true;
       _load();
       _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (ModalRoute.of(context)?.isCurrent == true) _load();
+        if (appInForeground() && ModalRoute.of(context)?.isCurrent == true) _load();
       });
     }
   }

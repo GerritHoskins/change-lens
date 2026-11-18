@@ -1235,6 +1235,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dieser Vergleich konnte nicht abgeschlossen werden.';
 
   @override
+  String evidenceMarkedA11y(String quote) {
+    return 'Markierte Stelle: $quote';
+  }
+
+  @override
+  String evidencePdfMarkedA11y(int page, String quote) {
+    return 'PDF-Seite $page. Markierte Stelle: $quote';
+  }
+
+  @override
+  String evidencePdfUnmarkedA11y(int page, String quote) {
+    return 'PDF-Seite $page. Die Stelle ist auf dieser Seite nicht markiert: $quote';
+  }
+
+  @override
   String get kindPdf => 'PDF';
 
   @override

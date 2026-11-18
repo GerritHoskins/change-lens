@@ -1226,6 +1226,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonFailedShort => 'This comparison couldn\'t be completed.';
 
   @override
+  String evidenceMarkedA11y(String quote) {
+    return 'Marked passage: $quote';
+  }
+
+  @override
+  String evidencePdfMarkedA11y(int page, String quote) {
+    return 'PDF page $page. Marked passage: $quote';
+  }
+
+  @override
+  String evidencePdfUnmarkedA11y(int page, String quote) {
+    return 'PDF page $page. The passage is not marked on this page: $quote';
+  }
+
+  @override
   String get kindPdf => 'PDF';
 
   @override

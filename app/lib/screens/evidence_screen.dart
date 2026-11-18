@@ -115,8 +115,11 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
     final pdf = presentation?.pdf ?? presentation?.originalPdf;
     Widget body;
     if (pdf != null && !textView) {
-      body = PdfViewer.data(pdf, sourceName: widget.version.label, controller: controller,
-          params: PdfViewerParams(pagePaintCallbacks: [_paint], onViewerReady: (_, _) => _reveal()));
+      // The page and its highlight are painted, so a screen reader gets them as one described image.
+      body = Semantics(container: true, image: true,
+        label: evidencePdfDescription(l, e, marked: presentation!.boxes.isNotEmpty),
+        child: PdfViewer.data(pdf, sourceName: widget.version.label, controller: controller,
+          params: PdfViewerParams(pagePaintCallbacks: [_paint], onViewerReady: (_, _) => _reveal())));
     } else if (pages != null) {
       body = ParsedTextView(pages: pages!, evidence: e,
           note: presentation!.mode == 'text_fallback' ? l.highlightFallback : null);
@@ -144,6 +147,11 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 }
 
+/// What a screen reader says for the PDF page view: the page, and the passage that is marked on it
+/// (or, when the highlight could not be placed, that it is not marked).
+String evidencePdfDescription(AppLocalizations l, Evidence e, {required bool marked}) => marked
+    ? l.evidencePdfMarkedA11y(e.page ?? 1, e.quote) : l.evidencePdfUnmarkedA11y(e.page ?? 1, e.quote);
+
 /// The parsed page text with the evidence span marked; the fallback for every kind of version.
 class ParsedTextView extends StatelessWidget {
   const ParsedTextView({super.key, required this.pages, required this.evidence, this.note});
@@ -163,13 +171,15 @@ class ParsedTextView extends StatelessWidget {
     final mark = TextStyle(backgroundColor: colors.marker, color: colors.onMarker, fontWeight: FontWeight.w600);
     return ListView(padding: const EdgeInsets.all(20), children: [
       if (note != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: CalmWarning(text: note!)),
-      SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyLarge, children: ok
+      // The mark is colour and weight only, so the passage is also named before the page text is read.
+      Semantics(container: true, label: AppLocalizations.of(context).evidenceMarkedA11y(e.quote),
+        child: SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyLarge, children: ok
           ? [
               TextSpan(text: text.substring(0, e.charStart)),
               TextSpan(text: e.quote, style: mark),
               TextSpan(text: text.substring(e.charEnd)),
             ]
-          : [TextSpan(text: e.quote, style: mark)])),
+          : [TextSpan(text: e.quote, style: mark)]))),
     ]);
   }
 }

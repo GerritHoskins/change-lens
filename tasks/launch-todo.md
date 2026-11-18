@@ -298,7 +298,7 @@ documents only. It closes every device check the audit found open.
 - [ ] Each result has a dated line in runbook section E or in 06; the M1b and M2 exit rows exist in 06
 - [ ] Every fault found becomes its own task in this file
 
-**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK, both built with `CHANGELENS_CONSENT=true` (no Codemagic workflow passes it yet); L27 and L28 first, so one sitting sees the final screens (device-first order in `tasks/launch-plan.md`) · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
+**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK, both built with `CHANGELENS_CONSENT=true` (`ios-device-check` passes it since 2026-11-18; the debug APK is built on the PC with the same define); L27 and L28 first, so one sitting sees the final screens (device-first order in `tasks/launch-plan.md`) · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
 
 ## Task L17: Outside uptime check and patch reminder (owner)
 
@@ -552,11 +552,20 @@ line in 06; A5 depends on whether iPad is a target at launch.
 
 **Acceptance criteria:**
 - [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; not yet built on Codemagic)
-- [ ] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
-- [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack
+- [x] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
+- [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack (built 2026-11-18; the screen-reader check is open)
 
 **Verification:**
-- [ ] App command passes; the screen-reader check is recorded in `docs/ui-ux-audit.md`
+- [ ] App command passes (no analyzer issues, 300 tests); the screen-reader check is recorded in `docs/ui-ux-audit.md` (open, L13 sitting)
+
+**Built 2026-11-18, not yet on a device.** A6: the project list, the project and the status screen skip
+their timer ticks unless the app is in front, and poll again on the first tick after it returns. Every API
+request ends after 30 seconds without a complete answer (5 minutes when it carries a file), and the screens
+then show their usual "can't be reached" message with Retry. The limit ends the wait and doesn't cancel the
+request, so an upload that the server finishes later can exist twice after a retry. A8: the text view names
+the marked passage before the page text, and the PDF view is one described image ("PDF page 2. Marked
+passage: …", or that the passage is not marked). The PDF view can't be drawn in widget tests, so only its
+wording is tested. Tests: `app/test/polling_and_spoken_evidence_test.dart`.
 
 **Dependencies:** L27 first (same screens); built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
