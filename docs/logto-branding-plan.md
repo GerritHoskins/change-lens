@@ -196,7 +196,7 @@ ugly but still usable.
 
 Decision log row (don't edit 06 without the owner):
 
-> | O-25 | Logo | **Decided 2026-11-16 (owner):** Logo D (Aperture), a thick "C" opened like a lens with the lime marker dot, set with the "ChangeLens" wordmark in Roboto Bold. Assets in `docs/brand/`. Replaces the "no logo yet" lines in DESIGN.md and the Calm Bold design-system page | I-18, launcher icon |
+> | O-29 | Logo | **Decided 2026-11-16 (owner):** Logo D (Aperture), a thick "C" opened like a lens with the lime marker dot, set with the "ChangeLens" wordmark in Roboto Bold. Assets in `docs/brand/`. Replaces the "no logo yet" lines in DESIGN.md and the Calm Bold design-system page | I-18, launcher icon |
 
 DESIGN.md: replace "No logo was supplied" / "no ChangeLens mark yet" with Logo D, and add the Logto branding
 as an implemented surface once §5 passes.

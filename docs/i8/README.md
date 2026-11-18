@@ -1,5 +1,9 @@
 # I-8 in slices: overview
 
+**Status 2026-11-18:** all seven slices are built, S7 is deployed on IONOS, and the app side (I-18) is
+built. These handoffs are the record of the plan; the current state is in the
+[SOP](../SOP.md) and the runbook ([deploy/ionos/README.md](../../deploy/ionos/README.md)).
+
 Prepared 2026-11-14. Repository this repository, branch `m1-iphone`,
 baseline commit `b8e3778` (onboarding account fields built: `account_onboarding`, `GET` / `PUT
 /me/onboarding`, the 422 key-name fix). HEAD may be one commit ahead: the commit that adds these files.

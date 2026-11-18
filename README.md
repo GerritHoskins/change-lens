@@ -4,7 +4,7 @@
 
 ChangeLens compares two versions of a client brief, pasted as text or picked as a PDF, and reports the changes in deadlines, deliverables, responsibilities, approval wording and budget. Each finding comes with the quoted source passage behind it. It is built for web and design freelancers and small studios who handle revised briefs and need to catch a changed requirement before they deliver the wrong thing.
 
-> **Status:** a hobby project in active development, intended to become a paid product. The source is public to read; see [License](#license). The backend runs locally with a single development token, and only synthetic documents are used. The app is not in the App Store or on Google Play.
+> **Status:** a hobby project in active development, intended to become a paid product. The source is public to read; see [License](#license). The backend is deployed on a server in Germany with account sign-in, but registration is closed: only the owner's test accounts exist, and only synthetic documents are used. The app is not in the App Store or on Google Play.
 
 <p align="center">
   <img src="docs/screenshots/projects.png" width="200" alt="Projects screen: a Compare two briefs button and one project, Cedar website, by Northstar Studio">
@@ -46,6 +46,7 @@ The app follows the system theme and ships in English and German.
 | [`backend/`](backend/README.md) | FastAPI `api` and `worker`, Postgres job queue, S3-compatible storage, the comparison pipeline |
 | [`docs/`](docs/) | MVP spec, technical design, ADRs and the [SOP](docs/SOP.md); the product decision, validation plan, backlog and decision log are kept private |
 | [`DESIGN.md`](DESIGN.md) | The Calm Bold design system |
+| [`deploy/`](deploy/ionos/README.md) | The IONOS deployment: Compose file, Caddy, backup job, server monitor and the runbook |
 | `scripts/`, `evidence/` | CI, release and evaluation scripts, and recorded check output |
 | `poc/` | The D-15 proof of concept |
 | `codemagic.yaml` | Ad hoc iOS builds for the owner's device checks |
@@ -54,14 +55,15 @@ The app follows the system theme and ships in English and German.
 
 - **App:** Flutter on Material 3, themed with Calm Bold; Roboto and Lucide icons bundled; `pdfrx` for PDF evidence; ARB localisation (en, de).
 - **Backend:** Python, FastAPI, Postgres 16, MinIO for local object storage, a deterministic fake LLM by default and an IONOS-hosted model for evaluation runs.
-- **Auth (in progress):** self-hosted Logto replacing the development token (I-8, D-8). Account linking runs through the backend, never through Logto's automatic email matching (O-19).
+- **Auth:** self-hosted Logto with an emailed one-time code, Google and Sign in with Apple (I-8, I-18). Account linking runs through the backend, never through Logto's automatic email matching (O-19). Tenants are separated by Postgres row-level security.
+- **Deployment:** one IONOS server in Germany running Docker Compose: Caddy for TLS, the API, the worker, Logto and Postgres, with encrypted backups to IONOS Object Storage and a restore test ([deploy/ionos/README.md](deploy/ionos/README.md)).
 
 ## Run it locally
 
 You need Docker Desktop, Python and Flutter.
 
 1. Start Postgres and MinIO, install the backend and run the API and the worker: [backend/README.md](backend/README.md) §1–3.
-2. Run the app on a device or emulator and enter the API address and dev token under **Developer settings**: [app/README.md](app/README.md).
+2. Run the app on a device or emulator and enter the API address and dev token under **Developer settings**: [app/README.md](app/README.md). A local backend uses a development token; account sign-in is for the deployed backend.
 
 Checks:
 
@@ -78,9 +80,9 @@ cd backend
 
 ## Roadmap
 
-Built: projects and immutable versions, text and PDF import, one-screen compare, topic-grouped reports, finding review with corrections and history, the separate client-approval record, PDF evidence with a text fallback, 30-day retention after last use, and the German locale. The end-to-end check has passed on an Android phone and an iPhone (on the iPhone with pasted text; the iOS PDF picker is not yet exercised).
+Built: projects and immutable versions, text and PDF import, one-screen compare, topic-grouped reports, finding review with corrections and history, the separate client-approval record, PDF evidence with a text fallback, 30-day retention after last use, and the German locale. Also built: account sign-in with account linking, in-app account deletion, monthly spend caps and rate limits, and the deployment on IONOS. The end-to-end check has passed on an Android phone and an iPhone (on the iPhone with pasted text; the iOS PDF picker is not yet exercised). Sign-in has been checked live on Android; the checks on the iPhone and of account deletion on both phones are open.
 
-Planned for v1: public sign-in with account linking and in-app account deletion, and a fair-use allowance. The first release is free; screenshot and share-sheet import and subscriptions follow after launch, once real usage informs the pricing. Push notifications, share links and teams come later.
+Planned for v1: open registration, a fair-use allowance, in-app feedback, a version timeline and the privacy texts. The first release is free; screenshot and share-sheet import and subscriptions follow after launch, once real usage informs the pricing. Push notifications, share links and teams come later.
 
 ## License
 

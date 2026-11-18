@@ -108,7 +108,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] T14, T15 Worth survey
 
 ### Phase 5: launch gates
-- [ ] L18 Bring the documents in line with the code
+- [x] L18 Bring the documents in line with the code (done 2026-11-18; L13 adds its device results to the same rows)
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
