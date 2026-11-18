@@ -210,6 +210,7 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
       labelStyle: text.bodyLarge?.copyWith(color: colors.muted),
       floatingLabelStyle: text.labelSmall?.copyWith(color: colors.muted),
       hintStyle: text.bodyLarge?.copyWith(color: colors.muted),
+      errorMaxLines: 6, // a field message wraps at large text instead of ending in an ellipsis
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       border: field(BorderSide(color: controlBorder)),
       enabledBorder: field(BorderSide(color: controlBorder)),

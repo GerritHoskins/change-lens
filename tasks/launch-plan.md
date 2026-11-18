@@ -4,7 +4,7 @@ Source: the repository audit of 2026-11-17 (decision matrix, items 1–16). Task
 [`tasks/launch-todo.md`](launch-todo.md).
 
 This plan sits **next to** [`tasks/plan.md`](plan.md) and [`tasks/todo.md`](todo.md), which stay the plan
-for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L26, so the two lists
+for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L28, so the two lists
 never collide. Where the audit names work that T3–T15 already describe, this plan points at those tasks and
 doesn't repeat them.
 
@@ -115,7 +115,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
-- [ ] L27 Imports keep their draft, and empty fields say why (audit A2, P1)
+- [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)
 - [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
@@ -124,6 +124,39 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] D-9 has no open high-severity finding; the D-10 users complete the flow; I-7b passes (05, Public launch)
 - [ ] Store declarations, privacy texts and the data inventory describe the same records
 - [ ] Owner decision to submit
+
+## Device-first order (owner's priority, 2026-11-18)
+
+Tasks that need a Mac or the iPhone go first. Every iOS build runs on Codemagic's Mac (`ios-device-check`,
+`ios-testflight`), so the owner's Mac is needed only to inspect a release build (L25). The iPhone must be in
+hand for steps 3 to 5. PC work comes first only where it saves a second iPhone sitting.
+
+1. **Before the build (PC, no device).** L27 (built 2026-11-18), then L28's code for A6 and A8, so the sitting sees the final
+   screens and the screen reader is checked once. `ios-device-check` gets
+   `--dart-define=CHANGELENS_CONSENT=true`: no workflow passes it today, so L13's consent line can't be checked.
+2. **Build (Codemagic Mac).** Run `ios-device-check` from `main`. This is also the first Codemagic run of L7's
+   sign-in define.
+3. **iPhone sitting 1.** L13's iPhone half: Sign in with Apple (iOS only), Google, the email code, the
+   `link_required` link, MFA, a PDF comparison from the picker, account deletion, and the consent screen with
+   its withdrawal (also the manual check of Task 2 in `tasks/todo.md`). In the same sitting: the VoiceOver check
+   of L28 A8 and the M1b exit on the iPhone. This closes the iPhone lines in `docs/verification.md` (AC-12 to
+   AC-15, AC-24, AC-25) and unlocks Checkpoint B, L22, L25 and L26. The Fairphone half of L13 needs no Apple
+   hardware and can follow.
+4. **iPhone and Mac sitting 2, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
+   the `ios-testflight` build: the receipt checks of `scripts/release/README.md`, three of them iOS only.
+5. **iPhone sitting 3.** L26, the usability test.
+
+Open before these steps:
+
+- **L28 A5, decided 2026-11-18:** iPad is not a launch target. The iOS project now targets iPhone only
+  (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations), so the store needs no iPad screenshots. The build in
+  step 2 proves the change. An iPad can still run the app as a scaled iPhone app, and App Review may open it
+  that way.
+- **L25, before step 4:** the README doesn't say how the three iOS checks (`keychain_this_device_only`,
+  `fresh_install_keychain_cleanup`, `handoff_file_protection`) are observed on a release build. The third names
+  the share extension, which is part of the deferred I-16.
+- **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
+  sitting 2.
 
 ## Parallelisation
 

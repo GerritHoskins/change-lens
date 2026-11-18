@@ -298,7 +298,7 @@ documents only. It closes every device check the audit found open.
 - [ ] Each result has a dated line in runbook section E or in 06; the M1b and M2 exit rows exist in 06
 - [ ] Every fault found becomes its own task in this file
 
-**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
+**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK, both built with `CHANGELENS_CONSENT=true` (no Codemagic workflow passes it yet); L27 and L28 first, so one sitting sees the final screens (device-first order in `tasks/launch-plan.md`) · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
 
 ## Task L17: Outside uptime check and patch reminder (owner)
 
@@ -527,12 +527,21 @@ loses the label and the pasted text. Blank required fields refuse without a mess
 name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
 
 **Acceptance criteria:**
-- [ ] After a failed import, the sheet is open or reopens with the label and pasted text intact; a success or Cancel clears them
-- [ ] A blank required field shows an error at the field and is announced: import label and text, note, approval, project name
-- [ ] An empty project name keeps the sheet open
+- [x] After a failed import, the sheet is open or reopens with the label and pasted text intact; a success or Cancel clears them
+- [x] A blank required field shows an error at the field and is announced: import label and text, note, approval, project name
+- [x] An empty project name keeps the sheet open
 
 **Verification:**
-- [ ] App command passes, with new widget tests for a failed import and for each blank field
+- [x] App command passes, with new widget tests for a failed import and for each blank field (no analyzer issues, 293 tests)
+
+**Built 2026-11-18, not yet on a device.** A failed import from the project screen reopens its sheet with
+the label, the pasted text and the reason; a failed PDF import keeps the label and the PDF is picked again.
+The draft lives in memory for that one import only. Each sheet is a Flutter `Form`: the main button shows a
+message at every blank required field, and Flutter announces the first one. Two things the tests found: with
+re-checking set on the whole form the message was announced twice and again on every keystroke, so it is set
+per field; and at 2x text on a 320-wide screen a message was cut after one line, so messages now wrap. Open
+for the L13 sitting: hear the messages with VoiceOver or TalkBack, and look at the label field's message at
+large text, where it shares its row with the character counter. Tests: `app/test/drafts_and_required_fields_test.dart`.
 
 **Dependencies:** None · **Files likely touched:** `app/lib/screens/project_screen.dart`, `compare_screen.dart`, `projects_screen.dart`, `finding_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
 
@@ -542,14 +551,14 @@ name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
 line in 06; A5 depends on whether iPad is a target at launch.
 
 **Acceptance criteria:**
-- [ ] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit
+- [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; not yet built on Codemagic)
 - [ ] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
 - [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack
 
 **Verification:**
 - [ ] App command passes; the screen-reader check is recorded in `docs/ui-ux-audit.md`
 
-**Dependencies:** L27 first (same screens) · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
+**Dependencies:** L27 first (same screens); built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 

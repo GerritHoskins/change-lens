@@ -164,6 +164,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pasteHint => 'Paste the brief or the update here';
 
   @override
+  String get requiredVersionLabel => 'Enter a label for this version.';
+
+  @override
+  String get requiredPastedText => 'Paste the text first.';
+
+  @override
+  String get requiredProjectName => 'Enter a project name.';
+
+  @override
+  String get requiredNote => 'Write the note first.';
+
+  @override
+  String get requiredApprovalEvidence => 'Enter the evidence.';
+
+  @override
+  String get requiredApprovalBy => 'Enter who stated it.';
+
+  @override
   String get upload => 'Import';
 
   @override
