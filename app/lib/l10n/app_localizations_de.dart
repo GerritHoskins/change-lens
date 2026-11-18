@@ -164,6 +164,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pasteHint => 'Füge hier das Briefing oder die Aktualisierung ein';
 
   @override
+  String get requiredVersionLabel => 'Gib dieser Version eine Bezeichnung.';
+
+  @override
+  String get requiredPastedText => 'Füge zuerst den Text ein.';
+
+  @override
+  String get requiredProjectName => 'Gib einen Projektnamen ein.';
+
+  @override
+  String get requiredNote => 'Schreibe zuerst die Notiz.';
+
+  @override
+  String get requiredApprovalEvidence => 'Gib den Nachweis ein.';
+
+  @override
+  String get requiredApprovalBy => 'Gib an, wer es mitgeteilt hat.';
+
+  @override
   String get upload => 'Importieren';
 
   @override

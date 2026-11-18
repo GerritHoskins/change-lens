@@ -196,16 +196,19 @@ class _FindingScreenState extends State<FindingScreen> {
 
   Future<String?> _askNote({required bool required}) async {
     final l = AppLocalizations.of(context);
+    final form = GlobalKey<FormState>();
     final field = TextEditingController();
-    return showCalmSheet<String>(context, builder: (context) => CalmSheet(
+    return showCalmSheet<String>(context, builder: (context) => Form(key: form, child: CalmSheet(
       title: l.noteLabel,
       action: l.save,
       onAction: () {
-        if (required && field.text.trim().isEmpty) return;
+        if (!form.currentState!.validate()) return;
         Navigator.pop(context, field.text.trim());
       },
-      children: [TextField(key: const Key('note-field'), controller: field, minLines: 3, maxLines: 6, autofocus: true)],
-    ));
+      children: [TextFormField(key: const Key('note-field'), controller: field, minLines: 3, maxLines: 6,
+        autofocus: true, validator: required ? calmRequired(l.requiredNote) : null,
+        autovalidateMode: AutovalidateMode.onUserInteraction)],
+    )));
   }
 
   Future<void> _correct(Finding f) async {
@@ -406,6 +409,7 @@ class ApprovalSheet extends StatefulWidget {
 }
 
 class _ApprovalSheetState extends State<ApprovalSheet> {
+  final form = GlobalKey<FormState>();
   final evidence = TextEditingController(), statedBy = TextEditingController();
   DateTime statedAt = DateTime.now();
 
@@ -416,18 +420,20 @@ class _ApprovalSheetState extends State<ApprovalSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final date = DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag());
-    return CalmSheet(
+    return Form(key: form, child: CalmSheet(
       title: l.recordApproval,
       lead: l.approvalHint,
       action: l.save,
       onAction: () {
-        if (evidence.text.trim().isEmpty || statedBy.text.trim().isEmpty) return;
+        if (!form.currentState!.validate()) return;
         Navigator.pop(context, (evidence.text.trim(), statedBy.text.trim(), statedAt));
       },
       children: [
-        TextField(key: const Key('approval-evidence'), controller: evidence, minLines: 3, maxLines: 5,
+        TextFormField(key: const Key('approval-evidence'), controller: evidence, minLines: 3, maxLines: 5,
+            validator: calmRequired(l.requiredApprovalEvidence), autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(labelText: l.approvalEvidence)),
-        TextField(key: const Key('approval-by'), controller: statedBy,
+        TextFormField(key: const Key('approval-by'), controller: statedBy,
+            validator: calmRequired(l.requiredApprovalBy), autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(labelText: l.approvalStatedBy)),
         Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(
           icon: const Icon(CalmIcons.calendar),
@@ -439,6 +445,6 @@ class _ApprovalSheetState extends State<ApprovalSheet> {
           },
         )),
       ],
-    );
+    ));
   }
 }

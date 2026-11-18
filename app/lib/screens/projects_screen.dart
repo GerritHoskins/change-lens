@@ -77,17 +77,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Future<void> _create() async {
     final l = AppLocalizations.of(context);
+    final form = GlobalKey<FormState>();
     final name = TextEditingController(), client = TextEditingController();
-    final ok = await showCalmSheet<bool>(context, builder: (context) => CalmSheet(
+    final ok = await showCalmSheet<bool>(context, builder: (context) => Form(key: form, child: CalmSheet(
       title: l.newProject,
       action: l.create, actionKey: const Key('create-project'),
-      onAction: () => Navigator.pop(context, name.text.trim().isNotEmpty),
+      onAction: () { if (form.currentState!.validate()) Navigator.pop(context, true); },
       children: [
-        TextField(key: const Key('project-name'), controller: name, autofocus: true,
+        TextFormField(key: const Key('project-name'), controller: name, autofocus: true,
+          validator: calmRequired(l.requiredProjectName), autovalidateMode: AutovalidateMode.onUserInteraction,
           textInputAction: TextInputAction.next, decoration: InputDecoration(labelText: l.projectName)),
         TextField(controller: client, decoration: InputDecoration(labelText: l.clientLabel)),
       ],
-    ));
+    )));
     if (ok != true || !mounted) return;
     try {
       await ServicesScope.of(context).api.createProject(name.text.trim(),

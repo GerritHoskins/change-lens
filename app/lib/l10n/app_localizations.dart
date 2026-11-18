@@ -380,6 +380,42 @@ abstract class AppLocalizations {
   /// **'Paste the brief or the update here'**
   String get pasteHint;
 
+  /// No description provided for @requiredVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a label for this version.'**
+  String get requiredVersionLabel;
+
+  /// No description provided for @requiredPastedText.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the text first.'**
+  String get requiredPastedText;
+
+  /// No description provided for @requiredProjectName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a project name.'**
+  String get requiredProjectName;
+
+  /// No description provided for @requiredNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Write the note first.'**
+  String get requiredNote;
+
+  /// No description provided for @requiredApprovalEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the evidence.'**
+  String get requiredApprovalEvidence;
+
+  /// No description provided for @requiredApprovalBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter who stated it.'**
+  String get requiredApprovalBy;
+
   /// No description provided for @upload.
   ///
   /// In en, this message translates to:

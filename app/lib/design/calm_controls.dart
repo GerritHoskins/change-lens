@@ -36,6 +36,13 @@ Future<T?> showCalmSheet<T>(BuildContext context, {required WidgetBuilder builde
     showModalBottomSheet<T>(context: context, isScrollControlled: true, useSafeArea: true,
       barrierColor: CalmColors.ink.withValues(alpha: .4), builder: builder);
 
+/// The validator of a field that must not be blank: [message] names what is missing. The sheet sits
+/// in a [Form], and its main button calls `validate()`: every message shows at its field and the first
+/// is announced. Re-checking while typing is set on each field, never on the Form, which would
+/// announce the first message again on every rebuild.
+FormFieldValidator<String> calmRequired(String message) =>
+    (value) => value == null || value.trim().isEmpty ? message : null;
+
 List<Widget> _spaced(List<Widget> children, double gap) => [
   for (var i = 0; i < children.length; i++) ...[if (i > 0) SizedBox(height: gap), children[i]],
 ];

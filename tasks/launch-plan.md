@@ -115,7 +115,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
-- [ ] L27 Imports keep their draft, and empty fields say why (audit A2, P1)
+- [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)
 - [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
@@ -131,7 +131,7 @@ Tasks that need a Mac or the iPhone go first. Every iOS build runs on Codemagic'
 `ios-testflight`), so the owner's Mac is needed only to inspect a release build (L25). The iPhone must be in
 hand for steps 3 to 5. PC work comes first only where it saves a second iPhone sitting.
 
-1. **Before the build (PC, no device).** L27, then L28's code for A6 and A8, so the sitting sees the final
+1. **Before the build (PC, no device).** L27 (built 2026-11-18), then L28's code for A6 and A8, so the sitting sees the final
    screens and the screen reader is checked once. `ios-device-check` gets
    `--dart-define=CHANGELENS_CONSENT=true`: no workflow passes it today, so L13's consent line can't be checked.
 2. **Build (Codemagic Mac).** Run `ios-device-check` from `main`. This is also the first Codemagic run of L7's

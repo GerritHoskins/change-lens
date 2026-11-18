@@ -131,47 +131,58 @@ class _ProjectScreenState extends State<ProjectScreen> {
     }
   }
 
-  /// Asks for a label (and the text, when pasting). Returns null if cancelled.
-  Future<(String, String?)?> _askLabel({required bool paste}) {
+  /// Asks for a label (and the text, when pasting), starting from [draft] and showing why the last
+  /// attempt failed. Returns null if cancelled.
+  Future<(String, String?)?> _askLabel({required bool paste, (String, String?)? draft, String? failure}) {
     final l = AppLocalizations.of(context);
-    final label = TextEditingController(), text = TextEditingController();
-    return showCalmSheet<(String, String?)>(context, builder: (context) => CalmSheet(
+    final form = GlobalKey<FormState>();
+    final label = TextEditingController(text: draft?.$1), text = TextEditingController(text: draft?.$2);
+    return showCalmSheet<(String, String?)>(context, builder: (context) => Form(key: form, child: CalmSheet(
       title: paste ? l.importPaste : l.importPdf,
       action: l.upload, actionKey: const Key('confirm-import'),
       onAction: () {
-        if (label.text.trim().isEmpty || (paste && text.text.trim().isEmpty)) return;
+        if (!form.currentState!.validate()) return;
         Navigator.pop(context, (label.text.trim(), paste ? text.text : null));
       },
       children: [
-        TextField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
+        if (failure != null) Semantics(liveRegion: true, child: CalmWarning(text: failure)),
+        TextFormField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
+          validator: calmRequired(l.requiredVersionLabel), autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: InputDecoration(labelText: l.versionLabel, hintText: l.versionLabelHint)),
-        if (paste) TextField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
+        if (paste) TextFormField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
+          validator: calmRequired(l.requiredPastedText), autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: InputDecoration(hintText: l.pasteHint)),
       ],
-    ));
+    )));
   }
 
+  /// A failed upload reopens the sheet with what the user typed. The draft lives in this call only:
+  /// Cancel or a success drops it, and nothing is written to the device (AC-25).
   Future<void> _import({required bool paste}) async {
     final l = AppLocalizations.of(context);
     final services = ServicesScope.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final answer = await _askLabel(paste: paste);
-    if (answer == null) return;
-    setState(() => importing = true);
-    try {
-      if (paste) {
-        await services.importText(widget.project.id, answer.$1, answer.$2!);
-      } else {
-        await services.importPdf(widget.project.id, answer.$1);
-      }
-      await _load();
-    } on Exception catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(l.importFailed(
+    (String, String?)? draft;
+    String? failure;
+    while (mounted) {
+      final answer = await _askLabel(paste: paste, draft: draft, failure: failure);
+      if (answer == null || !mounted) return;
+      setState(() => importing = true);
+      try {
+        if (paste) {
+          await services.importText(widget.project.id, answer.$1, answer.$2!);
+        } else {
+          await services.importPdf(widget.project.id, answer.$1);
+        }
+        await _load();
+        return;
+      } on Exception catch (e) {
+        draft = answer;
         // A limit the server enforces names the limit and the way out, like any rejected input.
-        e is ApiException && e.code == 'limit_exceeded' && e.detail != null
-            ? rejectionReasonLabel(l, 'limit_exceeded_${e.detail}') : userErrorMessage(l, e)))));
-    } finally {
-      if (mounted) setState(() => importing = false);
+        failure = l.importFailed(e is ApiException && e.code == 'limit_exceeded' && e.detail != null
+            ? rejectionReasonLabel(l, 'limit_exceeded_${e.detail}') : userErrorMessage(l, e));
+      } finally {
+        if (mounted) setState(() => importing = false);
+      }
     }
   }
 

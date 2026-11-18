@@ -527,12 +527,21 @@ loses the label and the pasted text. Blank required fields refuse without a mess
 name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
 
 **Acceptance criteria:**
-- [ ] After a failed import, the sheet is open or reopens with the label and pasted text intact; a success or Cancel clears them
-- [ ] A blank required field shows an error at the field and is announced: import label and text, note, approval, project name
-- [ ] An empty project name keeps the sheet open
+- [x] After a failed import, the sheet is open or reopens with the label and pasted text intact; a success or Cancel clears them
+- [x] A blank required field shows an error at the field and is announced: import label and text, note, approval, project name
+- [x] An empty project name keeps the sheet open
 
 **Verification:**
-- [ ] App command passes, with new widget tests for a failed import and for each blank field
+- [x] App command passes, with new widget tests for a failed import and for each blank field (no analyzer issues, 293 tests)
+
+**Built 2026-11-18, not yet on a device.** A failed import from the project screen reopens its sheet with
+the label, the pasted text and the reason; a failed PDF import keeps the label and the PDF is picked again.
+The draft lives in memory for that one import only. Each sheet is a Flutter `Form`: the main button shows a
+message at every blank required field, and Flutter announces the first one. Two things the tests found: with
+re-checking set on the whole form the message was announced twice and again on every keystroke, so it is set
+per field; and at 2x text on a 320-wide screen a message was cut after one line, so messages now wrap. Open
+for the L13 sitting: hear the messages with VoiceOver or TalkBack, and look at the label field's message at
+large text, where it shares its row with the character counter. Tests: `app/test/drafts_and_required_fields_test.dart`.
 
 **Dependencies:** None · **Files likely touched:** `app/lib/screens/project_screen.dart`, `compare_screen.dart`, `projects_screen.dart`, `finding_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
 

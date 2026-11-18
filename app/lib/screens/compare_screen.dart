@@ -237,6 +237,7 @@ class _InputSheet extends StatefulWidget {
 }
 
 class _InputSheetState extends State<_InputSheet> {
+  final form = GlobalKey<FormState>();
   final label = TextEditingController(), text = TextEditingController();
   bool busy = false;
   String? error;
@@ -245,7 +246,7 @@ class _InputSheetState extends State<_InputSheet> {
   void dispose() { label.dispose(); text.dispose(); super.dispose(); }
 
   Future<void> _choose() async {
-    if (label.text.trim().isEmpty || (widget.paste && text.text.trim().isEmpty)) return;
+    if (!form.currentState!.validate()) return;
     if (widget.paste) {
       Navigator.pop(context, ComparisonInput.paste(label.text.trim(), text.text));
       return;
@@ -266,17 +267,19 @@ class _InputSheetState extends State<_InputSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return CalmSheet(
+    return Form(key: form, child: CalmSheet(
       title: widget.paste ? l.importPaste : l.importPdf,
       action: widget.paste ? l.useText : l.importPdf, actionKey: const Key('confirm-import'),
       onAction: busy ? null : _choose,
       children: [
-        TextField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
+        TextFormField(key: const Key('label'), controller: label, maxLength: 100, autofocus: true,
+            validator: calmRequired(l.requiredVersionLabel), autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(labelText: l.versionLabel, hintText: l.versionLabelHint)),
-        if (widget.paste) TextField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
+        if (widget.paste) TextFormField(key: const Key('pasted'), controller: text, minLines: 4, maxLines: 10,
+            validator: calmRequired(l.requiredPastedText), autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(hintText: l.pasteHint)),
         if (error != null) Semantics(liveRegion: true, child: CalmWarning(text: error!)),
       ],
-    );
+    ));
   }
 }
