@@ -141,7 +141,8 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
    its withdrawal (also the manual check of Task 2 in `tasks/todo.md`). In the same sitting: the VoiceOver check
    of L28 A8 and the M1b exit on the iPhone. This closes the iPhone lines in `docs/verification.md` (AC-12 to
    AC-15, AC-24, AC-25) and unlocks Checkpoint B, L22, L25 and L26. The Fairphone half of L13 needs no Apple
-   hardware and can follow.
+   hardware and can follow (checklist:
+   [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md)).
 4. **iPhone and Mac sitting 2, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
    the `ios-testflight` build: the receipt checks of `scripts/release/README.md`, three of them iOS only.
 5. **iPhone sitting 3.** L26, the usability test.
