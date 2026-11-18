@@ -2,7 +2,8 @@
 
 With a bearer (a Logto access token, verified exactly as GUARD's step 1): body none, `{}` or
 `{"link_id": ...}`. The first call for a subject creates the user, a new tenant and an active owner
-membership; later calls return the same account. With `link_id`, the Google or Apple identity of that
+membership, if Logto still has that user (a deleted account's token gets `401`); later calls return the
+same account. With `link_id`, the Google or Apple identity of that
 pending link is linked to this user first, only if this user is the link's target, before expiry and
 once (O-19); anything else is `401` and the link is gone. A parked Apple token is then attached to the
 user row. The response carries the onboarding state read in the same transaction (O-23),
@@ -37,9 +38,21 @@ router = APIRouter()
 MAX_FIELD = 4096
 
 
-def _before_first_sign_in(request: Request):
-    """Runs only when a new account is about to be created: the sign-up cap per IP (I-8 S6).
-    Returning users never reach it."""
+def _before_first_sign_in(request: Request, subject: str):
+    """Runs only when a new account is about to be created. Returning users never reach it.
+
+    First, Logto must still know the user. `DELETE /me` removes the subject from our rows, but an access
+    token issued before it stays valid for up to 15 minutes; without this check that token would create
+    a fresh account nobody can sign in to or delete (review ledger LR-3). Dev mode has no IdP users.
+    Then the sign-up cap per IP (I-8 S6), which a stale token therefore doesn't use up."""
+    idp = request.app.state.idp
+    if idp is not None and hasattr(idp, "user"):
+        try:
+            known = idp.user(subject) is not None
+        except IdpUnavailable:
+            raise _unavailable() from None
+        if not known:
+            raise ApiError(401, "unauthenticated")
     limit_signup(request)
 
 
@@ -67,7 +80,7 @@ def create_session(request: Request, body: Optional[dict] = Body(default=None)):
         except LinkRejected:
             raise ApiError(401, "unauthenticated") from None
     with state.db.identity_scope() as identities:
-        principal = identities.bootstrap(subject, before_create=lambda: _before_first_sign_in(request))
+        principal = identities.bootstrap(subject, before_create=lambda: _before_first_sign_in(request, subject))
         if principal is not None:
             repo = identities.bind_tenant(principal.tenant_id)
             onboarding = _state(repo.onboarding(principal.user_id))
