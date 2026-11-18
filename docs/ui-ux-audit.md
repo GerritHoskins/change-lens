@@ -27,6 +27,36 @@ Source audit: **0 P0, 2 P1, 6 P2, 0 P3**. The subsequent reproduced settings def
 adds **one P1**, for **nine technical findings: 0 P0, 3 P1, 6 P2, 0 P3**. Design
 critique findings overlap; do not add both reports' counts as unique defects.
 
+## Status of every finding (checked 2026-11-18, task L24)
+
+Checked against `main` at `4e3df10` by reading the current source and tests, not on a device. The
+locations in the findings below are those of the 2026-11-07 baseline; the screens were rebuilt since.
+Tasks L27 and L28 are in [`tasks/launch-todo.md`](../tasks/launch-todo.md).
+
+| Finding | Status | Reference | What the code shows now |
+| --- | --- | --- | --- |
+| A1 (P1) | Fixed | `28c04ca` | The finding screen resolves every passage first; Confirm stays off until then, and the fallback warning sits directly above it and earlier in reading order (`finding_screen.dart`, test `review_evidence_test.dart`) |
+| A2 (P1) | Partly open | `28c04ca`, task L27 | Fixed: a comparison that fails to send keeps its exact inputs for Retry. Open: an import from the project screen closes its sheet before the upload and loses the label and pasted text on failure; blank required fields refuse without a message (import, note, approval); an empty project name closes the sheet |
+| A3 (P2) | Fixed | `28c04ca`, `d357054` | Status, saving, uploading and errors are live regions; page and section titles are semantic headings; finished work is announced once |
+| A4 (P2) | Fixed | `28c04ca`, `9b715c1` | Light and dark themes with named roles for marker, warning and muted text; dismissed cards are no longer dimmed |
+| A5 (P2) | Partly open | `28c04ca`, task L28 | Fixed: the status screen scrolls; layouts are tested at 320 wide with 2x text. Open: the iOS project targets iPad and lists four iPad orientations while the app locks portrait; no reading-width limit on wide screens |
+| A6 (P2) | Partly open | `28c04ca`, task L28 | Fixed: one request at a time, and polling stops when the comparison finishes. Open: the status and project screens keep polling while the app is in the background; requests have no time limit |
+| A7 (P2) | Fixed | `28c04ca`, `b23e76f` | Load errors offer Retry on every screen; messages come from `userErrorMessage`, never the exception text; limits are named |
+| A8 (P2) | Partly open | `28c04ca`, task L28 | Fixed: side, version and page are text on the quote card; a readable-text view exists beside the PDF page. Open: the marked passage has no spoken label, in the PDF (canvas paint) or in the text view (colour and weight only) |
+| A9 (P1) | Fixed | `28c04ca` | The settings controllers are created once; saving is covered by `app_test.dart` |
+
+Timeline critique of 2026-11-16 (`.impeccable/critique/2026-11-16T21-02-21Z__app-lib-screens-project-timeline-dart.md`):
+
+| Finding | Status | Reference | What the code shows now |
+| --- | --- | --- | --- |
+| 1 (P2) loud "Compare from here" | Fixed | `e980a2b` | Muted small text |
+| 2 (P2) no way to retry a failed card | Fixed | `e980a2b` | "Compare again" opens Compare with the same pair |
+| 3 (P2) silent status changes | Fixed | `e980a2b` | A comparison that finishes is announced once |
+| 4 (P3) two arrow directions | Fixed | `e980a2b` | The rail arrow is gone |
+
+The whole-app critique of 2026-11-17 confirms the four timeline fixes and lists nothing at P0 to P2; its
+P3 notes were handled in `bd8d6f7`.
+
 ## Findings
 
 ### A1 — P1: evidence fallback safeguard absent before Confirm

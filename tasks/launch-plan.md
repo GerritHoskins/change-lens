@@ -114,7 +114,9 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
 - [ ] L22 Security review and incident runbook (D-9)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
-- [ ] L24 Close or schedule the open UI findings
+- [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
+- [ ] L27 Imports keep their draft, and empty fields say why (audit A2, P1)
+- [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
 

@@ -506,13 +506,50 @@ texts on a web page, and link them in the app. Then the consent flag can be turn
 no recorded outcome. Check each against the current screens and mark it fixed, scheduled or declined.
 
 **Acceptance criteria:**
-- [ ] Every finding has a status with a commit or task reference
-- [ ] Each still-open P1 becomes its own task in this file
+- [x] Every finding has a status with a commit or task reference
+- [x] Each still-open P1 becomes its own task in this file
 
 **Verification:**
-- [ ] App command passes; `./scripts/ci.ps1` passes
+- [x] App command passes (no analyzer issues, 285 tests); `./scripts/ci.ps1` passes in `plan-checks` on GitHub for the branch `l24-ui-findings`
+
+**Done 2026-11-18** against `main` at `4e3df10`, by reading source and tests; nothing was checked on a device.
+Of the 13 findings, 9 are fixed (A1, A3, A4, A7, A9 and all four timeline items) and 4 are partly open: A2
+(P1) is task L27; A5, A6 and A8 (P2) are task L28. Nothing was declined: that is the owner's call. The
+statuses, commits and remaining gaps are in a table at the top of `docs/ui-ux-audit.md`. The app files in the
+main checkout differed from `main` only in line endings, so no uncommitted app work was pending.
 
 **Dependencies:** the second session's app edits are committed · **Files likely touched:** `docs/ui-ux-audit.md` · **Estimated scope:** S
+
+## Task L27: Imports keep their draft, and empty fields say why (audit A2, P1)
+
+**Description:** An import from the project screen closes its sheet before the upload, so a failed upload
+loses the label and the pasted text. Blank required fields refuse without a message, and an empty project
+name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
+
+**Acceptance criteria:**
+- [ ] After a failed import, the sheet is open or reopens with the label and pasted text intact; a success or Cancel clears them
+- [ ] A blank required field shows an error at the field and is announced: import label and text, note, approval, project name
+- [ ] An empty project name keeps the sheet open
+
+**Verification:**
+- [ ] App command passes, with new widget tests for a failed import and for each blank field
+
+**Dependencies:** None · **Files likely touched:** `app/lib/screens/project_screen.dart`, `compare_screen.dart`, `projects_screen.dart`, `finding_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
+
+## Task L28: Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8)
+
+**Description:** Three findings are fixed in part. Each part below can also be declined by the owner with a
+line in 06; A5 depends on whether iPad is a target at launch.
+
+**Acceptance criteria:**
+- [ ] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit
+- [ ] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
+- [ ] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack
+
+**Verification:**
+- [ ] App command passes; the screen-reader check is recorded in `docs/ui-ux-audit.md`
+
+**Dependencies:** L27 first (same screens) · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
