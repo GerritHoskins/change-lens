@@ -1,0 +1,48 @@
+name: ios-compile
+
+# Proves that the real app's iOS build compiles: the same step as Codemagic's app-ios-compile-check
+# (`codemagic.yaml`), on a GitHub-hosted Mac. Unsigned, so it needs no Apple account and produces
+# nothing installable. Codemagic workflows are started by hand (owner's decision, 2026-11-18); this
+# job is the automatic check for native iOS changes, which can't be built on the Windows PC.
+on:
+  pull_request:
+    paths:
+      - 'app/ios/**'
+      - 'app/pubspec.yaml'
+      - 'app/pubspec.lock'
+      - '.github/workflows/ios-compile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-compile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      # The version pinned in codemagic.yaml and used on the PC; bump all three together.
+      FLUTTER_VERSION: '3.47.9'
+      FLUTTER_COMMIT: c197ca5199e9ee5661e865596c9c07294dfab51c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # same pin as plan-checks
+      - name: Install the pinned Flutter SDK
+        run: |
+          set -eu
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = "$FLUTTER_COMMIT"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          flutter --version
+      - name: Get packages
+        working-directory: app
+        run: flutter pub get
+      - name: Build iOS without code signing
+        working-directory: app
+        run: flutter build ios --release --no-codesign
