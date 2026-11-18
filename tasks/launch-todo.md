@@ -476,12 +476,14 @@ and it is supported until October 2030. 3.11 to 3.13 are security-only, so Windo
 the deployed system, and write the incident-response runbook with the 72-hour Art. 33 notification.
 
 **Acceptance criteria:**
-- [ ] A findings list with severities; no high-severity finding is open
-- [ ] `docs/incident-runbook.md` exists and names who is notified, by when, and where the evidence is kept
+- [x] A findings list with severities; no high-severity finding is open (2026-11-18, for the scope built that day; Phase 4 features are reviewed when they exist)
+- [ ] `docs/incident-runbook.md` exists and names who is notified, by when, and where the evidence is kept (drafted 2026-11-18; the authority's name and the contact address come with L23, and it is not rehearsed)
 - [ ] D-9's dependency on I-16 and I-19 in 05 is rewritten for the launch scope
 
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
+
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 1 medium, 5 low. Open: 6 medium (L31 to L34 and two server checks) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 
@@ -622,6 +624,60 @@ done. Account A has since been deleted, and the iPhone sitting's results are not
 - [ ] Results recorded in runbook section E (MFA line) and a dated 06 row
 
 **Dependencies:** None · **Files likely touched:** `docs/device-sitting-1.md`, `deploy/ionos/README.md`, possibly `app/lib/auth/session.dart` · **Estimated scope:** S
+
+## Task L31: A deleted account can't be re-created by a token that is still valid (L22, LR-3)
+
+**Description:** `DELETE /me` clears the sign-in subject at once, but a token from another device stays valid
+for up to 15 minutes, and `POST /session` with it creates a fresh account under the deleted subject.
+
+**Acceptance criteria:**
+- [ ] After a completed deletion, `POST /session` with a token issued before it returns 401 and creates no row
+- [ ] The tombstone still ends up without personal data (ID and timestamps only)
+- [ ] The app's notice after deletion matches what the server did (204 or 202)
+
+**Verification:** backend unit and integration tests pass in CI, with a test for the first criterion.
+
+**Dependencies:** None · **Files likely touched:** `backend/changelens/domain/accounts.py`, a migration or `0004`'s functions, `backend/tests/integration/test_account_deletion_db.py` · **Estimated scope:** S
+
+## Task L32: The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4, LR-13)
+
+**Description:** Bring the deployment in line with 03 §6: the Management credential only in the api and
+retention, and a compromised parser unable to read the worker's secrets.
+
+**Acceptance criteria:**
+- [ ] The worker starts without the Logto Management credential and the rate-limit key, from its own env file
+- [ ] Logto is not on a network the worker is on
+- [ ] The parse child can't read its parent's environment or start processes; the worker drops capabilities
+- [ ] The backup job uses a role with replication rights only, not the superuser
+
+**Verification:** backend tests pass in CI; the compose file starts locally in Docker. Manual on the server: a comparison completes, a backup runs, and the worker can't resolve `logto`.
+
+**Dependencies:** None; a deployment with a new server file (owner) · **Files likely touched:** `backend/changelens/config.py`, `backend/changelens/pipeline/sandbox.py`, `deploy/ionos/compose.yaml`, `deploy/ionos/env/`, `deploy/ionos/README.md` · **Estimated scope:** M
+
+## Task L33: Per-account bounds on uploads and queued work (L22, LR-10)
+
+**Description:** One account must not keep the single worker busy for everyone or fill the storage. The fair-use allowance (T8 to T12) counts comparisons, not uploads or waiting jobs.
+
+**Acceptance criteria:**
+- [ ] An upload or comparison is refused with 429 when the account already has N unparsed versions or N unfinished comparisons (numbers: owner, with L5)
+- [ ] Stored bytes per account have a ceiling
+- [ ] Concurrent uploads are bounded so the api stays within its memory limit
+
+**Verification:** backend unit and integration tests pass in CI.
+
+**Dependencies:** L5 for the numbers · **Files likely touched:** `backend/changelens/api/routes.py`, `backend/changelens/api/comparisons.py`, `backend/changelens/api/app.py`, `backend/changelens/config.py` · **Estimated scope:** M
+
+## Task L34: Android sign-out ends the browser session on every browser (L22, LR-11; owner decision)
+
+**Description:** Add `login` to the sign-in request's `prompt`, so Logto asks again even when the browser kept its session. It touches all three sign-in methods and can only be confirmed on a phone.
+
+**Acceptance criteria:**
+- [ ] After sign-out, Continue with email asks for the address and the code again, on Android and iOS
+- [ ] Google and Apple sign-in still complete without an extra step
+
+**Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab.
+
+**Dependencies:** A device sitting · **Files likely touched:** `app/lib/auth/logto.dart`, `app/test/auth_session_test.dart`, `docs/device-sitting-1*.md` · **Estimated scope:** S
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
