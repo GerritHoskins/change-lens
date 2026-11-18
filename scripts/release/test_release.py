@@ -83,10 +83,22 @@ class AcceptanceTests(unittest.TestCase):
         for key in acceptance.PLATFORM_CHECKS["ios"]:
             self.assertIn("missing passing device evidence: " + key, errors)
 
+    def test_ios_launch_set_leaves_out_the_deferred_handoff_check(self):
+        """Owner's decision, 2026-11-18: no share extension before I-16, so nothing to observe."""
+        self.assertEqual(acceptance.DEFERRED_CHECKS, {"ios": {"handoff_file_protection"}})
+        self.assertFalse(acceptance.DEFERRED_CHECKS["ios"] & acceptance.PLATFORM_CHECKS["ios"])
+        self.artifact = self.artifact.with_suffix(".ipa")
+        self.artifact.write_bytes(b"synthetic iOS artifact")
+        self.receipt.update(platform="ios", artifact_sha256=acceptance.digest(self.artifact), checks={
+            key: {"result": "pass", "evidence": "Synthetic gate-test observation."}
+            for key in acceptance.CHECKS | acceptance.PLATFORM_CHECKS["ios"]})
+        self.assertEqual(acceptance.validate(self.receipt, self.artifact, "ios", self.commit), [])
+
 
 FILES = ("codemagic.yaml", "app/android/app/build.gradle.kts",
          "app/android/app/src/main/AndroidManifest.xml",
-         "app/android/app/src/main/res/xml/data_extraction_rules.xml")
+         "app/android/app/src/main/res/xml/data_extraction_rules.xml",
+         "app/ios/Runner.xcodeproj/project.pbxproj", "app/ios/Runner/Runner.entitlements")
 DEFINE = ' --dart-define=CHANGELENS_LOGTO_APP_ID="$CHANGELENS_LOGTO_APP_ID"'
 
 
@@ -123,6 +135,20 @@ class ConfigurationTests(unittest.TestCase):
         for relative, before, after in mutations:
             with self.subTest(relative=relative, before=before):
                 self.assertTrue(self.errors_after(relative, before, after))
+
+    def test_share_extension_or_app_group_brings_the_handoff_check_back(self):
+        """The deferred hand-off check must return with I-16, not be forgotten."""
+        back = " needs handoff_file_protection back in the iOS acceptance checks"
+        cases = (
+            (FILES[4], 'productType = "com.apple.product-type.application";',
+             'productType = "com.apple.product-type.app-extension";', ["an app extension" + back]),
+            (FILES[5], "<key>com.apple.developer.applesignin</key>",
+             "<key>com.apple.security.application-groups</key>\n\t<array/>\n"
+             "\t<key>com.apple.developer.applesignin</key>", ["an app group" + back]),
+        )
+        for relative, before, after, expected in cases:
+            with self.subTest(relative=relative):
+                self.assertEqual(self.errors_after(relative, before, after), expected)
 
     def test_release_build_without_the_sign_in_app_id_is_rejected(self):
         """Without the Logto app ID the app is a development build: no sign-in, developer settings shown."""

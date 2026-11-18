@@ -157,7 +157,7 @@ Open before these steps:
 - **L25, worked out 2026-11-18** (`scripts/release/README.md`, "Observing the iOS-only checks"): none of the
   three iOS checks could pass that day. The Keychain cleanup after a reinstall and the readback of the
   Keychain protection are task L29, built and compiled 2026-11-18 and not yet run on a phone.
-  `handoff_file_protection` doesn't apply before I-16: the owner decides whether it leaves the launch set.
+  `handoff_file_protection` left the iOS launch set on 2026-11-18 (owner's decision) and comes back with I-16.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
   sitting 2.
 

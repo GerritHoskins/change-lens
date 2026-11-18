@@ -58,7 +58,12 @@ Missing or pending observations fail acceptance; do not fill passes from source 
 | `keystore_backed_tokens` (Android) | Inspect secure storage and verify Keystore-backed keys on the device. |
 | `keychain_this_device_only` (iOS) | Inspect effective accessibility; after first unlock, this device only, no sync. |
 | `fresh_install_keychain_cleanup` (iOS) | Reinstall clears tokens surviving the previous installation. |
-| `handoff_file_protection` (iOS) | Share-extension hand-off files have complete file protection and are purged. |
+| `handoff_file_protection` (iOS, not required before I-16) | Share-extension hand-off files have complete file protection and are purged. |
+
+`handoff_file_protection` is not in the iOS launch set (owner's decision, 2026-11-18): the launch app has
+no share extension and no app group, so there are no hand-off files to observe. It is listed in
+`DEFERRED_CHECKS` in `check_acceptance.py`. `check_config.py` fails as soon as the iOS project gains an
+extension target or an app group while the check is still deferred, so I-16 has to bring it back.
 
 For an AAB, inspect the package installed from that same bundle; for TestFlight, use the same
 uploaded IPA/build number and retain its hash. Upload to an owner-only testing channel, if needed
@@ -75,7 +80,7 @@ L29 has since built the cleanup and the readback (2026-11-18); neither has run o
 |---|---|---|
 | `fresh_install_keychain_cleanup` | Built in task L29, not yet observed | Sign in, delete the app, install the same IPA again and open it. Pass: the sign-in screen. Fail: you are still signed in. |
 | `keychain_this_device_only` | Built in task L29, not yet observed | Sign in and open Settings. Pass: the line under "Signed in with" reads "Your sign-in is stored on this iPhone only. It can be read once the iPhone has been unlocked after a restart, and it is not synchronised with iCloud." Fail: the line names another protection, or there is no line. |
-| `handoff_file_protection` | Does not apply at launch | The app has no share extension and no app group; both come with I-16. The owner decides whether this check leaves the iOS launch set until I-16 or keeps blocking. |
+| `handoff_file_protection` | Not required before I-16 (owner's decision, 2026-11-18) | The app has no share extension and no app group; both come with I-16, and the check comes back with them. |
 
 Why these methods:
 
