@@ -298,7 +298,7 @@ documents only. It closes every device check the audit found open.
 - [ ] Each result has a dated line in runbook section E or in 06; the M1b and M2 exit rows exist in 06
 - [ ] Every fault found becomes its own task in this file
 
-**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
+**Dependencies:** L10; a signed build from `ios-device-check` and a debug APK, both built with `CHANGELENS_CONSENT=true` (no Codemagic workflow passes it yet); L27 and L28 first, so one sitting sees the final screens (device-first order in `tasks/launch-plan.md`) · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
 
 ## Task L17: Outside uptime check and patch reminder (owner)
 
@@ -549,7 +549,7 @@ line in 06; A5 depends on whether iPad is a target at launch.
 **Verification:**
 - [ ] App command passes; the screen-reader check is recorded in `docs/ui-ux-audit.md`
 
-**Dependencies:** L27 first (same screens) · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
+**Dependencies:** L27 first (same screens); the owner's iPad decision for A5; built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 
