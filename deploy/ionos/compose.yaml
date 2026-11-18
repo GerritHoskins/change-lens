@@ -6,7 +6,9 @@
 # Networks:
 #   edge     Caddy, the api, Logto, retention. Outbound internet (Logto's SMTP, JWKS, object storage).
 #            Caddy also answers as auth.pixeltronic.dev here, so processes reach Logto's public URL directly.
-#   data     internal, no internet: Postgres and everything that talks to it.
+#   data     internal, no internet: Postgres and the ChangeLens processes that talk to it.
+#   authdb   internal, no internet: Postgres and Logto only. Logto is not on `data`, so the worker has no
+#            route to Logto (03 §6, LR-4); the api and retention reach it through Caddy on `edge`.
 #   outbound the egress proxy and the backup job: the only way out for the worker is the proxy's allow-list.
 name: changelens
 
@@ -76,7 +78,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - wal-archive:/wal-archive
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
-    networks: [data]
+    networks: [data, authdb]
     shm_size: 256m
     mem_limit: 2g
     healthcheck:
@@ -97,7 +99,7 @@ services:
       ADMIN_ENDPOINT: http://localhost:3002
     ports:
       - "127.0.0.1:3002:3002"  # admin console: SSH tunnel only
-    networks: [edge, data]
+    networks: [edge, authdb]
     mem_limit: 1g
     depends_on:
       postgres:
@@ -134,9 +136,12 @@ services:
   worker:
     <<: *app
     command: ["python", "-m", "changelens.worker"]
-    env_file:
-      - /etc/changelens/changelens.env
-      - /etc/changelens/worker.env
+    # Its own file, without the Logto Management credential and the rate-limit key (03 §6, LR-4): the worker
+    # parses uploaded files, and it stops at start when it is given one of them.
+    env_file: /etc/changelens/worker.env
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     environment:
       # The worker has no route to the internet; the proxy lets through the model API and storage only.
       HTTPS_PROXY: http://egress:3128
@@ -206,6 +211,8 @@ services:
     restart: "no"
 
 networks:
+  authdb:
+    internal: true
   edge:
     ipam:
       config:

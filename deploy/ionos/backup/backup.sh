@@ -65,8 +65,9 @@ expire_remote() {
 }
 
 prune_logto_audit() {
-  count=$(psql -d logto -tAX -v ON_ERROR_STOP=1 -c \
-    "WITH d AS (DELETE FROM logs WHERE created_at < now() - interval '${RETENTION_DAYS} days' RETURNING 1) SELECT count(*) FROM d")
+  # The backup role has no right on Logto's tables. It may call this one function, which deletes the rows older
+  # than 30 days and returns their number (postgres/init/20-backup-role.sh).
+  count=$(psql -d logto -tAX -v ON_ERROR_STOP=1 -c "SELECT changelens_prune_audit_log()")
   if [ $? -eq 0 ]; then
     mark last-audit-prune-ok
     log "logto audit entries deleted=$count"

@@ -65,7 +65,7 @@ ssh root@<cube-ip>
    |---|---|---|
    | Data may be reaching someone it shouldn't | `docker compose stop caddy` | Everything is offline at once, including the other site this Caddy serves (runbook G) |
    | Only the API is in doubt | `docker compose stop api` | The app shows a connection error; sign-in pages still load |
-   | Model costs run away | `docker compose stop worker` | No model call is made; comparisons wait in the queue. To keep the worker for parsing only, set `CHANGELENS_GLOBAL_SPEND_CAP_EUR=0` in `/etc/changelens/changelens.env` and run `docker compose up -d` instead |
+   | Model costs run away | `docker compose stop worker` | No model call is made; comparisons wait in the queue. To keep the worker for parsing only, set `CHANGELENS_GLOBAL_SPEND_CAP_EUR=0` in `/etc/changelens/worker.env` and `/etc/changelens/changelens.env` and run `docker compose up -d` instead |
    | A deletion or retention run misbehaves | `docker compose stop retention` | No scheduled deletion runs; restart it within a day, because deletions that are due then wait |
 
    Do not run `docker compose down` and do not rebuild until section 4 is done.
@@ -168,10 +168,10 @@ restart the services that read it (`docker compose up -d`).
 | Secret | Kept in | Replaced where | Note |
 |---|---|---|---|
 | Server login (SSH key, root) | The owner's PC | IONOS console and `~/.ssh/authorized_keys` on the server | Check for unknown keys and users first |
-| Postgres passwords (superuser, owner, app, Logto) | `postgres.env`, `admin.env`, `changelens.env`, `logto.env`, `backup.env` | `ALTER ROLE … PASSWORD` in Postgres, then the files | All five files name one or more of them |
-| Object storage keys (documents; backups) | `changelens.env`; `backup.env` | IONOS console | Two separate key pairs |
+| Postgres passwords (superuser, owner, app, Logto, backup) | `postgres.env`, `admin.env`, `changelens.env`, `worker.env`, `logto.env`, `backup.env` | `ALTER ROLE … PASSWORD` in Postgres, then the files | Each of the six files names one or more of them. The backup role's: change it in `postgres.env` and `backup.env`, run `docker compose up -d`, then the role script (runbook F) |
+| Object storage keys (documents; backups) | `changelens.env` and `worker.env`; `backup.env` | IONOS console | Two separate key pairs |
 | Model key `IONOS_API_TOKEN` | `worker.env` | IONOS console | Only the worker reads it |
-| Logto Management credential | `changelens.env` | Logto console, the machine-to-machine app (runbook C5) | It can link identities and delete users |
+| Logto Management credential | `changelens.env` | Logto console, the machine-to-machine app (runbook C5) | It can link identities and delete users. The api and retention read it; the worker doesn't start when it is given it |
 | `CHANGELENS_RATE_LIMIT_KEY` | `changelens.env` | A new random value | Counters start again |
 | Google client secret, Apple `.p8` key | `/etc/changelens/signin/` | Google Cloud console; Apple Developer account (runbook C8) | Revoke the old Apple key there |
 | Apple-token keyring | `/etc/changelens/signin/apple-token-keys.json` | Add a new key and keep the old ones for decryption (03 §6) | Removing an old key makes stored tokens unreadable |
