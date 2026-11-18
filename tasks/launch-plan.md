@@ -85,7 +85,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
 - [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
 - [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server
-- [ ] L17 Outside uptime check and patch reminder
+- [x] L17 Outside uptime check and patch reminder (done 2026-11-18: HetrixTools monitors on both domains, alert mails received; calendar entry exists)
 
 ### Checkpoint B: M2 exit
 - [ ] A new user signs up, compares and deletes the account on both platforms (05, M2 exit)

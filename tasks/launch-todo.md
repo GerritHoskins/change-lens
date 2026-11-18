@@ -306,14 +306,14 @@ documents only. It closes every device check the audit found open.
 (runbook D3) and the weekly patch calendar entry (D4). The uptime service is a new processor that sees URLs only.
 
 **Acceptance criteria:**
-- [ ] Both `https://api.pixeltronic.dev/projects` (expects 401) and the Logto OpenID configuration (expects 200) are checked from outside, with an alert to the owner
-- [ ] `docs/data-inventory.md` lists the service; the "Still open" line in runbook section D is removed
-- [ ] The weekly calendar entry exists
+- [x] Both `https://api.pixeltronic.dev/projects` (expects 401) and the Logto OpenID configuration (expects 200) are checked from outside, with an alert to the owner
+- [x] `docs/data-inventory.md` lists the service; the "Still open" line in runbook section D is removed
+- [x] The weekly calendar entry exists (owner's statement, 2026-11-18)
 
 **Verification:**
-- [ ] Manual: stop `caddy` for 10 minutes and receive the outside alert
+- [x] Manual: stop `caddy` for 10 minutes and receive the outside alert (2026-11-18: the owner received HetrixTools' "down" and "recovered" mails)
 
-**Built 2026-11-17, not yet live.** Owner's choices: the check is a scheduled GitHub Actions workflow (`.github/workflows/uptime.yml`, every 10 minutes, three tries per URL), not a separate uptime service, so no new processor; the owner adds the calendar entry. The check script passed against the live server and failed on a wrong expected status. The data inventory and runbook section D describe it. Open: the workflow runs only from `main`, so it starts after the next merge; then the alert test (stop `caddy` for 20 minutes, not 10, because GitHub starts scheduled runs late), the owner's GitHub setting for failed-workflow mails, and the calendar entry. The "Still open" line in section D goes when those are done.
+**Done 2026-11-18.** The check is two website monitors in the owner's HetrixTools account (free plan, every minute, alert after three failed checks), set up by the owner from the values in runbook D3; the owner received the "down" and "recovered" mails in the `caddy` test and confirmed the calendar entry. The monitor settings themselves were not inspected from this repository. First attempt, dropped: a scheduled GitHub Actions workflow (`.github/workflows/uptime.yml`, on `main` from 2026-11-18 06:56Z) never started a scheduled run in four hours, also after disabling and re-enabling it, and its one manual failed run produced no mail; the file is removed. UptimeRobot's free plan was ruled out because it can't accept a 401 as healthy. HetrixTools is a new processor for operations (data inventory); its free plan needs a dashboard login every 90 days, which the weekly patch check now includes.
 
 **Dependencies:** None · **Files likely touched:** `docs/data-inventory.md`, `deploy/ionos/README.md` · **Estimated scope:** XS
 

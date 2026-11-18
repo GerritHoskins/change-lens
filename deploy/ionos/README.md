@@ -242,8 +242,8 @@ cd /opt/changelens/deploy/ionos
 ## D. Backups, restore test and monitoring
 
 **Done 2026-11-16:** backups and WAL shipping run, restore test passed (E), monitor cron set, alert mail received.
-The outside uptime check (D3) is the `uptime` workflow, built 2026-11-17; it starts once it is on `main`.
-Still open: its alert test (stop `caddy` for 20 minutes) and D4's calendar entry.
+**Done 2026-11-18:** the outside uptime check (D3) runs at HetrixTools; with `caddy` stopped its "down" mail
+arrived, and its "recovered" mail after the restart. D4's calendar entry exists.
 
 1. **Backups run.** Within a few minutes the log shows `started`, `wal shipped=…`, `base backup uploaded`,
    `logto audit entries deleted=…`:
@@ -274,14 +274,17 @@ Still open: its alert test (stop `caddy` for 20 minutes) and D4's calendar entry
    ```
    Test the alert mail once by stopping a container for 10 minutes (`docker compose stop retention`, then
    `docker compose start retention`). The monitor can't report the server itself being down, so
-   `.github/workflows/uptime.yml` checks both domains from GitHub's runners every 10 minutes: the API must
-   answer 401 without a token and Logto's OpenID configuration 200, three tries each. A failed run mails the
-   person who last changed its schedule (GitHub: Settings, Notifications, Actions, "failed workflows only").
-   GitHub is already a processor of this repository and sees the two URLs only (data inventory). Its limits:
-   scheduled runs start late under load (often 10 to 20 minutes), so an outage shorter than that can pass
-   unseen, and the schedule pauses after 60 days without a commit; GitHub mails a warning first.
+   two website monitors in the owner's HetrixTools account (free plan) check both domains from outside every
+   minute: `https://api.pixeltronic.dev/projects` must answer 401 without a token and
+   `https://auth.pixeltronic.dev/oidc/.well-known/openid-configuration` 200. After three failed checks it
+   mails the owner, and again on recovery. HetrixTools sees the two URLs only (data inventory). Its limit:
+   the free plan stops monitoring unless the owner logs in to its dashboard at least once every 90 days, so
+   the weekly patch check (step 4) includes that login. A scheduled GitHub Actions workflow was tried first
+   and removed on 2026-11-18: its schedule never started in four hours on `main`, and no mail arrived for
+   a failed run.
 4. **Patch reminder.** A calendar entry: check Logto, PDFium (`pypdfium2`), Caddy, Postgres and Ubuntu
-   security releases weekly; apply within 7 days (03 §6).
+   security releases weekly; apply within 7 days (03 §6). Log in to HetrixTools on the same occasion, and
+   empty the inbox of `noreply@pixeltronic.dev` (bounces can contain a user's address; data inventory).
 
 ## E. Evidence for the decision-log row (06)
 
@@ -303,7 +306,8 @@ Record each with its date:
       at a Gmail inbox. Registration stays off (O-21): Logto answers a code request for an unknown email with
       200 and sends nothing, so owner and test users are added first in the console (User management → Add
       user, email only)
-- [ ] the first `logto audit entries deleted=` line
+- [x] the first `logto audit entries deleted=` line: read 2026-11-18, `2026-11-18T07:44:37Z backup logto audit
+      entries deleted=0` (nothing is 30 days old yet; the same line on 2026-11-17)
 - [x] C8 sign-in configured: 2026-11-16, a made-up code answered `google 401` and `apple 401`; Google's token
       endpoint answered `invalid_grant` with the web client's secret; api healthy, retention without errors
       after the restart. The first start crash-looped (`Google client secret file cannot be read`): the image's
@@ -314,8 +318,8 @@ Record each with its date:
       Android: a new account signed in through `POST /session` and Logto's one-time token (audit log
       `Interaction.SignIn.Verification.OneTimeToken.Submit`); Google with the email account's address answered
       `link_required` (the app's "You already have an account")
-- [ ] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
-      30 days), the outside uptime check
+- [x] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
+      30 days), the outside uptime check. 2026-11-18: rows written from the deploy files and this runbook
 
 ## F. Updates
 
