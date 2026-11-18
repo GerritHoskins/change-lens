@@ -64,6 +64,9 @@ def check(root: Path) -> list[str]:
     device = workflow(config, "ios-device-check")
     require("distribution_type: ad_hoc\n" in device and "bundle_identifier: dev.changelens.app\n" in device,
             "device checks must use ad hoc signing for the real bundle ID")
+    # The device build shows the consent screen, so the owner can check it on the phone (L13).
+    require("--dart-define=CHANGELENS_CONSENT=${CHANGELENS_CONSENT:-true}" in device,
+            "device checks must build with the consent screen on")
     android = workflow(config, "app-android-release")
     require("android_signing:" in android and "changelens_release" in android,
             "Android release must request its external signing identity")
