@@ -75,7 +75,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     if (timer == null) {
       versions = List.of(widget.versions);
       _poll();
-      timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+      timer = Timer.periodic(const Duration(seconds: 2), (_) { if (appInForeground()) _poll(); });
     }
   }
 

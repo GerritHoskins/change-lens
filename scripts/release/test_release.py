@@ -117,6 +117,8 @@ class ConfigurationTests(unittest.TestCase):
              "bundle_identifier: dev.changelens.changelensPoc\n"),
             (FILES[0], "name: App signed IPA for TestFlight (prepare only)\n    <<: *real_app",
              "name: App signed IPA for TestFlight (prepare only)\n    <<: *app"),
+            # The device build loses the consent screen that L13 checks on the phone.
+            (FILES[0], " --dart-define=CHANGELENS_CONSENT=${CHANGELENS_CONSENT:-true}", ""),
         )
         for relative, before, after in mutations:
             with self.subTest(relative=relative, before=before):

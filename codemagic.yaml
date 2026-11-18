@@ -187,6 +187,9 @@ workflows:
   # Signs in against production (I-18) with the Logto app ID from `logto_app` above. To build with the
   # developer settings instead (the API URL is then set on the device, e.g. the PC's Wi-Fi address),
   # replace `*logto_app` here with a mapping that sets CHANGELENS_LOGTO_APP_ID to an empty string.
+  # The consent screen is on in this build (L13 checks it on the device), while the store builds leave
+  # it off until the legal review (I-20). To build without it, start the build with the environment
+  # variable CHANGELENS_CONSENT=false.
   ios-device-check:
     name: App ad hoc IPA for owner device checks
     <<: *real_app
@@ -207,7 +210,7 @@ workflows:
       - name: Apply ad hoc signing profiles
         script: xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Build ad hoc IPA
-        script: flutter build ipa --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID=${CHANGELENS_LOGTO_APP_ID:-} --export-options-plist=/Users/builder/export_options.plist
+        script: flutter build ipa --release --build-number=$BUILD_NUMBER --dart-define=CHANGELENS_LOGTO_APP_ID=${CHANGELENS_LOGTO_APP_ID:-} --dart-define=CHANGELENS_CONSENT=${CHANGELENS_CONSENT:-true} --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - $CM_BUILD_DIR/app/build/ios/ipa/*.ipa
 

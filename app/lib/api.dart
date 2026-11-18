@@ -1,4 +1,5 @@
 // Client for the ChangeLens API (backend/README.md; I-22, I-8). Bodies are never logged (03a P10).
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -142,8 +143,36 @@ class ConsentState {
   final String policyVersion;
 }
 
+/// Gives every request a time limit (audit A6); without one, a stalled connection waits forever. The
+/// limit ends the wait with a [TimeoutException], which the screens show like an unreachable server.
+/// It doesn't cancel the request: a late answer is dropped, so requests that carry a file wait longer.
+class _TimeLimitClient extends http.BaseClient {
+  _TimeLimitClient(this._inner, this._limit, this._fileLimit);
+
+  final http.Client _inner;
+  final Duration _limit, _fileLimit;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      _whole(request).timeout(request is http.MultipartRequest ? _fileLimit : _limit);
+
+  /// Reads the whole answer, so the limit covers the body too. [Api] reads every body into memory anyway.
+  Future<http.StreamedResponse> _whole(http.BaseRequest request) async {
+    final r = await _inner.send(request);
+    final body = await r.stream.toBytes();
+    return http.StreamedResponse(http.ByteStream.fromBytes(body), r.statusCode, contentLength: body.length,
+        request: r.request, headers: r.headers, isRedirect: r.isRedirect,
+        persistentConnection: r.persistentConnection, reasonPhrase: r.reasonPhrase);
+  }
+
+  @override
+  void close() => _inner.close();
+}
+
 class Api {
-  Api(this.baseUrl, this.token, {http.Client? client}) : _client = client ?? http.Client();
+  Api(this.baseUrl, this.token, {http.Client? client, Duration limit = const Duration(seconds: 30),
+      Duration fileLimit = const Duration(minutes: 5)})
+      : _client = _TimeLimitClient(client ?? http.Client(), limit, fileLimit);
 
   final String baseUrl, token;
   final http.Client _client;

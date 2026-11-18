@@ -456,6 +456,9 @@
   "historyCompareAgain": "Erneut vergleichen",
   "historyComparisonDone": "Vergleich von {earlier} mit {newer}: {status}",
   "comparisonFailedShort": "Dieser Vergleich konnte nicht abgeschlossen werden.",
+  "evidenceMarkedA11y": "Markierte Stelle: {quote}",
+  "evidencePdfMarkedA11y": "PDF-Seite {page}. Markierte Stelle: {quote}",
+  "evidencePdfUnmarkedA11y": "PDF-Seite {page}. Die Stelle ist auf dieser Seite nicht markiert: {quote}",
   "kindPdf": "PDF",
   "kindText": "Eingefügter Text"
 }

@@ -2125,6 +2125,24 @@ abstract class AppLocalizations {
   /// **'This comparison couldn\'t be completed.'**
   String get comparisonFailedShort;
 
+  /// No description provided for @evidenceMarkedA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked passage: {quote}'**
+  String evidenceMarkedA11y(String quote);
+
+  /// No description provided for @evidencePdfMarkedA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF page {page}. Marked passage: {quote}'**
+  String evidencePdfMarkedA11y(int page, String quote);
+
+  /// No description provided for @evidencePdfUnmarkedA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF page {page}. The passage is not marked on this page: {quote}'**
+  String evidencePdfUnmarkedA11y(int page, String quote);
+
   /// No description provided for @kindPdf.
   ///
   /// In en, this message translates to:
