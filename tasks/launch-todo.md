@@ -313,6 +313,8 @@ documents only. It closes every device check the audit found open.
 **Verification:**
 - [ ] Manual: stop `caddy` for 10 minutes and receive the outside alert
 
+**Built 2026-11-17, not yet live.** Owner's choices: the check is a scheduled GitHub Actions workflow (`.github/workflows/uptime.yml`, every 10 minutes, three tries per URL), not a separate uptime service, so no new processor; the owner adds the calendar entry. The check script passed against the live server and failed on a wrong expected status. The data inventory and runbook section D describe it. Open: the workflow runs only from `main`, so it starts after the next merge; then the alert test (stop `caddy` for 20 minutes, not 10, because GitHub starts scheduled runs late), the owner's GitHub setting for failed-workflow mails, and the calendar entry. The "Still open" line in section D goes when those are done.
+
 **Dependencies:** None · **Files likely touched:** `docs/data-inventory.md`, `deploy/ionos/README.md` · **Estimated scope:** XS
 
 ### Checkpoint B: M2 exit
