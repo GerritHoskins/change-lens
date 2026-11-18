@@ -104,6 +104,10 @@ task. The last section says where each result is recorded afterwards.
 - [ ] Sign out. Continue with Google again. This time it signs in directly. Settings says "Signed in with
       Google", with account A's address, and the project from step 3 is there.
       Result (was the authenticator code asked for with Google?):
+- [ ] While signed in: delete the app, install it again from the Codemagic link and open it. Note whether
+      you are still signed in. Expected today, from the code: yes. That is the missing Keychain cleanup of
+      task L29, not a new finding.
+      Result:
 
 ## 7. Sign in with Apple and account deletion (iPhone, then the Logto console)
 
