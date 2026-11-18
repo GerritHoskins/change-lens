@@ -104,15 +104,18 @@ task. The last section says where each result is recorded afterwards.
 - [ ] Sign out. Continue with Google again. This time it signs in directly. Settings says "Signed in with
       Google", with account A's address, and the project from step 3 is there.
       Result (was the authenticator code asked for with Google?):
+- [ ] Menu → Settings: note the line under "Signed in with …", if there is one. A build with task L29
+      says "Your sign-in is stored on this iPhone only. …". A build without L29 has no such line.
+      Result (the line, word for word, or "no line"):
 - [ ] While signed in: delete the app, install it again from the Codemagic link and open it. Note whether
-      you are still signed in. Expected today, from the code: yes. That is the missing Keychain cleanup of
-      task L29, not a new finding.
+      you are still signed in. A build with L29 shows the sign-in screen. A build without L29 is expected
+      to be still signed in; that is the known gap, not a new finding.
       Result:
 
 ## 7. Sign in with Apple and account deletion (iPhone, then the Logto console)
 
-- [ ] Sign out. Continue with Apple, with an Apple ID whose address is not account A's. A new account
-      starts: the onboarding and the consent screen appear again, and the project list is empty.
+- [ ] If you are still signed in, sign out. Continue with Apple, with an Apple ID whose address is not
+      account A's. A new account starts: the onboarding and the consent screen appear again, and the project list is empty.
       Result:
 - [ ] Menu → Settings → **Delete account** → confirm. The app returns to the sign-in screen with "Your
       account and all its projects were deleted." (or the notice that the last copies finish in the
@@ -145,3 +148,4 @@ Account A stays for the Fairphone half of L13.
 | 2 (consent) | The manual check of Task 2 in [`tasks/todo.md`](../tasks/todo.md) |
 | 3 (PDF picker, comparison, review) | The M1b exit row in 06 (private); the iPhone lines of AC-12 to AC-15, AC-24 and AC-25 in [`docs/verification.md`](verification.md) |
 | 4, 5 (field messages, VoiceOver) | Rows A2, A6 and A8 in [`docs/ui-ux-audit.md`](ui-ux-audit.md); tasks L27 and L28 |
+| 6, last two steps (Settings line, reinstall) | Task L29 in [`tasks/launch-todo.md`](../tasks/launch-todo.md) |

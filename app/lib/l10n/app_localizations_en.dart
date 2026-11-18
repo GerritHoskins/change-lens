@@ -1071,6 +1071,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsKeychainOk =>
+      'Your sign-in is stored on this iPhone only. It can be read once the iPhone has been unlocked after a restart, and it is not synchronised with iCloud.';
+
+  @override
+  String settingsKeychainDiffers(String found) {
+    return 'The sign-in stored on this iPhone isn\'t protected as intended ($found).';
+  }
+
+  @override
   String get settingsPrivacy => 'Privacy';
 
   @override

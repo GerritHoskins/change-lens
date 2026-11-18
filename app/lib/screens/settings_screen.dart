@@ -3,6 +3,8 @@
 // I-8 S5; 204 and 202 both end the account for the app), then Privacy with the usage-events switch.
 // Privacy appears only with a [UsageConsent]: the account's answer when [Services.consentFlow] is on. Legal links (Terms, Privacy,
 // Imprint) wait for the reviewed I-20 texts and a link opener; they are not built.
+// On iOS the account section also says how the Keychain protects the stored sign-in, read back from
+// the system (task L29). The line is in release builds too: the L25 inspection reads it there.
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 
@@ -10,16 +12,21 @@ import '../auth/session.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
+import '../services.dart' show KeychainProtection, readKeychainProtection;
 import 'consent_screen.dart';
 import 'sign_in_screen.dart' show methodName;
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.session, this.consent});
+  const SettingsScreen({super.key, required this.session, this.consent,
+    this.keychainProtection = readKeychainProtection});
 
   final AuthSession session;
 
   /// The account's usage-events answer (D-18); null hides the Privacy section until it exists.
   final UsageConsent? consent;
+
+  /// Reads what iOS reports for the stored sign-in; null hides the line (other platforms, nothing stored).
+  final Future<KeychainProtection?> Function() keychainProtection;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -27,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool deleting = false, deleteFailed = false, consentSaving = false, consentFailed = false;
+  late final Future<KeychainProtection?> protection = widget.keychainProtection();
 
   Future<void> _setConsent(bool allow) async {
     setState(() { consentSaving = true; consentFailed = false; });
@@ -88,6 +96,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (method != null) Padding(padding: const EdgeInsets.only(top: 4),
           child: Text(l.settingsSignedInWith(methodName(l, method)), key: const Key('account-method'),
             style: text.bodyMedium?.copyWith(color: colors.muted))),
+        FutureBuilder(future: protection, builder: (context, snapshot) {
+          final found = snapshot.data;
+          if (found == null) return const SizedBox.shrink();
+          return Padding(padding: const EdgeInsets.only(top: 4), child: Text(
+            found.asIntended ? l.settingsKeychainOk : l.settingsKeychainDiffers(found.found),
+            key: const Key('keychain-protection'), style: text.bodyMedium?.copyWith(color: colors.muted)));
+        }),
         const SizedBox(height: 16),
         Align(alignment: AlignmentDirectional.centerStart,
           child: OutlinedButton(key: const Key('sign-out'), onPressed: deleting ? null : widget.session.signOut,

@@ -416,6 +416,8 @@
   "settingsTitle": "Einstellungen",
   "settingsAccount": "Konto",
   "settingsSignedInWith": "Angemeldet mit {method}",
+  "settingsKeychainOk": "Deine Anmeldung ist nur auf diesem iPhone gespeichert. Sie ist lesbar, sobald das iPhone nach einem Neustart entsperrt wurde, und wird nicht mit iCloud synchronisiert.",
+  "settingsKeychainDiffers": "Die auf diesem iPhone gespeicherte Anmeldung ist nicht wie vorgesehen geschützt ({found}).",
   "settingsPrivacy": "Datenschutz",
   "settingsUsageEvents": "Nutzungsereignisse teilen",
   "settingsUsageEventsHint": "Welche Bildschirme du öffnest, welche Berichtsfilter du nutzt und wie lange dein erster Vergleich dauert. Niemals Dokumentinhalte.",

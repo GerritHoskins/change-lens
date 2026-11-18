@@ -35,6 +35,43 @@ class SecureSettingsStore implements SettingsStore {
   Future<void> write(String key, String value) => _storage.write(key: key, value: value);
 }
 
+/// What iOS reports for the items the app keeps in the Keychain (task L29; SA-11). The option above
+/// only asks for a protection class; an item keeps the class it was first written with, so the
+/// release inspection reads the effective one back (`scripts/release/README.md`).
+class KeychainProtection {
+  const KeychainProtection(this.classes, {required this.synchronised});
+
+  static const intended = 'after_first_unlock_this_device';
+
+  /// The distinct protection classes of the stored items, in the names of `AppDelegate.swift`.
+  final Set<String> classes;
+
+  /// True if any item is marked for iCloud Keychain.
+  final bool synchronised;
+
+  bool get asIntended => !synchronised && classes.length == 1 && classes.single == intended;
+
+  /// What was found, for the line that reports a difference.
+  String get found => [...classes.toList()..sort(), if (synchronised) 'synchronised'].join(', ');
+}
+
+const _keychain = MethodChannel('changelens/keychain');
+
+/// Null off iOS, with nothing stored yet, and when the readback fails: then nothing is claimed.
+Future<KeychainProtection?> readKeychainProtection() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+  try {
+    final items = await _keychain.invokeListMethod<Map<Object?, Object?>>('protection') ?? const [];
+    if (items.isEmpty) return null;
+    return KeychainProtection({for (final item in items) '${item['accessible']}'},
+        synchronised: items.any((item) => item['synchronizable'] == true));
+  } on PlatformException {
+    return null;
+  } on MissingPluginException {
+    return null;
+  }
+}
+
 class PickedDocument {
   PickedDocument(this.name, this.bytes);
 

@@ -117,7 +117,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
 - [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)
 - [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8) (built 2026-11-18; open: the screen-reader check on a phone)
-- [ ] L29 iOS Keychain: clear it on a fresh install and show its effective protection (for L25)
+- [ ] L29 iOS Keychain: clear it on a fresh install and show its effective protection (for L25) (built 2026-11-18; open: the Codemagic compile check and the iPhone check)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
 
@@ -155,8 +155,8 @@ Open before these steps:
   step 2 proves the change. An iPad can still run the app as a scaled iPhone app, and App Review may open it
   that way.
 - **L25, worked out 2026-11-18** (`scripts/release/README.md`, "Observing the iOS-only checks"): none of the
-  three iOS checks can pass today. The Keychain cleanup after a reinstall is not built, and the Keychain
-  protection can only be observed if the app reads it back; both are task L29, before step 4.
+  three iOS checks could pass that day. The Keychain cleanup after a reinstall and the readback of the
+  Keychain protection are task L29, built 2026-11-18 and not yet compiled or run on a phone.
   `handoff_file_protection` doesn't apply before I-16: the owner decides whether it leaves the launch set.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
   sitting 2.

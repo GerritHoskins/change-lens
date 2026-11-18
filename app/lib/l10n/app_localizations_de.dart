@@ -1079,6 +1079,15 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get settingsKeychainOk =>
+      'Deine Anmeldung ist nur auf diesem iPhone gespeichert. Sie ist lesbar, sobald das iPhone nach einem Neustart entsperrt wurde, und wird nicht mit iCloud synchronisiert.';
+
+  @override
+  String settingsKeychainDiffers(String found) {
+    return 'Die auf diesem iPhone gespeicherte Anmeldung ist nicht wie vorgesehen geschützt ($found).';
+  }
+
+  @override
   String get settingsPrivacy => 'Datenschutz';
 
   @override
