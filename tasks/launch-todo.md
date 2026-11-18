@@ -581,8 +581,8 @@ starts signed in. And the protection of the stored items can only be observed if
 - [ ] The app reads the protection class and the sync setting of its own Keychain items and shows them in plain words (the owner picks the place: a line in Settings, or hidden)
 - [ ] The readback is in the store build too, because the L25 receipt binds to the inspected artefact
 
-Built 2026-11-18 on branch `l29-keychain`. The Swift part has not been compiled or run, so the criteria stay
-open until the compile check and the iPhone check.
+Built 2026-11-18 and merged the same day (PR 55), before any iOS build had compiled it. The compile
+check passed afterwards; the criteria stay open until the iPhone check.
 
 - The cleanup runs in `AppDelegate.swift` before the Flutter engine starts. An empty marker file in
   Application Support marks an install as seen; iOS deletes the app's files with the app, but not the
@@ -596,7 +596,7 @@ open until the compile check and the iPhone check.
 - The readback covers every generic-password item the app can see, not only the plugin's.
 
 **Verification:**
-- [ ] Codemagic `app-ios-compile-check` passes on the branch before the merge: the change is native Swift and can't be built on the PC
+- [x] The iOS build compiles: the change is native Swift and can't be built on the PC. Passed 2026-11-18 in the GitHub job `ios-compile` (PR 59, run 44358870196: Xcode 16.4, Flutter 3.47.9, `flutter build ios --release --no-codesign`), after the merge and not before it as planned. Codemagic's `app-ios-compile-check` did not run: its queue did not move that day
 - [x] App command passes, with tests for the Dart side (2026-11-18: analyzer clean, 309 tests)
 - [ ] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. Signed in again, Settings shows the sentence above
 

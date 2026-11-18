@@ -56,4 +56,4 @@ flutter test        # widget tests for AC-9, AC-10, AC-12..15, AC-18, AC-24..26 
 flutter build apk --debug
 ```
 
-Codemagic runs the same checks in `app-android-check` and `app-ios-compile-check` (`../codemagic.yaml`).
+Codemagic runs the same checks in `app-android-check` and `app-ios-compile-check` (`../codemagic.yaml`), started by hand. A pull request that changes `ios/` is also compiled by the GitHub job `ios-compile`.
