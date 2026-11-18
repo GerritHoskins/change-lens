@@ -19,22 +19,6 @@ definitions:
     working_directory: app
     max_build_duration: 30
     instance_type: mac_mini_m2
-  # Automatic builds need the GitHub webhook to api.codemagic.io/hooks/<appId> (added 2026-11-18).
-  # Pull requests only: with push as well, every push to a pull request branch built twice.
-  # Codemagic skips on the changeset only after a workflow's first successful build.
-  on_real_app_change: &on_real_app_change
-    triggering:
-      events:
-        - pull_request
-      branch_patterns:
-        - pattern: '*'
-          include: true
-    when:
-      changeset:
-        includes:
-          - 'app/'
-          - 'codemagic.yaml'
-          - 'scripts/release/'
   # The Logto native app's ID (I-18): a public identifier that appears in every sign-in URL, not a
   # secret. A build without it is a development build with no sign-in and the developer settings in the
   # menu, so both store builds require it (scripts/release/check_config.py).
@@ -55,10 +39,15 @@ definitions:
       script: python3 "$CM_BUILD_DIR/scripts/release/check_config.py"
 
 workflows:
-  # The real app (I-9): analyze, test and build on every pull request that touches app/.
+  # Every workflow in this file is started by hand (owner's decision, 2026-11-18). No workflow has a
+  # triggering section, and the GitHub webhook to Codemagic is inactive: on its first day it queued
+  # about 15 builds in half an hour. Codemagic reads this file from the branch that sends an event,
+  # so a trigger added here also has to reach every open branch before the webhook is switched on.
+  #
+  # The real app (I-9): analyze, test and build.
   app-android-check:
     name: App Android check
-    <<: [*real_app, *on_real_app_change]
+    <<: *real_app
     environment:
       <<: *flutter
     cache: *cache
@@ -74,7 +63,7 @@ workflows:
 
   app-ios-compile-check:
     name: App iOS compile check (unsigned)
-    <<: [*real_app, *on_real_app_change]
+    <<: *real_app
     environment:
       <<: *flutter
     cache: *cache
