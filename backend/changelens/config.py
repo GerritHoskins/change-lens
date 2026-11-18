@@ -25,6 +25,9 @@ DEFAULT_ADMIN_DATABASE_URL = "postgresql+psycopg://changelens:changelens@127.0.0
 # serve nothing real, so a missing one stops it at start.
 DEPLOYED_REQUIRED = ("CHANGELENS_DATABASE_URL", "CHANGELENS_S3_ENDPOINT", "CHANGELENS_S3_ACCESS_KEY",
                      "CHANGELENS_S3_SECRET_KEY", "CHANGELENS_S3_BUCKET", "CHANGELENS_LLM")
+# Only the api and retention may hold these (03 §6). The worker parses uploaded files, so in logto mode it
+# stops at start when it finds one in its environment (LR-4).
+NOT_FOR_THE_WORKER = ("CHANGELENS_LOGTO_M2M_APP_ID", "CHANGELENS_LOGTO_M2M_APP_SECRET", "CHANGELENS_RATE_LIMIT_KEY")
 
 
 def database_url_from_env() -> str:
@@ -107,13 +110,21 @@ class Settings:
     consent_policy_version: str = "2026-11-13"
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
+    # The worker's settings (LR-4): it checks no token and calls no sign-in service, so it holds none of their
+    # settings, in any mode.
+    worker: bool = False
 
     def __post_init__(self):
         if self.auth_mode not in AUTH_MODES:
             raise ValueError("auth_mode must be dev or logto")
         if any(not isinstance(k, str) or not isinstance(v, str) for k, v in self.dev_tokens.items()):
             raise ValueError("dev_tokens maps token strings to subject strings")
-        if self.auth_mode == "logto":
+        if self.worker and (self.logto_management_endpoint or self.logto_m2m_app_id or self.logto_m2m_app_secret
+                            or self.google_client_id or self.apple_client_id):
+            raise ValueError("the worker holds no Logto, Google or Apple settings")
+        if self.auth_mode == "logto" and self.dev_tokens:
+            raise ValueError("dev tokens are refused in logto mode")
+        if self.auth_mode == "logto" and not self.worker:
             if not (self.logto_issuer and self.logto_audience and self.logto_jwks_url):
                 raise ValueError("logto mode needs issuer, audience and JWKS URL")
             # Plain string checks: config imports no URL or network module (test_injection allow-list).
@@ -121,8 +132,6 @@ class Settings:
             authority = url[len("https://"):].split("/", 1)[0] if url.startswith("https://") else ""
             if not authority or "@" in authority or url != url.strip():
                 raise ValueError("the Logto JWKS URL must be https")
-            if self.dev_tokens:
-                raise ValueError("dev tokens are refused in logto mode")
         for cap in (self.tenant_monthly_spend_cap_eur, self.global_monthly_spend_cap_eur):
             if not isinstance(cap, Decimal) or not cap.is_finite() or cap < 0:
                 raise ValueError("spend caps must be non-negative amounts")
@@ -148,10 +157,12 @@ class Settings:
             raise ValueError("Logto management needs an https endpoint, app ID and secret")
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls, worker: bool = False) -> "Settings":
+        """`worker=True` reads the worker's settings: the same database, storage and model requirements, nothing
+        about sign-in, and in logto mode no start when a credential it must not hold is set."""
         env = os.environ
         mode = env.get("CHANGELENS_AUTH_MODE", "dev")
-        auth: dict = {"auth_mode": mode}
+        auth: dict = {"auth_mode": mode, "worker": worker}
         if mode == "dev":
             # The dev token is never accepted by a deployed config (I-8 overview, decision 2).
             if env.get("CHANGELENS_ENV") != "local":
@@ -163,25 +174,12 @@ class Settings:
         elif mode == "logto":
             if env.get("CHANGELENS_DEV_TOKEN"):
                 raise RuntimeError("CHANGELENS_DEV_TOKEN must not be set in logto mode")
-            auth.update(logto_issuer=env.get("CHANGELENS_LOGTO_ISSUER"),
-                        logto_audience=env.get("CHANGELENS_LOGTO_AUDIENCE"),
-                        logto_jwks_url=env.get("CHANGELENS_LOGTO_JWKS_URL"),
-                        logto_management_endpoint=env.get("CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT"),
-                        logto_m2m_app_id=env.get("CHANGELENS_LOGTO_M2M_APP_ID"),
-                        logto_m2m_app_secret=env.get("CHANGELENS_LOGTO_M2M_APP_SECRET"))
-            for name in ("google_client_id", "google_client_secret_file", "google_redirect_uri", "apple_client_id",
-                         "apple_team_id", "apple_key_id", "apple_private_key_file", "apple_token_keys_file"):
-                if env.get("CHANGELENS_" + name.upper()):
-                    auth[name] = env["CHANGELENS_" + name.upper()]
-            if env.get("CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"):
-                auth["logto_management_resource"] = env["CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"]
-            # A deployment keys its rate-limit counters with its own secret (I-8 S6).
-            if len(env.get("CHANGELENS_RATE_LIMIT_KEY", "")) < 32:
-                raise RuntimeError("logto mode needs CHANGELENS_RATE_LIMIT_KEY (at least 32 characters)")
-            auth["rate_limit_key"] = env["CHANGELENS_RATE_LIMIT_KEY"]
-            # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
-            if not auth["logto_management_endpoint"]:
-                raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
+            if worker:
+                held = [name for name in NOT_FOR_THE_WORKER if env.get(name)]
+                if held:
+                    raise RuntimeError("the worker must not be given " + ", ".join(held))
+            else:
+                auth.update(_sign_in_from_env(env))
             # Names only in the message: the values are credentials.
             missing = [name for name in DEPLOYED_REQUIRED if not env.get(name, "").strip()]
             if missing:
@@ -215,6 +213,30 @@ class Settings:
             )
         except (ValueError, ArithmeticError) as exc:
             raise RuntimeError(str(exc)) from None
+
+
+def _sign_in_from_env(env) -> dict:
+    """What the api and retention need in logto mode and the worker never reads."""
+    auth = dict(logto_issuer=env.get("CHANGELENS_LOGTO_ISSUER"),
+                logto_audience=env.get("CHANGELENS_LOGTO_AUDIENCE"),
+                logto_jwks_url=env.get("CHANGELENS_LOGTO_JWKS_URL"),
+                logto_management_endpoint=env.get("CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT"),
+                logto_m2m_app_id=env.get("CHANGELENS_LOGTO_M2M_APP_ID"),
+                logto_m2m_app_secret=env.get("CHANGELENS_LOGTO_M2M_APP_SECRET"))
+    for name in ("google_client_id", "google_client_secret_file", "google_redirect_uri", "apple_client_id",
+                 "apple_team_id", "apple_key_id", "apple_private_key_file", "apple_token_keys_file"):
+        if env.get("CHANGELENS_" + name.upper()):
+            auth[name] = env["CHANGELENS_" + name.upper()]
+    if env.get("CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"):
+        auth["logto_management_resource"] = env["CHANGELENS_LOGTO_MANAGEMENT_RESOURCE"]
+    # A deployment keys its rate-limit counters with its own secret (I-8 S6).
+    if len(env.get("CHANGELENS_RATE_LIMIT_KEY", "")) < 32:
+        raise RuntimeError("logto mode needs CHANGELENS_RATE_LIMIT_KEY (at least 32 characters)")
+    auth["rate_limit_key"] = env["CHANGELENS_RATE_LIMIT_KEY"]
+    # Account deletion must reach Logto (I-8 S5): a deployment without it doesn't start.
+    if not auth["logto_management_endpoint"]:
+        raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
+    return auth
 
 
 def _ip(value) -> str:

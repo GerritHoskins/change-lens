@@ -483,7 +483,7 @@ the deployed system, and write the incident-response runbook with the 72-hour Ar
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
 
-Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 1 medium, 5 low. Open: 6 medium (L31 to L34 and two server checks) and 20 low to fix, schedule or accept.
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 3 medium (LR-2, LR-3 in L31, LR-4 in L32), 5 low. Open: 4 medium (L33, L34 and two server checks) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 
@@ -645,12 +645,12 @@ for up to 15 minutes, and `POST /session` with it creates a fresh account under 
 retention, and a compromised parser unable to read the worker's secrets.
 
 **Acceptance criteria:**
-- [ ] The worker starts without the Logto Management credential and the rate-limit key, from its own env file
-- [ ] Logto is not on a network the worker is on
-- [ ] The parse child can't read its parent's environment or start processes; the worker drops capabilities
-- [ ] The backup job uses a role with replication rights only, not the superuser
+- [x] The worker starts without the Logto Management credential and the rate-limit key, from its own env file (built 2026-11-18: `worker.env` is the only file it reads, and it stops at start when it is given one of them)
+- [x] Logto is not on a network the worker is on (built 2026-11-18: Logto and Postgres share the new `authdb` network; in a local start the worker couldn't resolve `logto`)
+- [x] The parse child can't read its parent's environment or start processes; the worker drops capabilities (built 2026-11-18; with both protections switched off, the same probes read the environment and forked)
+- [x] The backup job uses a role with replication rights only, not the superuser (built 2026-11-18: `changelens_backup`, plus the right to call one function that prunes Logto's audit log; every other attempt was refused locally)
 
-**Verification:** backend tests pass in CI; the compose file starts locally in Docker. Manual on the server: a comparison completes, a backup runs, and the worker can't resolve `logto`.
+**Verification:** backend tests pass in CI; the compose file starts locally in Docker (done 2026-11-18 with test values: Postgres, Logto and the proxy started; the worker's settings, database connection and a parse, and the backup role, were checked in their containers; the worker loop needs the storage and wasn't run). Manual on the server, open: the release steps in runbook F, then a comparison completes, a backup runs, and the worker can't resolve `logto`.
 
 **Dependencies:** None; a deployment with a new server file (owner) · **Files likely touched:** `backend/changelens/config.py`, `backend/changelens/pipeline/sandbox.py`, `deploy/ionos/compose.yaml`, `deploy/ionos/env/`, `deploy/ionos/README.md` · **Estimated scope:** M
 

@@ -23,7 +23,7 @@ from changelens.api.app import create_app
 from changelens.api.auth import current_principal
 from changelens.auth.jwks import JwksKeyHolder, JwksUnavailable
 from changelens.auth.jwt_verifier import JwtPolicy
-from changelens.config import Settings
+from changelens.config import NOT_FOR_THE_WORKER, Settings
 from changelens.domain import TenantRepo
 from changelens.domain.models import AccountOnboarding, ConsentEvent, Membership, User
 from changelens.storage import MemoryObjectStore
@@ -324,6 +324,39 @@ def test_a_deployment_refuses_the_fake_model(monkeypatch):
     _env(monkeypatch, {**LOGTO, "CHANGELENS_LLM": "fake"})
     with pytest.raises(RuntimeError, match="CHANGELENS_LLM"):
         Settings.from_env()
+
+
+# The worker's own env file (LR-4): database, storage and model, and nothing about sign-in.
+WORKER = {"CHANGELENS_AUTH_MODE": "logto", **DEPLOYED, **dict.fromkeys(NOT_FOR_THE_WORKER)}
+
+
+def test_a_deployed_worker_starts_without_any_sign_in_setting(monkeypatch):
+    _env(monkeypatch, WORKER)
+    worker = Settings.from_env(worker=True)
+    assert (worker.auth_mode, worker.llm_provider, worker.s3_bucket) == ("logto", "ionos", "originals-bucket")
+    assert (worker.logto_m2m_app_id, worker.logto_m2m_app_secret, worker.logto_management_endpoint) == (None,) * 3
+    with pytest.raises(RuntimeError):  # the same file starts no api: that one needs the sign-in settings
+        Settings.from_env()
+
+
+@pytest.mark.parametrize("name", NOT_FOR_THE_WORKER)
+def test_a_worker_given_a_credential_it_must_not_hold_does_not_start(monkeypatch, name):
+    _env(monkeypatch, {**WORKER, name: LOGTO[name]})
+    with pytest.raises(RuntimeError) as raised:
+        Settings.from_env(worker=True)
+    assert name in str(raised.value) and LOGTO[name] not in str(raised.value)  # the name, never the value
+    with pytest.raises(ValueError):
+        Settings(database_url="unused", s3_endpoint="unused", s3_access_key="unused", s3_secret_key="unused",
+                 s3_bucket="unused", auth_mode="logto", worker=True, logto_m2m_app_id="m2m-app",
+                 logto_m2m_app_secret=LOGTO["CHANGELENS_LOGTO_M2M_APP_SECRET"],
+                 logto_management_endpoint="https://auth.example.test")
+
+
+@pytest.mark.parametrize("name", sorted(DEPLOYED))
+def test_a_deployed_worker_without_its_own_database_storage_or_model_does_not_start(monkeypatch, name):
+    _env(monkeypatch, {**WORKER, name: None})
+    with pytest.raises(RuntimeError, match=name):
+        Settings.from_env(worker=True)
 
 
 API_DOCS = ("/docs", "/redoc", "/openapi.json")

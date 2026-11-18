@@ -10,7 +10,7 @@ from changelens.worker import Worker
 
 def main() -> None:
     configure_logging()
-    settings = Settings.from_env()
+    settings = Settings.from_env(worker=True)
     db = Database(settings.database_url)
     db.assert_app_role()
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)

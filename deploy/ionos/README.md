@@ -11,7 +11,7 @@ through IONOS SMTP. **Nothing here opens sign-ups**: that waits for S1–S6 bein
 | `compose.yaml` | All services, networks and volumes; images pinned by digest |
 | `changelens.Dockerfile` | The backend image (hash-pinned wheels, non-root, read-only filesystem) |
 | `Caddyfile` | TLS for `api.pixeltronic.dev` and `auth.pixeltronic.dev`; no access log |
-| `postgres/init/` | Logto's database and the replication rule for backups (first start only) |
+| `postgres/init/` | Logto's database (first start only) and the backup job's database role |
 | `squid/squid.conf` | The worker's egress proxy: HTTPS to the allow-listed hosts only |
 | `backup/` | WAL shipping, daily base backup, 30-day expiry, Logto audit-log pruning, restore test |
 | `monitor.sh` | Host cron job: endpoints, containers, backups, disk, global spend cap; alert mail |
@@ -81,8 +81,10 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    ```
    Generate each password with `openssl rand -base64 32 | tr -d '/+=' | cut -c1-32` and the rate-limit key
    with `openssl rand -hex 32`. Fill `postgres.env`, `admin.env`, `logto.env`, `caddy.env`, `backup.env`,
-   `worker.env` (the IONOS model key), `egress-allowlist.txt` and `monitor.env` now; `changelens.env` except
-   the two `CHANGELENS_LOGTO_M2M_*` values, which come in C5.
+   `worker.env` (the worker's own settings and the IONOS model key; the worker reads no other file),
+   `egress-allowlist.txt` and `monitor.env` now; `changelens.env` except the two `CHANGELENS_LOGTO_M2M_*`
+   values, which come in C5. `PGPASSWORD` in `backup.env` is the same value as `BACKUP_DB_PASSWORD` in
+   `postgres.env`.
 5. **Check that no template placeholder is left** (prints nothing when done; the M2M values are expected
    until C5):
    ```bash
@@ -139,6 +141,12 @@ cd /opt/changelens/deploy/ionos
    ```
    Logto shows `healthy`. (Done 2026-11-16 on the cube, together with `ALTER ROLE logto CREATEROLE`, which
    the init script now sets on a fresh volume.)
+
+   **The backup role, second run.** Logto's tables exist now, so the role gets the one function it may call
+   to prune the audit log. Until then the backup log says `logto audit pruning failed`:
+   ```bash
+   docker compose exec -u postgres postgres /docker-entrypoint-initdb.d/20-backup-role.sh
+   ```
 4. **Logto admin console**, from your PC through an SSH tunnel (it is never public).
    ```powershell
    ssh -N -L 3002:127.0.0.1:3002 root@<cube-ip>
@@ -165,7 +173,7 @@ cd /opt/changelens/deploy/ionos
    Management API access. Put its App ID and secret into `CHANGELENS_LOGTO_M2M_APP_ID` and
    `CHANGELENS_LOGTO_M2M_APP_SECRET` in `/etc/changelens/changelens.env`, then:
    ```bash
-   docker compose up -d --force-recreate api worker retention
+   docker compose up -d --force-recreate api retention
    ```
 6. **Smoke test** (from your PC). Expect `401`, then `200`, then a timeout or refusal:
    ```powershell
@@ -224,7 +232,7 @@ cd /opt/changelens/deploy/ionos
       from an older template doesn't have them: copy them from `env/changelens.env.example`) and fill in the
       client ID, Team ID and Key ID (all of a provider's lines or none), then:
       ```bash
-      docker compose up -d --force-recreate api worker retention
+      docker compose up -d --force-recreate api retention
       ```
    4. **Check.** No start error in `docker compose logs --tail 20 api retention`, then a made-up code must be
       refused by the provider: `401` means configured, `422` means that provider is still off, and `503`
@@ -332,7 +340,68 @@ App release:
 ```bash
 cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
 ```
-Logto upgrade (not part of an app release): change the image tag and digest in `compose.yaml` first, then run
+
+### The release with task L32 (once)
+
+L32 gives the worker its own env file, moves Logto off the worker's network and gives the backup job its own
+database role. The release recreates Postgres, Logto, the worker and the backup job: sign-in and the api
+pause for about a minute, and a recreated container's log is gone. **Run the three server checks in
+[`docs/security-review.md`](../../docs/security-review.md) first**: one of them reads Logto's log.
+
+1. **The code.**
+   ```bash
+   cd /opt/changelens && git pull
+   ```
+2. **The worker's file.** Copies the worker's settings from `changelens.env` into `worker.env` without
+   showing a value, then lists the names in the file:
+   ```bash
+   grep -E '^CHANGELENS_(AUTH_MODE|DATABASE_URL|S3_ENDPOINT|S3_BUCKET|S3_ACCESS_KEY|S3_SECRET_KEY|LLM|LLM_MODEL|TENANT_SPEND_CAP_EUR|GLOBAL_SPEND_CAP_EUR|COST_CEILING_EUR)=' /etc/changelens/changelens.env >> /etc/changelens/worker.env
+   ```
+   ```bash
+   cut -d= -f1 /etc/changelens/worker.env
+   ```
+   Expected: the comment line, `IONOS_API_TOKEN`, `CHANGELENS_AUTH_MODE`, `CHANGELENS_DATABASE_URL`, the four
+   `CHANGELENS_S3_` names and `CHANGELENS_LLM`, plus the spend caps if `changelens.env` sets them. No
+   `CHANGELENS_LOGTO_` name and no `CHANGELENS_RATE_LIMIT_KEY`: the worker doesn't start with one of those.
+3. **The backup role's password**, generated into both files without showing it:
+   ```bash
+   P=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32) && echo "BACKUP_DB_PASSWORD=$P" >> /etc/changelens/postgres.env && sed -i -e 's/^PGUSER=.*/PGUSER=changelens_backup/' -e "s/^PGPASSWORD=.*/PGPASSWORD=$P/" /etc/changelens/backup.env; unset P
+   ```
+   ```bash
+   grep -c ^BACKUP_DB_PASSWORD= /etc/changelens/postgres.env; grep ^PGUSER= /etc/changelens/backup.env
+   ```
+   Expected: `1` and `PGUSER=changelens_backup`.
+4. **The release.**
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
+   ```
+5. **The backup role.** The last line must read `backup role: ready (base backups, and deleting old rows from
+   the Logto audit log)`:
+   ```bash
+   docker compose exec -u postgres postgres /docker-entrypoint-initdb.d/20-backup-role.sh
+   ```
+6. **Checks.** Every service is up and none is restarting. A worker that restarts names what its file lacks
+   in `docker compose logs --tail 5 worker`:
+   ```bash
+   docker compose ps
+   ```
+   The worker has no route to Logto: the last line starts with `socket.gaierror`:
+   ```bash
+   docker compose exec worker python -c "import socket; socket.gethostbyname('logto')"
+   ```
+   The backup role can connect for a base backup (one line of numbers) and prune the audit log (a number):
+   ```bash
+   docker compose exec backup psql "replication=true dbname=postgres" -tAX -c "IDENTIFY_SYSTEM"
+   ```
+   ```bash
+   docker compose exec backup psql -d logto -tAX -c "SELECT changelens_prune_audit_log()"
+   ```
+   Then one comparison from the app completes, and the next day `docker compose logs --tail 30 backup` shows
+   `base backup uploaded`.
+
+### Logto upgrade
+
+Not part of an app release: change the image tag and digest in `compose.yaml` first, then run
 its database alteration before starting the new version. The command reads the version from `compose.yaml`
 and stops if it finds none:
 ```bash
@@ -370,9 +439,10 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
 
 - `python -m changelens.api --lan` prints a warning about the dev token at start; it doesn't apply in `logto`
   mode. A `--host` option would remove it.
-- `Settings.from_env` in `logto` mode requires the Logto Management credential and the rate-limit key in every
-  process, so the worker holds them too, although only the api and retention use them (03 §6 wants them
-  limited to those two).
+- `worker.env` repeats the database URL, the storage key and the spend caps from `changelens.env`: a changed
+  value has to be changed in both files.
+- The parse child keeps the worker's network (Postgres and the egress proxy). It holds no credential, can't
+  read the worker's, and can't start a process.
 - Secrets reach the processes as environment variables from root-only files, not as files; `docker inspect`
   shows them to root. Only the sign-in secrets (C8) are files.
 - The images' OS packages (`apt`/`apk`) aren't hash-pinned; the base images and Python wheels are.
