@@ -350,6 +350,7 @@ L32 gives the worker its own env file, moves Logto off the worker's network and 
 database role. The release recreates Postgres, Logto, the worker and the backup job: sign-in and the api
 pause for about a minute, and a recreated container's log is gone. **Run the three server checks in
 [`docs/security-review.md`](../../docs/security-review.md) first**: one of them reads Logto's log.
+**Done on the server 2026-11-19**, steps 1 to 6; open: the comparison from the app and the next day's backup.
 
 1. **The code.**
    ```bash
@@ -413,7 +414,8 @@ cd /opt/changelens/deploy/ionos && docker compose logs logto | grep -c -E 'login
 ```bash
 docker compose logs logto | grep -c -F '?[removed]'
 ```
-Expected: `0`, then a number above `0` (the requests are still logged, without their query strings).
+Expected: `0`, then a number above `0` (the requests are still logged, without their query strings). Two
+`0` mean an empty log: no sign-in has reached Logto yet. **Done on the server 2026-11-19.**
 
 ### Separate storage keys (once, LR-13)
 
