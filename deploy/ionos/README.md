@@ -446,13 +446,14 @@ user of its own and a bucket policy. Written from the IONOS documentation of 202
    ```bash
    cd /etc/changelens && cp -p changelens.env changelens.env.old-key && cp -p worker.env worker.env.old-key && cp -p backup.env backup.env.old-key
    ```
-6. **The app user's key** into `changelens.env` and `worker.env`. The secret key isn't shown when pasted:
+6. **The app user's key** into `changelens.env` and `worker.env`. Paste each value alone and press Enter; the
+   secret key isn't shown. A value with a space in it (a wrong paste) changes nothing. It ends with `changed`:
    ```bash
-   read -rp 'App access key: ' K && read -rsp 'App secret key: ' S && echo && sed -i -e "s|^CHANGELENS_S3_ACCESS_KEY=.*|CHANGELENS_S3_ACCESS_KEY=$K|" -e "s|^CHANGELENS_S3_SECRET_KEY=.*|CHANGELENS_S3_SECRET_KEY=$S|" /etc/changelens/changelens.env /etc/changelens/worker.env; unset K S
+   read -rp 'App access key: ' K && read -rsp 'App secret key: ' S && echo; if printf '%s\n%s\n' "$K" "$S" | grep -qvE '^[^[:space:]|&\]{16,}$'; then echo 'not changed: a value is empty or is not a key'; else sed -i -e "s|^CHANGELENS_S3_ACCESS_KEY=.*|CHANGELENS_S3_ACCESS_KEY=$K|" -e "s|^CHANGELENS_S3_SECRET_KEY=.*|CHANGELENS_S3_SECRET_KEY=$S|" /etc/changelens/changelens.env /etc/changelens/worker.env && echo 'changed'; fi; unset K S
    ```
 7. **The backup user's key** into `backup.env`:
    ```bash
-   read -rp 'Backup access key: ' K && read -rsp 'Backup secret key: ' S && echo && sed -i -e "s|^RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=.*|RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=$K|" -e "s|^RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=.*|RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=$S|" /etc/changelens/backup.env; unset K S
+   read -rp 'Backup access key: ' K && read -rsp 'Backup secret key: ' S && echo; if printf '%s\n%s\n' "$K" "$S" | grep -qvE '^[^[:space:]|&\]{16,}$'; then echo 'not changed: a value is empty or is not a key'; else sed -i -e "s|^RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=.*|RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=$K|" -e "s|^RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=.*|RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=$S|" /etc/changelens/backup.env && echo 'changed'; fi; unset K S
    ```
 8. **Restart with the new keys.** The api pauses for a few seconds:
    ```bash
