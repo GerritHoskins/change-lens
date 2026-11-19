@@ -433,6 +433,7 @@ user of its own and a bucket policy. Written from the IONOS documentation of 202
    user-owned buckets**. On `changelens-originals`: **Bucket settings** > **Access management** > **Bucket
    Policy** > **Edit**, paste the policy below with the app user's Canonical User ID, **Save**. Then the
    same on `changelens-backups`, with the backup user's ID and `changelens-backups` in both `Resource` values.
+   A policy that names another bucket than the one it is saved on is refused (`MalformedPolicy: Invalid resource`).
    ```json
    {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*",
      "Principal": {"CanonicalUser": ["<canonical user id>"]},
