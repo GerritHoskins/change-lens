@@ -112,7 +112,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
-- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, 3 medium open: L33, L34 and the storage key split for LR-13; runbook drafted)
+- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, 3 medium open: L33, L34 and the backup job's internet access (LR-13); runbook drafted)
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18, not deployed)
 - [ ] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; open: the release steps and checks on the server, runbook F)
 - [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)

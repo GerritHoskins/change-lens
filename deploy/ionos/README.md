@@ -419,7 +419,7 @@ Expected: `0`, then a number above `0` (the requests are still logged, without t
 
 Until this is done both sides share the account owner's key, which reaches both buckets: a compromised api
 or worker could delete the backups. Every key of one IONOS user has the same access, so each side gets a
-user of its own and a bucket policy. First run on the server 2026-11-19.
+user of its own and a bucket policy. **Done on the server 2026-11-19**, up to step 9.
 
 1. **A group.** In the IONOS DCD as the account owner: **Menu** > **Management** > **Users & Groups**, tab
    **Groups**: create the group `changelens-storage` and tick **Use Object Storage** under **Privileges**.
@@ -461,7 +461,7 @@ user of its own and a bucket policy. First run on the server 2026-11-19.
    running services keep the old key until step 9. Each command must print `own bucket: ok`, then a line
    naming `AccessDenied` (the other side's bucket). The app user's key:
    ```bash
-   cd /opt/changelens/deploy/ionos && docker compose run --rm --no-deps -T api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; b = e['CHANGELENS_S3_BUCKET']; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, b).client.list_objects_v2(Bucket=b, MaxKeys=1); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)" 2>&1 | grep -E 'own bucket|Error' | cut -c1-120
+   cd /opt/changelens/deploy/ionos && docker compose run --rm --no-deps -T api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; b = e['CHANGELENS_S3_BUCKET']; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, b).client.list_objects_v2(Bucket=b, MaxKeys=1); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)" 2>&1 | grep -oE '^own bucket: ok|An error occurred \([A-Za-z]+\)'
    ```
    The backup user's key (it writes and deletes one small test object):
    ```bash

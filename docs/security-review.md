@@ -23,7 +23,7 @@ Medium, open unless the last column says fixed:
 | LR-10 | No bound per account on uploads, stored bytes or queued work, and one worker serves one queue in order: one account can keep everyone else waiting and fill the disk without any model cost. Uploads are also held in memory with no limit on how many run at once | Read in `api/routes.py`, `api/comparisons.py`, `api/app.py`; the remaining cost of one hostile comparison was measured at about 3 s | Task L33 |
 | LR-11 | Android: signing out relies on a private browser tab, which the pinned plugin requests but the phone's browser may not honour. Where it doesn't, "Continue with email" after sign-out can enter without a code | Read in the plugin source (`flutter_web_auth_2` 5.1.0) and `auth/logto.dart` | Task L34 |
 | LR-12 | Logto's own output records request lines, which carry email addresses and one-time sign-in tokens in query strings | Server check of 2026-11-19: 24 such lines in Logto's log. Reproduced in Docker with the pinned image: Logto prints every request line with its full query string | Fixed 2026-11-19: Logto's output passes through `deploy/ionos/logto/log-filter.awk`, which drops the query string of a request line and masks email addresses before Docker stores the line. Checked in Docker: no test value left in the log, a stop still takes under a second, a crash message still arrives, and without the filter file Logto doesn't stay up. Not reviewed: what else Logto may print |
-| LR-13 | The backup job connects as the Postgres superuser and has unrestricted internet access. If the documents bucket and the backup bucket share one key, each key can read or delete the other's objects | Read in `backup.env.example` and `compose.yaml`. Server check of 2026-11-19: both sides use the same key | Partly fixed in task L32: the job connects as its own role, which may take base backups and call one function that prunes Logto's audit log. Still open: the shared key, which the owner replaces by one IONOS user and one bucket policy per side (runbook F, "Separate storage keys"; on 2026-11-19 both users, their keys and both bucket policies were set up at IONOS, and the server still runs on the owner's key until the new keys are entered and pass the runbook's check), and the job's internet access |
+| LR-13 | The backup job connects as the Postgres superuser and has unrestricted internet access. If the documents bucket and the backup bucket share one key, each key can read or delete the other's objects | Read in `backup.env.example` and `compose.yaml`. Server check of 2026-11-19: both sides use the same key | Partly fixed in task L32: the job connects as its own role, which may take base backups and call one function that prunes Logto's audit log. The shared key was replaced on the server on 2026-11-19 by one IONOS user and one bucket policy per side (runbook F, "Separate storage keys"): each key reaches its own bucket and is refused on the other, and the key check below prints `different keys`. Still open: the job's internet access, and removing the copies of the old key files from the server (runbook step 10) |
 
 Server checks for the owner (results go into the table above):
 
@@ -49,8 +49,8 @@ A=$(grep '^CHANGELENS_S3_ACCESS_KEY=' /etc/changelens/changelens.env | cut -d= -
 
 Expected: `0` (LR-12 does not apply), `1`, and `different keys`. The last command compares the two key IDs
 without printing them. Results of 2026-11-19, before the release with task L32: `24`, `1` and `same key`, so
-LR-12 and LR-13 both apply. Repeat the first command after the release with the log filter and the third
-after the key split.
+LR-12 and LR-13 both applied. After the key split of 2026-11-19 the third command prints `different keys`.
+Repeat the first command after the release with the log filter.
 
 Open, low. Each is fixed, scheduled or accepted by the owner before L22 closes:
 
