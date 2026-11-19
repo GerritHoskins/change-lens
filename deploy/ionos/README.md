@@ -419,7 +419,7 @@ Expected: `0`, then a number above `0` (the requests are still logged, without t
 
 Until this is done both sides share the account owner's key, which reaches both buckets: a compromised api
 or worker could delete the backups. Every key of one IONOS user has the same access, so each side gets a
-user of its own and a bucket policy. Written from the IONOS documentation of 2026-11-19; not yet run.
+user of its own and a bucket policy. First run on the server 2026-11-19.
 
 1. **A group.** In the IONOS DCD as the account owner: **Menu** > **Management** > **Users & Groups**, tab
    **Groups**: create the group `changelens-storage` and tick **Use Object Storage** under **Privileges**.
@@ -427,13 +427,15 @@ user of its own and a bucket policy. Written from the IONOS documentation of 202
    for the app and one for the backup job, each with an email address of its own. Add both to the group
    (its tab **Members**).
 3. **A key for each user.** Select the user in the **Users** list, tab **Object Storage Keys**, **+ Generate
-   Key**, **OK**. Keep the access key and the secret key in the password manager. In the same tab click the
-   **Object Storage** link and copy the **Canonical User ID**.
+   Key**, **OK**. The row shows the access key only: the round **?** icon at its right end opens a dialog with
+   **Key** and **Secret** (64 characters: click into the field, Ctrl+A, Ctrl+C). The **Object Storage** link
+   in the same tab shows the user's **Canonical User ID**.
 4. **A policy on each bucket.** **Menu** > **Backup & Storage** > **Object Storage**, tab **Buckets**, **Show
    user-owned buckets**. On `changelens-originals`: **Bucket settings** > **Access management** > **Bucket
-   Policy** > **Edit**, paste the policy below with the app user's Canonical User ID, **Save**. Then the
-   same on `changelens-backups`, with the backup user's ID and `changelens-backups` in both `Resource` values.
-   A policy that names another bucket than the one it is saved on is refused (`MalformedPolicy: Invalid resource`).
+   Policy** > **Edit**, paste the policy below with the app user's Canonical User ID in place of `<canonical
+   user id>`, **Save**. Then the same on `changelens-backups`, with the backup user's ID and
+   `changelens-backups` in both `Resource` values. IONOS saves a policy that still holds the placeholder, and
+   that policy lets nobody in; it refuses one that names another bucket (`MalformedPolicy: Invalid resource`).
    ```json
    {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*",
      "Principal": {"CanonicalUser": ["<canonical user id>"]},
@@ -455,35 +457,30 @@ user of its own and a bucket policy. Written from the IONOS documentation of 202
    ```bash
    read -rp 'Backup access key: ' K && read -rsp 'Backup secret key: ' S && echo; if printf '%s\n%s\n' "$K" "$S" | grep -qvE '^[^[:space:]|&\]{16,}$'; then echo 'not changed: a value is empty or is not a key'; else sed -i -e "s|^RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=.*|RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=$K|" -e "s|^RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=.*|RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=$S|" /etc/changelens/backup.env && echo 'changed'; fi; unset K S
    ```
-8. **Restart with the new keys.** The api pauses for a few seconds:
+8. **Try the new keys before any service uses them.** One-off containers read the changed files; the
+   running services keep the old key until step 9. Each command must print `own bucket: ok`, then a line
+   naming `AccessDenied` (the other side's bucket). The app user's key:
    ```bash
-   cd /opt/changelens/deploy/ionos && docker compose up -d --force-recreate api worker retention backup
+   cd /opt/changelens/deploy/ionos && docker compose run --rm --no-deps -T api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; b = e['CHANGELENS_S3_BUCKET']; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, b).client.list_objects_v2(Bucket=b, MaxKeys=1); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)" 2>&1 | grep -E 'own bucket|Error' | cut -c1-120
    ```
-9. **Checks.** Every service is up; `docker compose logs --tail 5 worker` shows no storage error:
+   The backup user's key (it writes and deletes one small test object):
    ```bash
-   docker compose ps
+   docker compose run --rm --no-deps -T --entrypoint sh backup -c '{ echo key-test | rclone rcat --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/key-test" && rclone deletefile --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/key-test" && echo "own bucket: ok"; rclone lsf --s3-no-check-bucket --retries 1 ionos:changelens-originals; } 2>&1 | grep -oE "own bucket: ok|api error [A-Za-z]+" | uniq' 2>/dev/null
    ```
-   The app's key reaches its own bucket and not the backups. Expected: `own bucket: ok`, then an error whose
-   last line names `AccessDenied`:
+   `SignatureDoesNotMatch` is a wrong secret key (step 6 or 7 again). `AccessDenied` without `own bucket: ok`
+   is a policy that doesn't name this user (step 4). Go on only when both are as expected.
+9. **Restart with the new keys.** The api pauses for a few seconds; afterwards every service is up. Then one
+   comparison from the app completes, the key check in `docs/security-review.md` prints `different keys`,
+   and the next day the backup log shows `base backup uploaded`:
    ```bash
-   docker compose exec api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, e['CHANGELENS_S3_BUCKET']).client.head_bucket(Bucket=e['CHANGELENS_S3_BUCKET']); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)"
+   docker compose up -d --force-recreate api worker retention backup && sleep 40 && docker compose ps
    ```
-   The backup job's key writes to and deletes from its own bucket (`own bucket: ok`) and is refused on the
-   documents (an error naming `AccessDenied`):
-   ```bash
-   docker compose exec backup sh -c 'echo key-test > /tmp/key-test && rclone copyto --s3-no-check-bucket /tmp/key-test "ionos:$BACKUP_BUCKET/key-test" && rclone deletefile --s3-no-check-bucket "ionos:$BACKUP_BUCKET/key-test" && echo "own bucket: ok"'
-   ```
-   ```bash
-   docker compose exec backup rclone lsf --s3-no-check-bucket ionos:changelens-originals
-   ```
-   Then one comparison from the app completes, the key check in `docs/security-review.md` prints `different
-   keys`, and the next day the backup log shows `base backup uploaded`.
 10. **Afterwards.** The checks passed: remove the old files. The owner's key stays active at IONOS, because
     it owns the buckets, and is on the server nowhere:
     ```bash
     rm /etc/changelens/changelens.env.old-key /etc/changelens/worker.env.old-key /etc/changelens/backup.env.old-key
     ```
-    A check failed: put the old files back, then repeat step 8:
+    A service doesn't come up: put the old files back, then run the restart of step 9 again:
     ```bash
     cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
     ```
