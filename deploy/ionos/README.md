@@ -12,6 +12,7 @@ through IONOS SMTP. **Nothing here opens sign-ups**: that waits for S1–S6 bein
 | `changelens.Dockerfile` | The backend image (hash-pinned wheels, non-root, read-only filesystem) |
 | `Caddyfile` | TLS for `api.pixeltronic.dev` and `auth.pixeltronic.dev`; no access log |
 | `postgres/init/` | Logto's database (first start only) and the backup job's database role |
+| `logto/` | Logto's start script and the filter that keeps email addresses and sign-in tokens out of its log |
 | `squid/squid.conf` | The worker's egress proxy: HTTPS to the allow-listed hosts only |
 | `backup/` | WAL shipping, daily base backup, 30-day expiry, Logto audit-log pruning, restore test |
 | `monitor.sh` | Host cron job: endpoints, containers, backups, disk, global spend cap; alert mail |
@@ -33,8 +34,10 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    feature launched; ask IONOS support for this volume, by its ID) and the bucket encryption check in A3.
 3. **Object Storage in Frankfurt** (**done 2026-11-15**) (`s3.eu-central-1.ionoscloud.com`; the backend signs for region
    `eu-central-1`): bucket `changelens-originals` (private, versioning **off**) and bucket `changelens-backups`
-   (private, versioning off, lifecycle rule: delete after 30 days). One access key for the app and, if IONOS
-   lets you scope keys per bucket, a second one for backups. **Encryption:** the backend uploads originals
+   (private, versioning off, lifecycle rule: delete after 30 days). **Keys:** the app and the backup job each
+   use the key of an IONOS user of their own, which a bucket policy lets into one bucket only (section F,
+   "Separate storage keys"). The account owner's key reaches both buckets and doesn't belong on the server.
+   **Encryption:** the backend uploads originals
    without an encryption header, so turn on default encryption (SSE-S3, AES-256) on `changelens-originals`;
    backups are already `age`-encrypted. After C7, check one uploaded object shows `ServerSideEncryption:
    AES256` (in the DCD object details, or `aws s3api head-object` with the app key).
@@ -73,7 +76,7 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 3. **The code.** Add a read-only deploy key to the GitHub repository, then: **Done 2026-11-16** (key
    `/root/.ssh/changelens_deploy`, set as the clone's `core.sshCommand`).
    ```bash
-   git clone git@github.com:GerritHoskins/change-lens.git /opt/changelens && cd /opt/changelens && git checkout m1-iphone
+   git clone git@github.com:GerritHoskins/change-lens.git /opt/changelens && cd /opt/changelens
    ```
 4. **Secret files.** Copy each template, then fill it in with `nano`:
    ```bash
@@ -398,6 +401,90 @@ pause for about a minute, and a recreated container's log is gone. **Run the thr
    ```
    Then one comparison from the app completes, and the next day `docker compose logs --tail 30 backup` shows
    `base backup uploaded`.
+
+### The release with the Logto log filter (once, LR-12)
+
+Logto prints every request line with its query string: the email address and one-time token of a sign-in.
+From this release `logto/log-filter.awk` drops the query string and masks email addresses. The app release
+command recreates Logto (sign-in pauses for under a minute; the old log goes). Then sign in from the app, and:
+```bash
+cd /opt/changelens/deploy/ionos && docker compose logs logto | grep -c -E 'login_hint|primaryEmail|one_time_token'
+```
+```bash
+docker compose logs logto | grep -c -F '?[removed]'
+```
+Expected: `0`, then a number above `0` (the requests are still logged, without their query strings).
+
+### Separate storage keys (once, LR-13)
+
+Until this is done both sides share the account owner's key, which reaches both buckets: a compromised api
+or worker could delete the backups. Every key of one IONOS user has the same access, so each side gets a
+user of its own and a bucket policy. Written from the IONOS documentation of 2026-11-19; not yet run.
+
+1. **A group.** In the IONOS DCD as the account owner: **Menu** > **Management** > **Users & Groups**, tab
+   **Groups**: create the group `changelens-storage` and tick **Use Object Storage** under **Privileges**.
+2. **Two users.** Tab **Users**, **+ Create**: first name, last name, email, password, **Create**. One user
+   for the app and one for the backup job, each with an email address of its own. Add both to the group
+   (its tab **Members**).
+3. **A key for each user.** Select the user in the **Users** list, tab **Object Storage Keys**, **+ Generate
+   Key**, **OK**. Keep the access key and the secret key in the password manager. In the same tab click the
+   **Object Storage** link and copy the **Canonical User ID**.
+4. **A policy on each bucket.** **Menu** > **Backup & Storage** > **Object Storage**, tab **Buckets**, **Show
+   user-owned buckets**. On `changelens-originals`: **Bucket settings** > **Access management** > **Bucket
+   Policy** > **Edit**, paste the policy below with the app user's Canonical User ID, **Save**. Then the
+   same on `changelens-backups`, with the backup user's ID and `changelens-backups` in both `Resource` values.
+   ```json
+   {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*",
+     "Principal": {"CanonicalUser": ["<canonical user id>"]},
+     "Resource": ["arn:aws:s3:::changelens-originals", "arn:aws:s3:::changelens-originals/*"]}]}
+   ```
+   Buckets listed under **Show contract-owned buckets** take the user's **Contract User ID** instead, as
+   `"Principal": {"AWS": ["arn:aws:iam:::user/<contract user id>"]}`.
+
+5. **On the server, keep the old files** until the checks have passed:
+   ```bash
+   cd /etc/changelens && cp -p changelens.env changelens.env.old-key && cp -p worker.env worker.env.old-key && cp -p backup.env backup.env.old-key
+   ```
+6. **The app user's key** into `changelens.env` and `worker.env`. The secret key isn't shown when pasted:
+   ```bash
+   read -rp 'App access key: ' K && read -rsp 'App secret key: ' S && echo && sed -i -e "s|^CHANGELENS_S3_ACCESS_KEY=.*|CHANGELENS_S3_ACCESS_KEY=$K|" -e "s|^CHANGELENS_S3_SECRET_KEY=.*|CHANGELENS_S3_SECRET_KEY=$S|" /etc/changelens/changelens.env /etc/changelens/worker.env; unset K S
+   ```
+7. **The backup user's key** into `backup.env`:
+   ```bash
+   read -rp 'Backup access key: ' K && read -rsp 'Backup secret key: ' S && echo && sed -i -e "s|^RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=.*|RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=$K|" -e "s|^RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=.*|RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=$S|" /etc/changelens/backup.env; unset K S
+   ```
+8. **Restart with the new keys.** The api pauses for a few seconds:
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose up -d --force-recreate api worker retention backup
+   ```
+9. **Checks.** Every service is up; `docker compose logs --tail 5 worker` shows no storage error:
+   ```bash
+   docker compose ps
+   ```
+   The app's key reaches its own bucket and not the backups. Expected: `own bucket: ok`, then an error whose
+   last line names `AccessDenied`:
+   ```bash
+   docker compose exec api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, e['CHANGELENS_S3_BUCKET']).client.head_bucket(Bucket=e['CHANGELENS_S3_BUCKET']); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)"
+   ```
+   The backup job's key writes to and deletes from its own bucket (`own bucket: ok`) and is refused on the
+   documents (an error naming `AccessDenied`):
+   ```bash
+   docker compose exec backup sh -c 'echo key-test > /tmp/key-test && rclone copyto --s3-no-check-bucket /tmp/key-test "ionos:$BACKUP_BUCKET/key-test" && rclone deletefile --s3-no-check-bucket "ionos:$BACKUP_BUCKET/key-test" && echo "own bucket: ok"'
+   ```
+   ```bash
+   docker compose exec backup rclone lsf --s3-no-check-bucket ionos:changelens-originals
+   ```
+   Then one comparison from the app completes, the key check in `docs/security-review.md` prints `different
+   keys`, and the next day the backup log shows `base backup uploaded`.
+10. **Afterwards.** The checks passed: remove the old files. The owner's key stays active at IONOS, because
+    it owns the buckets, and is on the server nowhere:
+    ```bash
+    rm /etc/changelens/changelens.env.old-key /etc/changelens/worker.env.old-key /etc/changelens/backup.env.old-key
+    ```
+    A check failed: put the old files back, then repeat step 8:
+    ```bash
+    cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
+    ```
 
 ### Logto upgrade
 

@@ -483,7 +483,7 @@ the deployed system, and write the incident-response runbook with the 72-hour Ar
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
 
-Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 3 medium (LR-2, LR-3 in L31, LR-4 in L32), 5 low. Open: 4 medium (L33, L34 and two server checks) and 20 low to fix, schedule or accept.
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 4 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19), 5 low. Open: 3 medium (L33, L34, and LR-13: the server check of 2026-11-19 found one storage key on both sides; the owner's key split is in runbook F) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 
