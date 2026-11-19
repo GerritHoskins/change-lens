@@ -91,7 +91,12 @@ services:
 
   logto:
     image: svhd/logto:1.45.0@sha256:9a9aff9423ab7863f00c881c31408e0bfe4def730bac2182d0097367002f5854
-    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    # Logto prints every request line with its query string, which carries the email address and the one-time
+    # sign-in token (LR-12). logto/start.sh sends the output through logto/log-filter.awk, which drops those
+    # before Docker stores the line.
+    entrypoint: ["sh", "/usr/local/share/changelens/start.sh"]
+    volumes:
+      - ./logto:/usr/local/share/changelens:ro
     env_file: /etc/changelens/logto.env
     environment:
       TRUST_PROXY_HEADER: "1"
