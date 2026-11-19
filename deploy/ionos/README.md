@@ -419,7 +419,7 @@ Expected: `0`, then a number above `0` (the requests are still logged, without t
 
 Until this is done both sides share the account owner's key, which reaches both buckets: a compromised api
 or worker could delete the backups. Every key of one IONOS user has the same access, so each side gets a
-user of its own and a bucket policy. **Done on the server 2026-11-19**, up to step 9.
+user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten steps.
 
 1. **A group.** In the IONOS DCD as the account owner: **Menu** > **Management** > **Users & Groups**, tab
    **Groups**: create the group `changelens-storage` and tick **Use Object Storage** under **Privileges**.
