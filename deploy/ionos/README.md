@@ -350,7 +350,7 @@ L32 gives the worker its own env file, moves Logto off the worker's network and 
 database role. The release recreates Postgres, Logto, the worker and the backup job: sign-in and the api
 pause for about a minute, and a recreated container's log is gone. **Run the three server checks in
 [`docs/security-review.md`](../../docs/security-review.md) first**: one of them reads Logto's log.
-**Done on the server 2026-11-19**, steps 1 to 6; open: the comparison from the app and the next day's backup.
+**Done on the server 2026-11-19**, steps 1 to 6, and the base backup of 2026-11-20; open: the comparison from the app.
 
 1. **The code.**
    ```bash
@@ -400,8 +400,8 @@ pause for about a minute, and a recreated container's log is gone. **Run the thr
    ```bash
    docker compose exec backup psql -d logto -tAX -c "SELECT changelens_prune_audit_log()"
    ```
-   Then one comparison from the app completes, and the next day `docker compose logs --tail 30 backup` shows
-   `base backup uploaded`.
+   Then one comparison from the app completes, and within a day the backup log shows `base backup uploaded`
+   (it runs 24 hours after the last one): `docker compose logs backup | grep -v 'wal shipped' | tail -n 20`.
 
 ### The release with the Logto log filter (once, LR-12)
 
@@ -473,7 +473,7 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
    is a policy that doesn't name this user (step 4). Go on only when both are as expected.
 9. **Restart with the new keys.** The api pauses for a few seconds; afterwards every service is up. Then one
    comparison from the app completes, the key check in `docs/security-review.md` prints `different keys`,
-   and the next day the backup log shows `base backup uploaded`:
+   and within a day the backup log shows `base backup uploaded` (the command that ends the L32 release):
    ```bash
    docker compose up -d --force-recreate api worker retention backup && sleep 40 && docker compose ps
    ```
