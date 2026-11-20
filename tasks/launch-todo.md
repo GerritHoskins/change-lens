@@ -599,8 +599,8 @@ once. Before launch that affects the owner's phones only.
 
 **Acceptance criteria:**
 - [x] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there (2026-11-20: offered after the email code and set up; the onboarding was finished)
-- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone open)
-- [ ] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed
+- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone 2026-11-20: yes with email, by the owner's report, sign-in completed 22:10:16 UTC in the api log; Google on the Fairphone open)
+- [x] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed (2026-11-20: account A finished the onboarding on the iPhone, and the Fairphone opened the project list after the email sign-in, by the owner's report, and the api log has no `PUT /me/onboarding` since the install; the 2026-11-18 case was an account that had not finished it)
 
 **Verification:**
 - [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for the iPhone 2026-11-20; the 06 row is the owner's)
@@ -657,7 +657,7 @@ retention, and a compromised parser unable to read the worker's secrets.
 - [ ] After sign-out, Continue with email asks for the address and the code again, on Android and iOS
 - [ ] Google and Apple sign-in still complete without an extra step
 
-**Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab.
+**Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab. Fairphone, 2026-11-20, before any change (debug build from `main` at `b4cbea6`; Android 15, default browser Chrome 157, both read over adb): after Settings → Sign out, Continue with email asked for the address and the mail code again, by the owner's report, one run. The api log since the install has one `POST /session 200` (22:10:16 UTC), the sign-in before the sign-out, and none after it: the owner stopped the second attempt once Logto asked again, and what Logto's page asked is not in the api log. So Chrome on this phone honours the private tab. Other browsers and other Chrome versions are not covered by this check. Owner's decision, 2026-11-20: the task stays open and is not built now.
 
 **Dependencies:** A device sitting · **Files likely touched:** `app/lib/auth/logto.dart`, `app/test/auth_session_test.dart`, `docs/device-sitting-1*.md` · **Estimated scope:** S
 

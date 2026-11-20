@@ -116,7 +116,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18; on the server since the release of 2026-11-19, not checked there)
 - [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, runbook F; the base backup and a comparison from the iPhone ran on 2026-11-20)
 - [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)
-- [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision, device check)
+- [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision; Fairphone check of 2026-11-20 before any change: Chrome asked for the address and the code again; stays open by the owner's decision of that day)
 - [x] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20; built the same day; build 6: 12 of 12 sign-ins, one sheet each)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
