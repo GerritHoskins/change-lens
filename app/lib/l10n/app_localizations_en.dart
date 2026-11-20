@@ -922,6 +922,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign-in didn\'t work. Try again, or choose another method.';
 
   @override
+  String signInFailureCode(String code) {
+    return 'Code: $code';
+  }
+
+  @override
   String get signInRejected =>
       'This sign-in can\'t be used for a ChangeLens account. Choose another method.';
 

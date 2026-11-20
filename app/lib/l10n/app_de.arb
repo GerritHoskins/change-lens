@@ -375,6 +375,7 @@
   "signInWorking": "Anmeldung läuft …",
   "signInUnavailable": "Die Anmeldung ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
   "signInFailed": "Die Anmeldung hat nicht geklappt. Versuche es erneut oder wähle eine andere Methode.",
+  "signInFailureCode": "Code: {code}",
   "signInRejected": "Mit dieser Anmeldung ist kein ChangeLens-Konto möglich. Wähle eine andere Methode.",
   "signedOutExpired": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um weiterzumachen.",
   "signedOutDone": "Du bist abgemeldet.",

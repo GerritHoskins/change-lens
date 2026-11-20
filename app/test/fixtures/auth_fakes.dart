@@ -143,10 +143,14 @@ class FakeBrowser implements WebAuthenticator {
   bool cancel = false;
   bool wrongState = false;
 
+  /// The browser could not be opened; the code as [SystemWebAuthenticator] reports it.
+  String? failCode;
+
   @override
   Future<String> authenticate(Uri url, String callbackScheme) async {
     urls.add(url);
     if (cancel) throw AuthCancelled();
+    if (failCode != null) throw AuthFailed(failCode!);
     final state = wrongState ? 'other' : url.queryParameters['state'];
     return '${config.redirectUri}?code=${server.issueCode()}&state=$state';
   }

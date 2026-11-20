@@ -74,18 +74,41 @@ abstract class WebAuthenticator {
   Future<String> authenticate(Uri url, String callbackScheme);
 }
 
+// Ephemeral: no Logto cookie outlives the sign-in, so signing out of the app is complete.
+Future<String> _openSystemBrowser(Uri url, String callbackScheme) => FlutterWebAuth2.authenticate(
+  url: url.toString(), callbackUrlScheme: callbackScheme,
+  options: const FlutterWebAuth2Options(preferEphemeral: true));
+
+DateTime _now() => DateTime.now();
+
+Future<void> _wait(Duration d) => Future<void>.delayed(d);
+
 class SystemWebAuthenticator implements WebAuthenticator {
-  const SystemWebAuthenticator();
+  const SystemWebAuthenticator({this.open = _openSystemBrowser, this.clock = _now, this.wait = _wait});
+
+  /// A failure sooner than this means the browser never appeared, so nobody saw or did anything in it.
+  static const openedAfter = Duration(seconds: 1);
+
+  /// The pauses before opening it again. On iOS the plugin refuses while another sheet is still on
+  /// screen, and Google's sheet may only just be closing when the backend has answered (L35).
+  static const retryDelays = [Duration(milliseconds: 400), Duration(milliseconds: 800)];
+
+  final Future<String> Function(Uri url, String callbackScheme) open;
+  final DateTime Function() clock;
+  final Future<void> Function(Duration) wait;
 
   @override
   Future<String> authenticate(Uri url, String callbackScheme) async {
-    try {
-      // Ephemeral: no Logto cookie outlives the sign-in, so signing out of the app is complete.
-      return await FlutterWebAuth2.authenticate(url: url.toString(), callbackUrlScheme: callbackScheme,
-        options: const FlutterWebAuth2Options(preferEphemeral: true));
-    } on PlatformException catch (e) {
-      if (e.code == 'CANCELED') throw AuthCancelled();
-      throw AuthFailed('browser_${e.code}');
+    for (var attempt = 0; ; attempt++) {
+      final started = clock();
+      try {
+        return await open(url, callbackScheme);
+      } on PlatformException catch (e) {
+        if (e.code == 'CANCELED') throw AuthCancelled();
+        final neverOpened = clock().difference(started) < openedAfter;
+        if (!neverOpened || attempt >= retryDelays.length) throw AuthFailed('browser_${e.code}');
+        await wait(retryDelays[attempt]);
+      }
     }
   }
 }
