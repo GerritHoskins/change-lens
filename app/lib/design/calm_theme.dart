@@ -139,7 +139,8 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   // 800 and 500 weights map to 700 and 400.
   TextStyle role(double size, FontWeight weight, double lineHeight, {Color? color, double? tracking}) =>
       TextStyle(fontFamily: 'Roboto', fontSize: size, fontWeight: weight, height: lineHeight / size,
-        color: color ?? ink, letterSpacing: tracking);
+        // 0, not null: a null would inherit Material's own tracking for the role (body 0.5, labels 0.1 to 0.5).
+        color: color ?? ink, letterSpacing: tracking ?? 0);
   final text = TextTheme(
     displayLarge: role(54, FontWeight.w700, 54, tracking: -2),   // display
     displayMedium: role(64, FontWeight.w700, 56, tracking: -2),  // figure

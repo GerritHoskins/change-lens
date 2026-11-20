@@ -64,6 +64,31 @@ void main() {
       expect(heights, {CalmSize.buttonMain});
     });
 
+    testWidgets('Apple, Google and email are the same white pill, ink label, in light and dark', (tester) async {
+      await pumpGate(tester);
+      OutlinedButton pill(String key) =>
+          tester.widget(find.descendant(of: find.byKey(Key(key)), matching: find.byType(OutlinedButton)));
+      Text label(String key, String text) =>
+          tester.widget(find.descendant(of: find.byKey(Key(key)), matching: find.text(text)));
+      double? size(String key, String text) =>
+          DefaultTextStyle.of(tester.element(find.byWidget(label(key, text)))).style.fontSize;
+      void same(Brightness brightness) {
+        for (final key in ['sign-in-apple', 'sign-in-google', 'sign-in-email']) {
+          expect(pill(key).style?.backgroundColor?.resolve({}), Colors.white, reason: '$key $brightness');
+          expect(pill(key).style?.foregroundColor?.resolve({}), CalmColors.ink, reason: '$key $brightness');
+          // Light: Apple's "white with outline". Dark: Apple's "white", no outline.
+          expect(pill(key).style?.side?.resolve({})?.style,
+              brightness == Brightness.dark ? BorderStyle.none : BorderStyle.solid, reason: '$key $brightness');
+        }
+      }
+      same(Brightness.light);
+      expect(size('sign-in-apple', 'Continue with Apple'), size('sign-in-google', 'Continue with Google'));
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      same(Brightness.dark);
+    });
+
     testWidgets('iOS order: Apple, Google, email', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
