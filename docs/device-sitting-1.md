@@ -159,6 +159,8 @@ task. The last section says where each result is recorded afterwards.
       code the owner was signed in and the project from step 3 was there (the owner's report; the pasted log
       ends at the token). Pass on this repeat. The failed sign-ins of the morning and the repeated Google
       sheet stay findings, each with its own task.
+      After the fix (task L35), build 6 from `main` at `ea3b8a7`, 2026-11-20: twelve Google sign-ins in a row,
+      all signed in, Google's sheet once each; the api log has 12 tokens issued and 24 `POST /session 200`.
 - [x] Menu → Settings: note the line under "Signed in with …", if there is one. A build with task L29
       says "Your sign-in is stored on this iPhone only. …". A build without L29 has no such line.
       Result (the line, word for word, or "no line"): 2026-11-20, pass. "Your sign-in is stored on this
