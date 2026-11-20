@@ -84,7 +84,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L10 Migrate the server to head and repeat the restore test (done 2026-11-17: `main` at `6a90bb5`, schema `0008_consent_events`, `RESTORE OK`)
 - [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
 - [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
-- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server (Fairphone 2026-11-18, iPhone 2026-11-20; open: MFA on the Fairphone (L30) and the 06 rows)
+- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server (Fairphone 2026-11-18, iPhone 2026-11-20; MFA on the Fairphone 2026-11-20 (L30); open: the 06 rows)
 - [x] L17 Outside uptime check and patch reminder (done 2026-11-18: HetrixTools monitors on both domains, alert mails received; calendar entry exists)
 
 ### Checkpoint B: M2 exit

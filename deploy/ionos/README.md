@@ -334,7 +334,7 @@ Record each with its date:
       the user left the console, an email code request for its address sent nothing, and the same Gmail
       through Google started a new account (deleted again, gone from the console); that account had no MFA.
       2026-11-20, iPhone (`docs/device-sitting-1.md`): email code, MFA set up and asked for with email and
-      with Google, the completed `link_required` link, Apple with token revocation. Fairphone MFA: task L30
+      with Google, the completed `link_required` link, Apple with token revocation. Fairphone MFA, same day: asked with both (L30)
 - [x] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
       30 days), the outside uptime check. 2026-11-18: rows written from the deploy files and this runbook
 
