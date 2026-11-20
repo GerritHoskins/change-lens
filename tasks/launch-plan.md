@@ -117,7 +117,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, runbook F; the base backup and a comparison from the iPhone ran on 2026-11-20)
 - [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)
 - [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision, device check)
-- [ ] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20)
+- [ ] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20; built the same day, open: the iPhone check on a new build)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
 - [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18; checked on the Fairphone 2026-11-18 and the iPhone 2026-11-20)

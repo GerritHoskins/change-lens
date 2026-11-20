@@ -1634,6 +1634,12 @@ abstract class AppLocalizations {
   /// **'Sign-in didn\'t work. Try again, or choose another method.'**
   String get signInFailed;
 
+  /// Under a sign-in failure message: the technical event code, for support. Never personal data.
+  ///
+  /// In en, this message translates to:
+  /// **'Code: {code}'**
+  String signInFailureCode(String code);
+
   /// 401 after a provider or Logto sign-in, for example a deleted account.
   ///
   /// In en, this message translates to:

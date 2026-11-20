@@ -25,6 +25,26 @@ class ProviderCode {
 /// backend recomputes from the raw nonce (backend/changelens/auth/id_tokens.py `_check_nonce`).
 String appleNonceHash(String raw) => sha256.convert(utf8.encode(raw)).toString();
 
+/// The code the backend redeems, after Google's sign-in. On iOS that sign-in already produced it and the
+/// plugin keeps it: a request for no further scope returns it without a second Google sheet. A request
+/// that names 'email' shows the sheet again, because the SDK compares the names literally and Google
+/// grants 'email' under its long name (L35). If the first request yields nothing, ask as before.
+/// [authorizeServer] returns the code for the given scopes, or null.
+Future<String?> googleServerCode(Future<String?> Function(List<String> scopes) authorizeServer,
+    {required bool ios, required List<String> scopes}) async {
+  if (ios) {
+    try {
+      final code = await authorizeServer(const []);
+      if (code != null && code.isNotEmpty) return code;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) rethrow;
+    } on Exception {
+      // a plugin error on this shortcut: the request below is the one that worked before
+    }
+  }
+  return authorizeServer(scopes);
+}
+
 abstract class NativeSignIn {
   /// Sign in with Apple is offered on iOS only: on Android it would need Apple's web flow and a
   /// Services ID, which the backend's audience check (the bundle ID) doesn't accept.
@@ -62,9 +82,11 @@ class PlatformNativeSignIn implements NativeSignIn {
     try {
       await _googleReady;
       final account = await google.authenticate(scopeHint: _googleScopes);
-      final server = await account.authorizationClient.authorizeServer(_googleScopes);
-      if (server == null) throw AuthCancelled();
-      return ProviderCode('google', server.serverAuthCode);
+      final code = await googleServerCode(
+        (scopes) async => (await account.authorizationClient.authorizeServer(scopes))?.serverAuthCode,
+        ios: _ios, scopes: _googleScopes);
+      if (code == null) throw AuthCancelled();
+      return ProviderCode('google', code);
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) throw AuthCancelled();
       if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
