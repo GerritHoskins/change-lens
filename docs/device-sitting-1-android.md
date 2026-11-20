@@ -76,6 +76,11 @@ Android: the consent screen, a comparison on the server, MFA and account deletio
       completed on the iPhone. Settings says "Signed in with Google", with account A's address.
       Result (was the authenticator code asked for with Google?): 2026-11-18, pass. No authenticator code
       asked for (account A has no MFA).
+      Repeat 2026-11-20 (new account A with two-step verification, debug build from `main` at `b4cbea6`):
+      pass. The authenticator code was asked for, the project list opened, and Settings said "Signed in with
+      Google", by the owner's report. Api log: one-time token 22:46:57, completing `POST /session 200`
+      22:47:27 UTC, no `link_required`, no new user, no `PUT /me/onboarding`. A first attempt at 22:42:58 was
+      not carried through.
 
 ## 3. A PDF comparison from the picker (Fairphone)
 

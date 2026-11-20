@@ -289,7 +289,7 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 **Description:** One sitting on the iPhone and the Fairphone against the IONOS server, with synthetic documents only. It closes every device check the audit found open. The iPhone half has a step-by-step checklist with a result line per step: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md). The Fairphone half follows it, with its own checklist: [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md).
 
 **Acceptance criteria:**
-- [ ] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26 (iPhone 2026-11-20: all five; Fairphone 2026-11-18: all but MFA, which is task L30)
+- [x] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26 (iPhone 2026-11-20: all five; Fairphone 2026-11-18: all but MFA; MFA with email and with Google on 2026-11-20, task L30)
 - [x] One PDF comparison started from screen P2 completes on the server on each phone (this also proves the worker's egress allow-list); on the iPhone the PDF comes from the picker (Fairphone 2026-11-18, iPhone 2026-11-20)
 - [x] Account deletion works on both phones and the Logto user is gone; the consent screen (build with `CHANGELENS_CONSENT=true`) shows once and the Settings switch withdraws (Fairphone 2026-11-18, iPhone 2026-11-20; on the iPhone the Logto check is the owner's report)
 
@@ -599,11 +599,11 @@ once. Before launch that affects the owner's phones only.
 
 **Acceptance criteria:**
 - [x] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there (2026-11-20: offered after the email code and set up; the onboarding was finished)
-- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone 2026-11-20: yes with email, by the owner's report, sign-in completed 22:10:16 UTC in the api log; Google on the Fairphone open)
+- [x] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone 2026-11-20: yes with email, by the owner's report, sign-in completed 22:10:16 UTC in the api log; with Google the same evening: asked, then the project list, and Settings said "Signed in with Google", by the owner's report; in the api log the one-time token is at 22:46:57 and the completing `POST /session 200` at 22:47:27 UTC, with no `link_required`, no new user and no `PUT /me/onboarding`; a first attempt at 22:42:58 was not carried through)
 - [x] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed (2026-11-20: account A finished the onboarding on the iPhone, and the Fairphone opened the project list after the email sign-in, by the owner's report, and the api log has no `PUT /me/onboarding` since the install; the 2026-11-18 case was an account that had not finished it)
 
 **Verification:**
-- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for the iPhone 2026-11-20; the 06 row is the owner's)
+- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for both phones 2026-11-20; the 06 row is the owner's)
 
 **Dependencies:** None · **Files likely touched:** `docs/device-sitting-1.md`, `deploy/ionos/README.md`, possibly `app/lib/auth/session.dart` · **Estimated scope:** S
 
