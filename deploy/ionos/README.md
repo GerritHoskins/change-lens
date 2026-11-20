@@ -323,7 +323,7 @@ Record each with its date:
       endpoint answered `invalid_grant` with the web client's secret; api healthy, retention without errors
       after the restart. The first start crash-looped (`Google client secret file cannot be read`): the image's
       user had a system group, not 10001, fixed in `changelens.Dockerfile` (commit e191ad5)
-- [ ] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
+- [x] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
       Google and Apple on S4's path. 2026-11-16: `exp − iat` = 900 s on a production token after email sign-in
       (Android, Fairphone 5, debug build's account screen); onboarding saved per step and completed. Google on
       Android: a new account signed in through `POST /session` and Logto's one-time token (audit log
@@ -332,8 +332,9 @@ Record each with its date:
       (`docs/device-sitting-1-android.md`): email code and `exp − iat` = 900 again; the linked account signed
       in directly with Google; account deletion returned "Your account and all its projects were deleted.",
       the user left the console, an email code request for its address sent nothing, and the same Gmail
-      through Google started a new account (deleted again, gone from the console). Still open: MFA. The test
-      account never had MFA set up, so no authenticator code was asked for with email or Google
+      through Google started a new account (deleted again, gone from the console); that account had no MFA.
+      2026-11-20, iPhone (`docs/device-sitting-1.md`): email code, MFA set up and asked for with email and
+      with Google, the completed `link_required` link, Apple with token revocation. Fairphone MFA: task L30
 - [x] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
       30 days), the outside uptime check. 2026-11-18: rows written from the deploy files and this runbook
 
@@ -350,7 +351,7 @@ L32 gives the worker its own env file, moves Logto off the worker's network and 
 database role. The release recreates Postgres, Logto, the worker and the backup job: sign-in and the api
 pause for about a minute, and a recreated container's log is gone. **Run the three server checks in
 [`docs/security-review.md`](../../docs/security-review.md) first**: one of them reads Logto's log.
-**Done on the server 2026-11-19**, steps 1 to 6, and the base backup of 2026-11-20; open: the comparison from the app.
+**Done on the server 2026-11-19**, steps 1 to 6; the base backup and a comparison from the app ran on 2026-11-20.
 
 1. **The code.**
    ```bash

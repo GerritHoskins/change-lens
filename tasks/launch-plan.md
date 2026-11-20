@@ -4,7 +4,7 @@ Source: the repository audit of 2026-11-17 (decision matrix, items 1–16). Task
 [`tasks/launch-todo.md`](launch-todo.md).
 
 This plan sits **next to** [`tasks/plan.md`](plan.md) and [`tasks/todo.md`](todo.md), which stay the plan
-for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L34, so the two lists
+for the timeline, allowance and D-18 contracts (T1–T15). Tasks here are numbered L1–L35, so the two lists
 never collide. Where the audit names work that T3–T15 already describe, this plan points at those tasks and
 doesn't repeat them.
 
@@ -84,7 +84,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L10 Migrate the server to head and repeat the restore test (done 2026-11-17: `main` at `6a90bb5`, schema `0008_consent_events`, `RESTORE OK`)
 - [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
 - [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
-- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server
+- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server (Fairphone 2026-11-18, iPhone 2026-11-20; open: MFA on the Fairphone (L30) and the 06 rows)
 - [x] L17 Outside uptime check and patch reminder (done 2026-11-18: HetrixTools monitors on both domains, alert mails received; calendar entry exists)
 
 ### Checkpoint B: M2 exit
@@ -114,14 +114,15 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
 - [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, 3 medium open: L33, L34 and the backup job's internet access (LR-13); runbook drafted)
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18; on the server since the release of 2026-11-19, not checked there)
-- [ ] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, runbook F; the base backup of 2026-11-20 was uploaded; open: one comparison from the app)
+- [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, runbook F; the base backup and a comparison from the iPhone ran on 2026-11-20)
 - [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)
 - [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision, device check)
+- [ ] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
-- [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18, not yet on a device)
-- [ ] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8) (built 2026-11-18; open: the screen-reader check on a phone)
-- [ ] L29 iOS Keychain: clear it on a fresh install and show its effective protection (for L25) (built and compiled 2026-11-18; open: the iPhone check)
+- [x] L27 Imports keep their draft, and empty fields say why (audit A2, P1) (built 2026-11-18; checked on the Fairphone 2026-11-18 and the iPhone 2026-11-20)
+- [x] L28 Remaining P2 UI findings: tablets, polling, spoken evidence location (audit A5, A6, A8) (built 2026-11-18; TalkBack heard 2026-11-18, VoiceOver 2026-11-20)
+- [ ] L29 iOS Keychain: clear it on a fresh install and show its effective protection (for L25) (built and compiled 2026-11-18; the iPhone check passed 2026-11-20 on build 5; open: the same line in a store build, L25)
 - [ ] L25 Release-build inspection on both platforms and store declarations (I-17)
 - [ ] L26 Usability test with 5 users (D-10)
 
@@ -138,10 +139,10 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
 
 1. **Before the build (PC, no device), done 2026-11-18.** L27, then L28's code for A6 and A8, so the sitting sees the final
    screens and the screen reader is checked once. `ios-device-check` gets
-   `--dart-define=CHANGELENS_CONSENT=true`, so L13's consent line can be checked. Step 2 is the next step.
-2. **Build (Codemagic Mac).** Run `ios-device-check` from `main`. This is also the first Codemagic run of L7's
+   `--dart-define=CHANGELENS_CONSENT=true`, so L13's consent line can be checked. Steps 2 and 3 followed on 2026-11-20.
+2. **Build (Codemagic Mac), done 2026-11-20 (build 5).** Run `ios-device-check` from `main`. This is also the first Codemagic run of L7's
    sign-in define.
-3. **iPhone sitting 1** (checklist: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md))**.** L13's iPhone half: Sign in with Apple (iOS only), Google, the email code, the
+3. **iPhone sitting 1** (checklist: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md))**, done 2026-11-20.** L13's iPhone half: Sign in with Apple (iOS only), Google, the email code, the
    `link_required` link, MFA, a PDF comparison from the picker, account deletion, and the consent screen with
    its withdrawal (also the manual check of Task 2 in `tasks/todo.md`). In the same sitting: the VoiceOver check
    of L28 A8 and the M1b exit on the iPhone. This closes the iPhone lines in `docs/verification.md` (AC-12 to
@@ -160,7 +161,7 @@ Open before these steps:
   that way.
 - **L25, worked out 2026-11-18** (`scripts/release/README.md`, "Observing the iOS-only checks"): none of the
   three iOS checks could pass that day. The Keychain cleanup after a reinstall and the readback of the
-  Keychain protection are task L29, built and compiled 2026-11-18 and not yet run on a phone.
+  Keychain protection are task L29, built 2026-11-18 and passed on the iPhone on 2026-11-20 (build 5).
   `handoff_file_protection` left the iOS launch set on 2026-11-18 (owner's decision) and comes back with I-16.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
   sitting 2.

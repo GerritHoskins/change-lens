@@ -289,13 +289,13 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 **Description:** One sitting on the iPhone and the Fairphone against the IONOS server, with synthetic documents only. It closes every device check the audit found open. The iPhone half has a step-by-step checklist with a result line per step: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md). The Fairphone half follows it, with its own checklist: [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md).
 
 **Acceptance criteria:**
-- [ ] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26
-- [ ] One PDF comparison started from screen P2 completes on the server on each phone (this also proves the worker's egress allow-list); on the iPhone the PDF comes from the picker
-- [ ] Account deletion works on both phones and the Logto user is gone; the consent screen (build with `CHANGELENS_CONSENT=true`) shows once and the Settings switch withdraws
+- [ ] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26 (iPhone 2026-11-20: all five; Fairphone 2026-11-18: all but MFA, which is task L30)
+- [x] One PDF comparison started from screen P2 completes on the server on each phone (this also proves the worker's egress allow-list); on the iPhone the PDF comes from the picker (Fairphone 2026-11-18, iPhone 2026-11-20)
+- [x] Account deletion works on both phones and the Logto user is gone; the consent screen (build with `CHANGELENS_CONSENT=true`) shows once and the Settings switch withdraws (Fairphone 2026-11-18, iPhone 2026-11-20; on the iPhone the Logto check is the owner's report)
 
 **Verification:**
 - [ ] Each result has a dated line in runbook section E or in 06; the M1b and M2 exit rows exist in 06
-- [ ] Every fault found becomes its own task in this file
+- [x] Every fault found becomes its own task in this file (L30 from the Fairphone, L35 from the iPhone)
 
 **Dependencies:** L10; a signed build from `ios-device-check` and a debug APK, both built with `CHANGELENS_CONSENT=true` (`ios-device-check` passes it since 2026-11-18; the debug APK is built on the PC with the same define); L27 and L28 first, so one sitting sees the final screens (device-first order in `tasks/launch-plan.md`) · **Files likely touched:** `deploy/ionos/README.md`, `docs/06-decision-log.md` (private), `tasks/todo.md` (Task 2 manual check) · **Estimated scope:** M (half a day)
 
@@ -537,14 +537,7 @@ name closes the sheet. Keep drafts in memory only (AC-25: nothing on disk).
 **Verification:**
 - [x] App command passes, with new widget tests for a failed import and for each blank field (no analyzer issues, 293 tests)
 
-**Built 2026-11-18, not yet on a device.** A failed import from the project screen reopens its sheet with
-the label, the pasted text and the reason; a failed PDF import keeps the label and the PDF is picked again.
-The draft lives in memory for that one import only. Each sheet is a Flutter `Form`: the main button shows a
-message at every blank required field, and Flutter announces the first one. Two things the tests found: with
-re-checking set on the whole form the message was announced twice and again on every keystroke, so it is set
-per field; and at 2x text on a 320-wide screen a message was cut after one line, so messages now wrap. Open
-for the L13 sitting: hear the messages with VoiceOver or TalkBack, and look at the label field's message at
-large text, where it shares its row with the character counter. Tests: `app/test/drafts_and_required_fields_test.dart`.
+**Built 2026-11-18; checked on the Fairphone 2026-11-18 and the iPhone 2026-11-20.** A failed import from the project screen reopens its sheet with the label, the pasted text and the reason; a failed PDF import keeps the label and the PDF is picked again. The draft lives in memory for that one import only. Each sheet is a Flutter `Form`: the main button shows a message at every blank required field, and Flutter announces the first one. Two things the tests found: with re-checking set on the whole form the message was announced twice and again on every keystroke, so it is set per field; and at 2x text on a 320-wide screen a message was cut after one line, so messages now wrap. iPhone, 2026-11-20 (`docs/device-sitting-1.md` sections 4 and 5): VoiceOver spoke the first field message once, and at the largest text size the Label message was readable next to the character counter. Not heard with TalkBack. Tests: `app/test/drafts_and_required_fields_test.dart`.
 
 **Dependencies:** None · **Files likely touched:** `app/lib/screens/project_screen.dart`, `compare_screen.dart`, `projects_screen.dart`, `finding_screen.dart`, `app/lib/l10n/app_*.arb`, `app/test/` · **Estimated scope:** M
 
@@ -554,21 +547,14 @@ large text, where it shares its row with the character counter. Tests: `app/test
 line in 06; A5 depends on whether iPad is a target at launch.
 
 **Acceptance criteria:**
-- [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; not yet built on Codemagic)
+- [x] A5: iPad is either removed as a target, or its orientations match the portrait lock and wide screens get a reading-width limit (removed 2026-11-18, the owner's decision: `TARGETED_DEVICE_FAMILY = 1` and no iPad orientations; built on Codemagic 2026-11-20, `ios-device-check` build 5)
 - [x] A6: polling pauses while the app is in the background, and every request has a time limit with a plain message
-- [x] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack (built 2026-11-18; heard with TalkBack on the Fairphone 2026-11-18, L13 sitting)
+- [x] A8: the marked passage has a spoken label in the text view and a spoken page description in the PDF view, checked once with VoiceOver or TalkBack (built 2026-11-18; heard with TalkBack on the Fairphone 2026-11-18 and with VoiceOver on the iPhone 2026-11-20, L13 sittings)
 
 **Verification:**
-- [ ] App command passes (no analyzer issues, 300 tests); the screen-reader check is recorded in `docs/ui-ux-audit.md` (open, L13 sitting)
+- [x] App command passes (no analyzer issues, 300 tests); the screen-reader check is recorded in `docs/ui-ux-audit.md` (TalkBack 2026-11-18, VoiceOver 2026-11-20)
 
-**Built 2026-11-18, not yet on a device.** A6: the project list, the project and the status screen skip
-their timer ticks unless the app is in front, and poll again on the first tick after it returns. Every API
-request ends after 30 seconds without a complete answer (5 minutes when it carries a file), and the screens
-then show their usual "can't be reached" message with Retry. The limit ends the wait and doesn't cancel the
-request, so an upload that the server finishes later can exist twice after a retry. A8: the text view names
-the marked passage before the page text, and the PDF view is one described image ("PDF page 2. Marked
-passage: …", or that the passage is not marked). The PDF view can't be drawn in widget tests, so only its
-wording is tested. Tests: `app/test/polling_and_spoken_evidence_test.dart`.
+**Built 2026-11-18; checked on the Fairphone 2026-11-18 and the iPhone 2026-11-20.** A6: the project list, the project and the status screen skip their timer ticks unless the app is in front, and poll again on the first tick after it returns. Every API request ends after 30 seconds without a complete answer (5 minutes when it carries a file), and the screens then show their usual "can't be reached" message with Retry. The limit ends the wait and doesn't cancel the request, so an upload that the server finishes later can exist twice after a retry. A8: the text view names the marked passage before the page text, and the PDF view is one described image ("PDF page 2. Marked passage: …", or that the passage is not marked). The PDF view can't be drawn in widget tests, so only its wording is tested. On both phones the status screen caught up within a few seconds after a minute in the background; that polling stops there can't be seen on a phone. Tests: `app/test/polling_and_spoken_evidence_test.dart`.
 
 **Dependencies:** L27 first (same screens); built before the L13 device build, so the screen-reader check joins that sitting · **Files likely touched:** `app/lib/screens/comparison_screen.dart`, `project_screen.dart`, `evidence_screen.dart`, `app/lib/api.dart`, `app/ios/Runner/Info.plist` · **Estimated scope:** M
 
@@ -579,12 +565,12 @@ iOS-only checks"). iOS keeps Keychain items when the app is deleted, and nothing
 starts signed in. And the protection of the stored items can only be observed if the app reads it back.
 
 **Acceptance criteria:**
-- [ ] On the first launch after an install, the app deletes Keychain items left by an earlier install before it restores a session. It waits until protected data is available, so a launch before the first unlock never deletes a valid session
-- [ ] The app reads the protection class and the sync setting of its own Keychain items and shows them in plain words (the owner picks the place: a line in Settings, or hidden)
-- [ ] The readback is in the store build too, because the L25 receipt binds to the inspected artefact
+- [x] On the first launch after an install, the app deletes Keychain items left by an earlier install before it restores a session. It waits until protected data is available, so a launch before the first unlock never deletes a valid session (iPhone 2026-11-20: build 5, deleted while signed in and reinstalled, opened on the sign-in screen; the wait for protected data is not something a sitting shows)
+- [x] The app reads the protection class and the sync setting of its own Keychain items and shows them in plain words (the owner picks the place: a line in Settings, or hidden) (iPhone 2026-11-20: the Settings line read as intended, word for word)
+- [ ] The readback is in the store build too, because the L25 receipt binds to the inspected artefact (in every build by the code; seen in the ad hoc build 5, not yet in an `ios-testflight` build: L25)
 
 Built 2026-11-18 and merged the same day (PR 55), before any iOS build had compiled it. The compile
-check passed afterwards; the criteria stay open until the iPhone check.
+check passed afterwards, and the iPhone check on 2026-11-20 (`docs/device-sitting-1.md`, section 6).
 
 - The cleanup runs in `AppDelegate.swift` before the Flutter engine starts. An empty marker file in
   Application Support marks an install as seen; iOS deletes the app's files with the app, but not the
@@ -600,7 +586,7 @@ check passed afterwards; the criteria stay open until the iPhone check.
 **Verification:**
 - [x] The iOS build compiles: the change is native Swift and can't be built on the PC. Passed 2026-11-18 in the GitHub job `ios-compile` (PR 59, run 44358870196: Xcode 16.4, Flutter 3.47.9, `flutter build ios --release --no-codesign`), after the merge and not before it as planned. Codemagic's `app-ios-compile-check` did not run: its queue did not move that day
 - [x] App command passes, with tests for the Dart side (2026-11-18: analyzer clean, 309 tests)
-- [ ] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. Signed in again, Settings shows the sentence above
+- [x] Manual on the iPhone: sign in, delete the app, reinstall and open it: the sign-in screen. Signed in again, Settings shows the sentence above (2026-11-20, build 5: both seen; the sentence was read word for word before the reinstall and confirmed after it)
 
 **Known effect:** the first launch after updating to this version looks like a fresh install and signs out
 once. Before launch that affects the owner's phones only.
@@ -609,19 +595,15 @@ once. Before launch that affects the owner's phones only.
 
 ## Task L30: MFA and onboarding findings from the L13 Fairphone sitting (owner, iPhone first)
 
-**Description:** The Fairphone sitting (2026-11-18, `docs/device-sitting-1-android.md`) found two fails.
-Account A never had MFA set up: no authenticator entry exists, so Logto asked for no code with email or
-Google, and the iPhone MFA step either wasn't offered MFA or skipped it. And account A arrived on the Fairphone
-with its onboarding unfinished, although onboarding state is stored on the server and the iPhone sitting was
-done. Account A has since been deleted, and the iPhone sitting's results are not written down.
+**Description:** The Fairphone sitting (2026-11-18, `docs/device-sitting-1-android.md`) found two fails. Account A never had MFA set up: no authenticator entry existed, so Logto asked for no code with email or Google. And account A arrived on the Fairphone with its onboarding unfinished, although onboarding state is stored on the server. That account A was deleted. iPhone sitting of 2026-11-20 (`docs/device-sitting-1.md`): a new account A has two-step verification (authenticator and backup codes) and Google linked, and Logto asked for the code with email and with Google. Logto let another test user skip the MFA offer, which is how C4 step 4 sets it (offered, not forced); whether to force it is the owner's call. Before the Fairphone repeat, delete the one older test user with a Google link that is still in Logto: the link step goes to whichever user holds the same verified address, and in the iPhone sitting it once went to a leftover test user.
 
 **Acceptance criteria:**
-- [ ] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there
-- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced)
+- [x] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there (2026-11-20: offered after the email code and set up; the onboarding was finished)
+- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone open)
 - [ ] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed
 
 **Verification:**
-- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row
+- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for the iPhone 2026-11-20; the 06 row is the owner's)
 
 **Dependencies:** None · **Files likely touched:** `docs/device-sitting-1.md`, `deploy/ionos/README.md`, possibly `app/lib/auth/session.dart` · **Estimated scope:** S
 
@@ -650,7 +632,7 @@ retention, and a compromised parser unable to read the worker's secrets.
 - [x] The parse child can't read its parent's environment or start processes; the worker drops capabilities (built 2026-11-18; with both protections switched off, the same probes read the environment and forked)
 - [x] The backup job uses a role with replication rights only, not the superuser (built 2026-11-18: `changelens_backup`, plus the right to call one function that prunes Logto's audit log; every other attempt was refused locally)
 
-**Verification:** backend tests pass in CI; the compose file starts locally in Docker (done 2026-11-18 with test values: Postgres, Logto and the proxy started; the worker's settings, database connection and a parse, and the backup role, were checked in their containers; the worker loop needs the storage and wasn't run). Manual on the server: the release steps in runbook F ran on 2026-11-19; every service is up, the worker can't resolve `logto`, and the backup role connects for a base backup and may prune the audit log. The base backup of 2026-11-20 was uploaded. Open: a comparison completes.
+**Verification:** backend tests pass in CI; the compose file starts locally in Docker (done 2026-11-18 with test values: Postgres, Logto and the proxy started; the worker's settings, database connection and a parse, and the backup role, were checked in their containers; the worker loop needs the storage and wasn't run). Manual on the server: the release steps in runbook F ran on 2026-11-19; every service is up, the worker can't resolve `logto`, and the backup role connects for a base backup and may prune the audit log. The base backup of 2026-11-20 was uploaded, and a comparison from the iPhone completed that day (two parse jobs, four model calls, 1 finding; `docs/device-sitting-1.md`, step 3).
 
 **Dependencies:** None; a deployment with a new server file (owner) · **Files likely touched:** `backend/changelens/config.py`, `backend/changelens/pipeline/sandbox.py`, `deploy/ionos/compose.yaml`, `deploy/ionos/env/`, `deploy/ionos/README.md` · **Estimated scope:** M
 
@@ -678,6 +660,20 @@ retention, and a compromised parser unable to read the worker's secrets.
 **Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab.
 
 **Dependencies:** A device sitting · **Files likely touched:** `app/lib/auth/logto.dart`, `app/test/auth_session_test.dart`, `docs/device-sitting-1*.md` · **Estimated scope:** S
+
+## Task L35: Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13)
+
+**Description:** iPhone sitting, 2026-11-20 (`docs/device-sitting-1.md`, section 6, `ios-device-check` build 5). Three of five Google sign-ins in a row ended in "Sign-in didn't work. Try again, or choose another method." The api had issued the one-time token each time, and the app never requested Logto's page (10:18:53 UTC: token issued, no `GET /oidc/auth`). The two later Google sign-ins that went through Logto's page (15:58 and 16:08 UTC) worked, so the fault is intermittent. Google's own sheet also appears twice per sign-in; three were counted once. Not verified, from reading the code: `app/lib/auth/providers.dart` calls `authenticate` and then `authorizeServer`, which may be the two sheets, and the sign-in browser may start while the second sheet is still closing.
+
+**Acceptance criteria:**
+- [ ] The cause of the failed sign-ins is found and written down; if it can't be reproduced, the app records which browser error it got (`browser_<code>`), without personal data
+- [ ] After a Google code exchange the sign-in browser opens every time, and a Google sign-in shows Google's sheet once, or the second sheet is explained as needed
+
+**Verification:**
+- [ ] App command passes, with a test for the changed path
+- [ ] Manual on the iPhone: ten Google sign-ins in a row with the linked account all sign in, and the sheet count is noted
+
+**Dependencies:** A new `ios-device-check` build for the manual check (paid; the owner starts it) · **Files likely touched:** `app/lib/auth/providers.dart`, `app/lib/auth/logto.dart`, `app/lib/auth/session.dart`, `app/test/` · **Estimated scope:** S to M
 
 ## Task L25: Release-build inspection and store declarations (I-17; owner, both phones)
 

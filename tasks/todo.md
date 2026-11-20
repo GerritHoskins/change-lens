@@ -62,7 +62,9 @@ from the session response, and add the Settings switch for withdrawal. Keep it b
 - [x] Manual: device build, first launch and withdrawal in Settings. 2026-11-18, Fairphone debug build with the
   flag (`docs/device-sitting-1-android.md` section 5): a new account saw "Share usage events?" after the
   onboarding with nothing preselected and no Back; it did not come back after a restart; the Settings switch
-  persisted and was turned off (withdrawal). Allow was tapped, not Don't allow, so Decline was not seen on a device
+  persisted and was turned off (withdrawal). Allow was tapped, not Don't allow, so Decline was not seen on a device.
+  2026-11-20, iPhone build 5 (`docs/device-sitting-1.md` section 2): the same screen, Allow again, no return after a
+  restart, and the Settings switch was turned off and stayed off
 
 **Dependencies:** Task 1
 
