@@ -39,6 +39,7 @@ services:
     env_file: /etc/changelens/caddy.env
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./brand:/srv/changelens-brand:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:

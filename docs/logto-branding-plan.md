@@ -4,6 +4,11 @@ Prepared 2026-11-16. Repository `C:\Users\Gerrit\job-search\POCs\change-lens`, b
 `1f11f54`. Check `git status` and HEAD first. The untracked tool folders aren't yours. In a Linux shell over the
 Windows checkout, about 400 files show as modified with no content change (CRLF): never stage those.
 
+**Status 2026-11-20:** §4.1–§4.5 and §6 are implemented in the repository (`deploy/ionos/brand/`,
+`deploy/ionos/logto/`, `scripts/logto/apply-branding.py`, Caddyfile, compose, runbook). Nothing is applied to a
+server yet and §5 has not been run: on the iPhone sitting of 2026-11-20 the live pages still showed a lime brand
+colour set in the Console, Logto's layout and Logto's copy. §4.6 (`ui_locales`) is still open.
+
 Designs: https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr, row "Logto hosted pages". There are 7 artboards,
 each with toggles for locale (en/de), dark and state.
 
@@ -53,7 +58,7 @@ The Doc itself still carries these WP-A points. Ask the owner whether to update 
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | **Logo D (Aperture)** is the ChangeLens logo | Owner, 2026-11-16. Not yet in 06: draft row in §8 |
+| 1 | **Logo D (Aperture)** is the ChangeLens logo | Owner, 2026-11-16. Recorded as O-29 in 06 |
 | 2 | Stay on **free Logto OSS branding**: brand colour, logos, favicon, dark mode, custom CSS, custom phrases. No "Bring your UI" | Recommended. Since 1.45, a custom sign-in UI and removing Logto branding need a paid Self-Hosted Pro licence |
 | 3 | **"Powered by Logto" stays** in the footer | Follows from 2. Don't hide it with CSS: it's a licensed feature |
 | 4 | Fonts and logos come from **our own origin** (`auth.pixeltronic.dev/changelens-brand/`), never Google Fonts or a CDN | Privacy: no third-party request that reveals visitors' IP addresses. Same origin also avoids any CSP question |
@@ -127,10 +132,10 @@ Keep the desired values in `deploy/ionos/logto/sign-in-experience.json`. The scr
 
 ### 4.4 Custom CSS
 
-Move `docs/logto-branding/custom.css` to `deploy/ionos/logto/custom.css`. It has three tiers:
+The stylesheet is `deploy/ionos/logto/custom.css` (moved from `docs/logto-branding/` on 2026-11-20). It has three tiers:
 1. **Theme variables** (`--color-*`, `--font-*`, `--radius`) under `html[data-theme] body`. Robust.
 2. **Stable hooks**: Logto's own unhashed `logto_*` classes.
-3. **FRAGILE**: two CSS-module suffix selectors, for the headline and the pill button.
+3. **FRAGILE**: three CSS-module suffix selectors, for the headline, the pill button and the focused code box.
 
 Notes:
 - The brand colour isn't in the CSS: Logto sets it inline on `<body>` from §4.3.
@@ -139,7 +144,7 @@ Notes:
 
 ### 4.5 Custom phrases
 
-Apply `docs/logto-branding/custom-phrases.{en,de}.json` with `PUT /api/custom-phrases/en` and `/de`, from the same
+Apply `deploy/ionos/logto/custom-phrases.{en,de}.json` with `PUT /api/custom-phrases/en` and `/de`, from the same
 script. Only the overridden keys are listed; the rest stay Logto's.
 
 What they fix:
@@ -192,14 +197,14 @@ ugly but still usable.
 - The legal texts themselves (I-20).
 - The app's launcher icon with Logo D: a separate task.
 
-## 8. Records for the owner to accept
+## 8. Records
 
-Decision log row (don't edit 06 without the owner):
-
-> | O-29 | Logo | **Decided 2026-11-16 (owner):** Logo D (Aperture), a thick "C" opened like a lens with the lime marker dot, set with the "ChangeLens" wordmark in Roboto Bold. Assets in `docs/brand/`. Replaces the "no logo yet" lines in DESIGN.md and the Calm Bold design-system page | I-18, launcher icon |
-
-DESIGN.md: replace "No logo was supplied" / "no ChangeLens mark yet" with Logo D, and add the Logto branding
-as an implemented surface once §5 passes.
+- **Decision log:** the logo is recorded as O-29 in `06-decision-log.md` (2026-11-16).
+- **PRODUCT.md:** "No logo was supplied" replaced with Logo D (2026-11-20). DESIGN.md already names Logo D
+  (sign-in lockup, `CalmLogoMark`, `CalmLogoLockup`); it never carried the "no mark yet" line.
+- **Calm Bold design-system page:** Logo section rewritten and a Logos group added with the `docs/brand/` files
+  (2026-11-20).
+- **Still open:** add the Logto branding to DESIGN.md as an implemented surface once §5 passes.
 
 ## 9. Receiving-agent prompt
 

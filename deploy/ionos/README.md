@@ -338,6 +338,21 @@ and stops if it finds none:
 ```bash
 V=$(grep -o 'svhd/logto:[0-9][0-9.]*' compose.yaml | cut -d: -f2) && [ -n "$V" ] && echo "Logto $V" && docker compose pull logto && docker compose run --rm --entrypoint sh logto -c "npm run cli db alteration deploy $V" && docker compose up -d logto
 ```
+After each Logto upgrade, open a sign-in page and the code page and check two things: the headline is left-aligned
+at 32 px and the main button is a 60 px pill. Those come from the FRAGILE selectors in `logto/custom.css`; if they
+stop matching, the pages keep our colours and font in Logto's own layout.
+
+Sign-in page branding (colours, logos, custom CSS, custom phrases; `docs/logto-branding-plan.md`). The desired
+state is `logto/sign-in-experience.json` and the files beside it; `brand/` is served by Caddy at
+`/changelens-brand/`. Don't set these in the Console: the dry run reports a Console value as a difference and
+`--apply` overwrites it. After `git pull` and `docker compose up -d caddy`:
+```bash
+curl -sI https://auth.pixeltronic.dev/changelens-brand/fonts/roboto-700.woff2 | head -1
+```
+```bash
+set -a && . /etc/changelens/changelens.env && set +a && python3 /opt/changelens/scripts/logto/apply-branding.py
+```
+The first prints `200`; the second lists what differs and changes nothing. Add `--apply` to write it.
 
 ## G. Sharing the cube with another site
 

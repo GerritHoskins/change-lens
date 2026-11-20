@@ -39,7 +39,16 @@ api.pixeltronic.dev {
 	reverse_proxy api:8000
 }
 
+# /changelens-brand/ is ours, not a Logto route: the logos and Roboto for Logto's hosted sign-in pages
+# (deploy/ionos/brand, docs/logto-branding-plan.md §4), same origin so no third party sees a visitor.
 auth.pixeltronic.dev {
 	import common
-	reverse_proxy logto:3001
+	handle_path /changelens-brand/* {
+		root * /srv/changelens-brand
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+	handle {
+		reverse_proxy logto:3001
+	}
 }

@@ -1,0 +1,18 @@
+{
+  "color": {
+    "primaryColor": "#111114",
+    "isDarkModeEnabled": true,
+    "darkPrimaryColor": "#F3F3EF"
+  },
+  "branding": {
+    "logoUrl": "{endpoint}/changelens-brand/changelens-logo-light.svg",
+    "darkLogoUrl": "{endpoint}/changelens-brand/changelens-logo-dark.svg",
+    "favicon": "{endpoint}/changelens-brand/changelens-favicon-light.svg",
+    "darkFavicon": "{endpoint}/changelens-brand/changelens-favicon-dark.svg"
+  },
+  "customCss": {"file": "custom.css"},
+  "customPhrases": {
+    "en": {"file": "custom-phrases.en.json"},
+    "de": {"file": "custom-phrases.de.json"}
+  }
+}
