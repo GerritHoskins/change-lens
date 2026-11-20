@@ -7,13 +7,15 @@ killed and the version rejected with a content-free reason:
 - wall clock: `parse_wall_seconds`, enforced by the parent on every platform -> `parse_timeout`;
 - Windows: a Job Object caps the child's committed memory (`parse_memory_mb`) and user CPU time
   (`parse_cpu_seconds`), allows one active process, and kills the child when the job closes;
-- Linux (production): `setrlimit` for address space, CPU seconds, file size 0 and no core dumps.
-  Not exercised by the tests on this machine.
+- Linux (production): `setrlimit` for address space, CPU seconds, file size 0, no core dumps and no new
+  process or thread. The parent also makes itself non-dumpable before the first child starts, so a child
+  running as the same user can't read the parent's environment or memory through /proc, or attach to it
+  (LR-4). Exercised by tests/integration/test_parse_sandbox_linux.py, which CI runs on Linux.
 - page count: checked inside the child, after PDFium opens the file and before any page is parsed.
 
 Limitation: neither platform removes network access from the child here. The child runs only our
-parse code, which makes no network calls; production should also run the worker with outbound
-traffic restricted to the model API and storage (03 §6).
+parse code, which makes no network calls, and holds no credential; in production the worker's network
+reaches Postgres and the egress proxy only (03 §6).
 """
 from __future__ import annotations
 
@@ -62,6 +64,8 @@ def run_sandboxed(entry: str, payload: bytes, header: dict, limits: Limits,
     kwargs = {}
     if sys.platform != "win32":
         kwargs["preexec_fn"] = _posix_limits(limits)
+    if sys.platform == "linux":
+        seal_parent()
     # -B is needed because -I ignores PYTHONDONTWRITEBYTECODE: a .pyc write would breach
     # RLIMIT_FSIZE=0 on Linux and kill the child with SIGXFSZ.
     proc = subprocess.Popen([_interpreter(), "-I", "-B", "-c", boot], stdin=subprocess.PIPE,
@@ -124,7 +128,28 @@ def _posix_limits(limits: Limits):
         resource.setrlimit(resource.RLIMIT_CPU, (limits.parse_cpu_seconds, limits.parse_cpu_seconds))
         resource.setrlimit(resource.RLIMIT_FSIZE, (0, 0))
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+        if sys.platform == "linux":
+            # No fork and no thread from here on (the exec that follows is not one). The kernel doesn't apply
+            # this limit to root, which the worker never is.
+            resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
     return apply
+
+
+_sealed = False
+
+
+def seal_parent() -> None:
+    """Linux: make this process non-dumpable (prctl PR_SET_DUMPABLE 0). Its /proc entries then belong to root
+    and it can't be attached to, so a parse child running as the same user can't read the credentials this
+    process holds. Raises if the kernel refuses: no child is started from a readable parent."""
+    global _sealed
+    if _sealed:
+        return
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(4, 0, 0, 0, 0) != 0:  # PR_SET_DUMPABLE = 4
+        raise OSError(ctypes.get_errno(), "prctl(PR_SET_DUMPABLE, 0) failed")
+    _sealed = True
 
 
 def parse_sandboxed(data: bytes, kind: Kind, limits: Limits) -> ParsedDocument:

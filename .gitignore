@@ -10,6 +10,10 @@ files/
 .env
 .env.*
 !.env.example
+# Filled-in deployment files belong in /etc/changelens on the server, never here (LR-7)
+/deploy/ionos/env/*.env
+/deploy/ionos/env/egress-allowlist.txt
+backup-identity.txt
 
 # Product plans stay local and private (not in the public repository)
 /PRODUCT.md

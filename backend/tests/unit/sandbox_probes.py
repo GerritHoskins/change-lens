@@ -39,6 +39,41 @@ def spawn_process(header, payload):
         return {"ok": True, "spawned": False, "winerror": getattr(exc, "winerror", None)}
 
 
+def fork_process(header, payload):
+    import os
+    try:
+        pid = os.fork()
+    except OSError as exc:
+        return {"ok": True, "forked": False, "errno": exc.errno}
+    if pid == 0:
+        os._exit(0)
+    os.waitpid(pid, 0)
+    return {"ok": True, "forked": True}
+
+
+def start_thread(header, payload):
+    import threading
+    try:
+        threading.Thread(target=lambda: None).start()
+    except RuntimeError:
+        return {"ok": True, "started": False}
+    return {"ok": True, "started": True}
+
+
+def read_parent(header, payload):
+    """Tries to open the parent's environment, memory and open files through /proc (Linux)."""
+    import os
+    opened = []
+    for name in ("environ", "mem", "fd"):
+        path = "/proc/%d/%s" % (os.getppid(), name)
+        try:
+            os.listdir(path) if name == "fd" else open(path, "rb").read(1)
+            opened.append(name)
+        except OSError:
+            pass
+    return {"ok": True, "opened": opened}
+
+
 def crash(header, payload):
     import os
     os._exit(7)

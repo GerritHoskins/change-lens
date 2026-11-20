@@ -11,7 +11,8 @@ through IONOS SMTP. **Nothing here opens sign-ups**: that waits for S1–S6 bein
 | `compose.yaml` | All services, networks and volumes; images pinned by digest |
 | `changelens.Dockerfile` | The backend image (hash-pinned wheels, non-root, read-only filesystem) |
 | `Caddyfile` | TLS for `api.pixeltronic.dev` and `auth.pixeltronic.dev`; no access log |
-| `postgres/init/` | Logto's database and the replication rule for backups (first start only) |
+| `postgres/init/` | Logto's database (first start only) and the backup job's database role |
+| `logto/` | Logto's start script and the filter that keeps email addresses and sign-in tokens out of its log |
 | `squid/squid.conf` | The worker's egress proxy: HTTPS to the allow-listed hosts only |
 | `backup/` | WAL shipping, daily base backup, 30-day expiry, Logto audit-log pruning, restore test |
 | `monitor.sh` | Host cron job: endpoints, containers, backups, disk, global spend cap; alert mail |
@@ -33,8 +34,10 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    feature launched; ask IONOS support for this volume, by its ID) and the bucket encryption check in A3.
 3. **Object Storage in Frankfurt** (**done 2026-11-15**) (`s3.eu-central-1.ionoscloud.com`; the backend signs for region
    `eu-central-1`): bucket `changelens-originals` (private, versioning **off**) and bucket `changelens-backups`
-   (private, versioning off, lifecycle rule: delete after 30 days). One access key for the app and, if IONOS
-   lets you scope keys per bucket, a second one for backups. **Encryption:** the backend uploads originals
+   (private, versioning off, lifecycle rule: delete after 30 days). **Keys:** the app and the backup job each
+   use the key of an IONOS user of their own, which a bucket policy lets into one bucket only (section F,
+   "Separate storage keys"). The account owner's key reaches both buckets and doesn't belong on the server.
+   **Encryption:** the backend uploads originals
    without an encryption header, so turn on default encryption (SSE-S3, AES-256) on `changelens-originals`;
    backups are already `age`-encrypted. After C7, check one uploaded object shows `ServerSideEncryption:
    AES256` (in the DCD object details, or `aws s3api head-object` with the app key).
@@ -73,7 +76,7 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
 3. **The code.** Add a read-only deploy key to the GitHub repository, then: **Done 2026-11-16** (key
    `/root/.ssh/changelens_deploy`, set as the clone's `core.sshCommand`).
    ```bash
-   git clone git@github.com:GerritHoskins/change-lens.git /opt/changelens && cd /opt/changelens && git checkout m1-iphone
+   git clone git@github.com:GerritHoskins/change-lens.git /opt/changelens && cd /opt/changelens
    ```
 4. **Secret files.** Copy each template, then fill it in with `nano`:
    ```bash
@@ -81,8 +84,10 @@ Commands in B–F run on the server in Bash, as root, unless a step says otherwi
    ```
    Generate each password with `openssl rand -base64 32 | tr -d '/+=' | cut -c1-32` and the rate-limit key
    with `openssl rand -hex 32`. Fill `postgres.env`, `admin.env`, `logto.env`, `caddy.env`, `backup.env`,
-   `worker.env` (the IONOS model key), `egress-allowlist.txt` and `monitor.env` now; `changelens.env` except
-   the two `CHANGELENS_LOGTO_M2M_*` values, which come in C5.
+   `worker.env` (the worker's own settings and the IONOS model key; the worker reads no other file),
+   `egress-allowlist.txt` and `monitor.env` now; `changelens.env` except the two `CHANGELENS_LOGTO_M2M_*`
+   values, which come in C5. `PGPASSWORD` in `backup.env` is the same value as `BACKUP_DB_PASSWORD` in
+   `postgres.env`.
 5. **Check that no template placeholder is left** (prints nothing when done; the M2M values are expected
    until C5):
    ```bash
@@ -139,6 +144,12 @@ cd /opt/changelens/deploy/ionos
    ```
    Logto shows `healthy`. (Done 2026-11-16 on the cube, together with `ALTER ROLE logto CREATEROLE`, which
    the init script now sets on a fresh volume.)
+
+   **The backup role, second run.** Logto's tables exist now, so the role gets the one function it may call
+   to prune the audit log. Until then the backup log says `logto audit pruning failed`:
+   ```bash
+   docker compose exec -u postgres postgres /docker-entrypoint-initdb.d/20-backup-role.sh
+   ```
 4. **Logto admin console**, from your PC through an SSH tunnel (it is never public).
    ```powershell
    ssh -N -L 3002:127.0.0.1:3002 root@<cube-ip>
@@ -165,7 +176,7 @@ cd /opt/changelens/deploy/ionos
    Management API access. Put its App ID and secret into `CHANGELENS_LOGTO_M2M_APP_ID` and
    `CHANGELENS_LOGTO_M2M_APP_SECRET` in `/etc/changelens/changelens.env`, then:
    ```bash
-   docker compose up -d --force-recreate api worker retention
+   docker compose up -d --force-recreate api retention
    ```
 6. **Smoke test** (from your PC). Expect `401`, then `200`, then a timeout or refusal:
    ```powershell
@@ -224,7 +235,7 @@ cd /opt/changelens/deploy/ionos
       from an older template doesn't have them: copy them from `env/changelens.env.example`) and fill in the
       client ID, Team ID and Key ID (all of a provider's lines or none), then:
       ```bash
-      docker compose up -d --force-recreate api worker retention
+      docker compose up -d --force-recreate api retention
       ```
    4. **Check.** No start error in `docker compose logs --tail 20 api retention`, then a made-up code must be
       refused by the provider: `401` means configured, `422` means that provider is still off, and `503`
@@ -312,7 +323,7 @@ Record each with its date:
       endpoint answered `invalid_grant` with the web client's secret; api healthy, retention without errors
       after the restart. The first start crash-looped (`Google client secret file cannot be read`): the image's
       user had a system group, not 10001, fixed in `changelens.Dockerfile` (commit e191ad5)
-- [ ] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
+- [x] after the app signs in (I-18) or S4: a real access token's `exp − iat` = 900, MFA with a test account,
       Google and Apple on S4's path. 2026-11-16: `exp − iat` = 900 s on a production token after email sign-in
       (Android, Fairphone 5, debug build's account screen); onboarding saved per step and completed. Google on
       Android: a new account signed in through `POST /session` and Logto's one-time token (audit log
@@ -321,8 +332,9 @@ Record each with its date:
       (`docs/device-sitting-1-android.md`): email code and `exp − iat` = 900 again; the linked account signed
       in directly with Google; account deletion returned "Your account and all its projects were deleted.",
       the user left the console, an email code request for its address sent nothing, and the same Gmail
-      through Google started a new account (deleted again, gone from the console). Still open: MFA. The test
-      account never had MFA set up, so no authenticator code was asked for with email or Google
+      through Google started a new account (deleted again, gone from the console); that account had no MFA.
+      2026-11-20, iPhone (`docs/device-sitting-1.md`): email code, MFA set up and asked for with email and
+      with Google, the completed `link_required` link, Apple with token revocation. Fairphone MFA: task L30
 - [x] `docs/data-inventory.md`: IONOS SMTP, Logto's database and audit logs, the backup bucket (encrypted,
       30 days), the outside uptime check. 2026-11-18: rows written from the deploy files and this runbook
 
@@ -332,7 +344,153 @@ App release:
 ```bash
 cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
 ```
-Logto upgrade (not part of an app release): change the image tag and digest in `compose.yaml` first, then run
+
+### The release with task L32 (once)
+
+L32 gives the worker its own env file, moves Logto off the worker's network and gives the backup job its own
+database role. The release recreates Postgres, Logto, the worker and the backup job: sign-in and the api
+pause for about a minute, and a recreated container's log is gone. **Run the three server checks in
+[`docs/security-review.md`](../../docs/security-review.md) first**: one of them reads Logto's log.
+**Done on the server 2026-11-19**, steps 1 to 6; the base backup and a comparison from the app ran on 2026-11-20.
+
+1. **The code.**
+   ```bash
+   cd /opt/changelens && git pull
+   ```
+2. **The worker's file.** Copies the worker's settings from `changelens.env` into `worker.env` without
+   showing a value, then lists the names in the file:
+   ```bash
+   grep -E '^CHANGELENS_(AUTH_MODE|DATABASE_URL|S3_ENDPOINT|S3_BUCKET|S3_ACCESS_KEY|S3_SECRET_KEY|LLM|LLM_MODEL|TENANT_SPEND_CAP_EUR|GLOBAL_SPEND_CAP_EUR|COST_CEILING_EUR)=' /etc/changelens/changelens.env >> /etc/changelens/worker.env
+   ```
+   ```bash
+   cut -d= -f1 /etc/changelens/worker.env
+   ```
+   Expected: the comment line, `IONOS_API_TOKEN`, `CHANGELENS_AUTH_MODE`, `CHANGELENS_DATABASE_URL`, the four
+   `CHANGELENS_S3_` names and `CHANGELENS_LLM`, plus the spend caps if `changelens.env` sets them. No
+   `CHANGELENS_LOGTO_` name and no `CHANGELENS_RATE_LIMIT_KEY`: the worker doesn't start with one of those.
+3. **The backup role's password**, generated into both files without showing it:
+   ```bash
+   P=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32) && echo "BACKUP_DB_PASSWORD=$P" >> /etc/changelens/postgres.env && sed -i -e 's/^PGUSER=.*/PGUSER=changelens_backup/' -e "s/^PGPASSWORD=.*/PGPASSWORD=$P/" /etc/changelens/backup.env; unset P
+   ```
+   ```bash
+   grep -c ^BACKUP_DB_PASSWORD= /etc/changelens/postgres.env; grep ^PGUSER= /etc/changelens/backup.env
+   ```
+   Expected: `1` and `PGUSER=changelens_backup`.
+4. **The release.**
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d
+   ```
+5. **The backup role.** The last line must read `backup role: ready (base backups, and deleting old rows from
+   the Logto audit log)`:
+   ```bash
+   docker compose exec -u postgres postgres /docker-entrypoint-initdb.d/20-backup-role.sh
+   ```
+6. **Checks.** Every service is up and none is restarting. A worker that restarts names what its file lacks
+   in `docker compose logs --tail 5 worker`:
+   ```bash
+   docker compose ps
+   ```
+   The worker has no route to Logto: the last line starts with `socket.gaierror`:
+   ```bash
+   docker compose exec worker python -c "import socket; socket.gethostbyname('logto')"
+   ```
+   The backup role can connect for a base backup (one line of numbers) and prune the audit log (a number):
+   ```bash
+   docker compose exec backup psql "replication=true dbname=postgres" -tAX -c "IDENTIFY_SYSTEM"
+   ```
+   ```bash
+   docker compose exec backup psql -d logto -tAX -c "SELECT changelens_prune_audit_log()"
+   ```
+   Then one comparison from the app completes, and within a day the backup log shows `base backup uploaded`
+   (it runs 24 hours after the last one): `docker compose logs backup | grep -v 'wal shipped' | tail -n 20`.
+
+### The release with the Logto log filter (once, LR-12)
+
+Logto prints every request line with its query string: the email address and one-time token of a sign-in.
+From this release `logto/log-filter.awk` drops the query string and masks email addresses. The app release
+command recreates Logto (sign-in pauses for under a minute; the old log goes). Then sign in from the app, and:
+```bash
+cd /opt/changelens/deploy/ionos && docker compose logs logto | grep -c -E 'login_hint|primaryEmail|one_time_token'
+```
+```bash
+docker compose logs logto | grep -c -F '?[removed]'
+```
+Expected: `0`, then a number above `0` (the requests are still logged, without their query strings). Two
+`0` mean an empty log: no sign-in has reached Logto yet. **Done on the server 2026-11-19.**
+
+### Separate storage keys (once, LR-13)
+
+Until this is done both sides share the account owner's key, which reaches both buckets: a compromised api
+or worker could delete the backups. Every key of one IONOS user has the same access, so each side gets a
+user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten steps.
+
+1. **A group.** In the IONOS DCD as the account owner: **Menu** > **Management** > **Users & Groups**, tab
+   **Groups**: create the group `changelens-storage` and tick **Use Object Storage** under **Privileges**.
+2. **Two users.** Tab **Users**, **+ Create**: first name, last name, email, password, **Create**. One user
+   for the app and one for the backup job, each with an email address of its own. Add both to the group
+   (its tab **Members**).
+3. **A key for each user.** Select the user in the **Users** list, tab **Object Storage Keys**, **+ Generate
+   Key**, **OK**. The row shows the access key only: the round **?** icon at its right end opens a dialog with
+   **Key** and **Secret** (64 characters: click into the field, Ctrl+A, Ctrl+C). The **Object Storage** link
+   in the same tab shows the user's **Canonical User ID**.
+4. **A policy on each bucket.** **Menu** > **Backup & Storage** > **Object Storage**, tab **Buckets**, **Show
+   user-owned buckets**. On `changelens-originals`: **Bucket settings** > **Access management** > **Bucket
+   Policy** > **Edit**, paste the policy below with the app user's Canonical User ID in place of `<canonical
+   user id>`, **Save**. Then the same on `changelens-backups`, with the backup user's ID and
+   `changelens-backups` in both `Resource` values. IONOS saves a policy that still holds the placeholder, and
+   that policy lets nobody in; it refuses one that names another bucket (`MalformedPolicy: Invalid resource`).
+   ```json
+   {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*",
+     "Principal": {"CanonicalUser": ["<canonical user id>"]},
+     "Resource": ["arn:aws:s3:::changelens-originals", "arn:aws:s3:::changelens-originals/*"]}]}
+   ```
+   Buckets listed under **Show contract-owned buckets** take the user's **Contract User ID** instead, as
+   `"Principal": {"AWS": ["arn:aws:iam:::user/<contract user id>"]}`.
+
+5. **On the server, keep the old files** until the checks have passed:
+   ```bash
+   cd /etc/changelens && cp -p changelens.env changelens.env.old-key && cp -p worker.env worker.env.old-key && cp -p backup.env backup.env.old-key
+   ```
+6. **The app user's key** into `changelens.env` and `worker.env`. Paste each value alone and press Enter; the
+   secret key isn't shown. A value with a space in it (a wrong paste) changes nothing. It ends with `changed`:
+   ```bash
+   read -rp 'App access key: ' K && read -rsp 'App secret key: ' S && echo; if printf '%s\n%s\n' "$K" "$S" | grep -qvE '^[^[:space:]|&\]{16,}$'; then echo 'not changed: a value is empty or is not a key'; else sed -i -e "s|^CHANGELENS_S3_ACCESS_KEY=.*|CHANGELENS_S3_ACCESS_KEY=$K|" -e "s|^CHANGELENS_S3_SECRET_KEY=.*|CHANGELENS_S3_SECRET_KEY=$S|" /etc/changelens/changelens.env /etc/changelens/worker.env && echo 'changed'; fi; unset K S
+   ```
+7. **The backup user's key** into `backup.env`:
+   ```bash
+   read -rp 'Backup access key: ' K && read -rsp 'Backup secret key: ' S && echo; if printf '%s\n%s\n' "$K" "$S" | grep -qvE '^[^[:space:]|&\]{16,}$'; then echo 'not changed: a value is empty or is not a key'; else sed -i -e "s|^RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=.*|RCLONE_CONFIG_IONOS_ACCESS_KEY_ID=$K|" -e "s|^RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=.*|RCLONE_CONFIG_IONOS_SECRET_ACCESS_KEY=$S|" /etc/changelens/backup.env && echo 'changed'; fi; unset K S
+   ```
+8. **Try the new keys before any service uses them.** One-off containers read the changed files; the
+   running services keep the old key until step 9. Each command must print `own bucket: ok`, then a line
+   naming `AccessDenied` (the other side's bucket). The app user's key:
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose run --rm --no-deps -T api python -c "import os; from changelens.storage import S3ObjectStore as S; e = os.environ; b = e['CHANGELENS_S3_BUCKET']; a = (e['CHANGELENS_S3_ENDPOINT'], e['CHANGELENS_S3_ACCESS_KEY'], e['CHANGELENS_S3_SECRET_KEY']); S(*a, b).client.list_objects_v2(Bucket=b, MaxKeys=1); print('own bucket: ok'); S(*a, 'changelens-backups').client.list_objects_v2(Bucket='changelens-backups', MaxKeys=1)" 2>&1 | grep -oE '^own bucket: ok|An error occurred \([A-Za-z]+\)'
+   ```
+   The backup user's key (it writes and deletes one small test object):
+   ```bash
+   docker compose run --rm --no-deps -T --entrypoint sh backup -c '{ echo key-test | rclone rcat --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/key-test" && rclone deletefile --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/key-test" && echo "own bucket: ok"; rclone lsf --s3-no-check-bucket --retries 1 ionos:changelens-originals; } 2>&1 | grep -oE "own bucket: ok|api error [A-Za-z]+" | uniq' 2>/dev/null
+   ```
+   `SignatureDoesNotMatch` is a wrong secret key (step 6 or 7 again). `AccessDenied` without `own bucket: ok`
+   is a policy that doesn't name this user (step 4). Go on only when both are as expected.
+9. **Restart with the new keys.** The api pauses for a few seconds; afterwards every service is up. Then one
+   comparison from the app completes, the key check in `docs/security-review.md` prints `different keys`,
+   and within a day the backup log shows `base backup uploaded` (the command that ends the L32 release):
+   ```bash
+   docker compose up -d --force-recreate api worker retention backup && sleep 40 && docker compose ps
+   ```
+10. **Afterwards.** The checks passed: remove the old files. The owner's key stays active at IONOS, because
+    it owns the buckets, and is on the server nowhere:
+    ```bash
+    rm /etc/changelens/changelens.env.old-key /etc/changelens/worker.env.old-key /etc/changelens/backup.env.old-key
+    ```
+    A service doesn't come up: put the old files back, then run the restart of step 9 again:
+    ```bash
+    cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
+    ```
+
+### Logto upgrade
+
+Not part of an app release: change the image tag and digest in `compose.yaml` first, then run
 its database alteration before starting the new version. The command reads the version from `compose.yaml`
 and stops if it finds none:
 ```bash
@@ -385,9 +543,10 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
 
 - `python -m changelens.api --lan` prints a warning about the dev token at start; it doesn't apply in `logto`
   mode. A `--host` option would remove it.
-- `Settings.from_env` in `logto` mode requires the Logto Management credential and the rate-limit key in every
-  process, so the worker holds them too, although only the api and retention use them (03 §6 wants them
-  limited to those two).
+- `worker.env` repeats the database URL, the storage key and the spend caps from `changelens.env`: a changed
+  value has to be changed in both files.
+- The parse child keeps the worker's network (Postgres and the egress proxy). It holds no credential, can't
+  read the worker's, and can't start a process.
 - Secrets reach the processes as environment variables from root-only files, not as files; `docker inspect`
   shows them to root. Only the sign-in secrets (C8) are files.
 - The images' OS packages (`apt`/`apk`) aren't hash-pinned; the base images and Python wheels are.

@@ -929,6 +929,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Anmeldung hat nicht geklappt. Versuche es erneut oder wähle eine andere Methode.';
 
   @override
+  String signInFailureCode(String code) {
+    return 'Code: $code';
+  }
+
+  @override
   String get signInRejected =>
       'Mit dieser Anmeldung ist kein ChangeLens-Konto möglich. Wähle eine andere Methode.';
 

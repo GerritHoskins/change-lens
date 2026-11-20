@@ -105,6 +105,35 @@ def test_deleting_an_account_removes_its_tenant_and_leaves_a_tombstone(env, capl
     assert SUBJECT_A not in str(env.sql("SELECT * FROM account_deletions"))
 
 
+class ForgetfulIdp(FakeIdp):
+    """Like Logto: a deleted user is unknown afterwards."""
+
+    def __init__(self):
+        super().__init__()
+        self.known = {SUBJECT_A, SUBJECT_B}
+
+    def delete_user(self, subject):
+        super().delete_user(subject)
+        self.known.discard(subject)
+
+    def user(self, subject):
+        return {"id": subject} if subject in self.known else None
+
+
+def test_a_token_from_before_the_deletion_cannot_create_the_account_again(env):
+    """LR-3: the tombstone has no subject, and the token stays valid for up to 15 minutes."""
+    _account(env, TOKEN_A, "A")
+    client = _client(env, ForgetfulIdp())
+    assert client.delete("/me", headers=auth(TOKEN_A)).status_code == 204
+    users, memberships = env.sql("SELECT count(*) FROM users"), env.sql("SELECT count(*) FROM memberships")
+    r = client.post("/session", headers=auth(TOKEN_A))
+    assert r.status_code == 401 and r.json()["code"] == "unauthenticated"
+    assert env.sql("SELECT count(*) FROM users") == users
+    assert env.sql("SELECT count(*) FROM memberships") == memberships
+    assert env.sql("SELECT count(*) FROM users WHERE idp_subject = :s", s=SUBJECT_A) == [(0,)]
+    assert client.post("/session", headers=auth(TOKEN_B)).status_code == 200  # another account still signs in
+
+
 def test_the_account_is_locked_out_right_after_the_freeze(env, monkeypatch):
     _account(env, TOKEN_A, "A")
     monkeypatch.setattr(env.store, "delete_prefix", lambda prefix: (_ for _ in ()).throw(ConnectionError("down")))

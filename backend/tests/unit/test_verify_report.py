@@ -115,6 +115,39 @@ def test_list_marker_and_case_edits_are_presentation_only():
     assert {x.quote for x in changed} == {"Due Friday", "Due Monday"}
 
 
+def test_block_diff_stays_bounded_on_texts_built_from_one_repeated_line(monkeypatch):
+    """LR-1: within every input limit, the unbounded sequence match would run for hours here."""
+    import time
+
+    from changelens.pipeline import verify as module
+
+    n = 3_000  # 7,500 against 15,000 lines is the largest text the limits allow
+    a = doc(["a"] * n)
+    b = doc([line for i in range(n) for line in ("a", f"token {i}")])
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("the sequence match must not run over the work limit")
+
+    monkeypatch.setattr(module.difflib, "SequenceMatcher", refuse)
+    start = time.perf_counter()
+    changed, moved = block_diff(a, b)
+    assert time.perf_counter() - start < 5
+    assert moved == [] and len(changed) == n and {x.side for x in changed} == {"later"}
+    assert changed[0].quote == "token 0"
+
+
+def test_over_the_work_limit_the_changed_blocks_are_the_same(monkeypatch):
+    from changelens.pipeline import verify as module
+
+    exact_changed, exact_moved = block_diff(E, L)
+    a, b = doc(["- Logo as SVG", "1. Brand book", "Due Friday"]), doc(["* Logo as SVG", "a) brand book", "Due Monday"])
+    marker_changed, _ = block_diff(a, b)
+    monkeypatch.setattr(module, "MAX_DIFF_WORK", 0)
+    key = lambda found: sorted((x.side, x.quote) for x in found)  # noqa: E731
+    assert key(block_diff(E, L)[0]) == key(exact_changed) and block_diff(E, L)[1] == []
+    assert key(block_diff(a, b)[0]) == key(marker_changed)
+
+
 # report -------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("change_type,note,words", [

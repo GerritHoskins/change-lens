@@ -118,6 +118,26 @@ void main() {
       expect(find.byKey(const Key('sign-in-topics')), findsNothing);
     });
 
+    testWidgets('A failed sign-in shows its event code under the message (L35)', (tester) async {
+      final h = await pumpGate(tester);
+      h.browser.failCode = 'browser_EUNKNOWN';
+      await tapKey(tester, 'sign-in-google');
+      expect(find.descendant(of: find.byKey(const Key('sign-in-error')),
+        matching: find.text('Code: browser_EUNKNOWN')), findsOneWidget);
+      // The next attempt starts without the old code.
+      h.browser.failCode = null;
+      h.native.cancel = true;
+      await tapKey(tester, 'sign-in-google');
+      expect(find.byKey(const Key('sign-in-error-code')), findsNothing);
+    });
+
+    test('The shown code keeps letters, digits and _ . : - only, and at most 60 characters', () {
+      expect(shownFailureCode(null), isNull);
+      expect(shownFailureCode(''), isNull);
+      expect(shownFailureCode('authorize_<b>x y</b>'), 'authorize_bxyb');
+      expect(shownFailureCode('a' * 80), 'a' * 60);
+    });
+
     testWidgets('German copy', (tester) async {
       await pumpGate(tester, locale: const Locale('de'));
       expect(find.text('Was hat sich geändert, und was davon ist wichtig?'), findsOneWidget);

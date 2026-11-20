@@ -11,6 +11,7 @@ import pytest
 from changelens.api.app import create_app
 from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
+from changelens.auth.logto_management import IdpUnavailable
 from changelens.domain.models import Membership, User
 from changelens.storage import MemoryObjectStore
 from test_guard_logto import AUDIENCE, ISSUER, JWKS_URL, KEY_1, KEY_3, GuardDb, Jwks, logto_settings, sign
@@ -119,6 +120,66 @@ def test_a_deleted_user_or_one_without_an_active_membership_is_rejected_without_
     # Only changelens.* keeps its text past the production scrubber (logs.py); other loggers are dropped.
     logs = "\n".join(rec.getMessage() for rec in caplog.records if rec.name.startswith("changelens"))
     assert "subject-gone" not in logs and token not in logs and token.split(".")[1] not in logs
+
+
+class KnownUsers:
+    """The part of the Logto client the first sign-in uses: whether Logto still has the user."""
+
+    def __init__(self, *subjects, down=False):
+        self.known, self.down, self.asked = set(subjects), down, []
+
+    def user(self, subject):
+        self.asked.append(subject)
+        if self.down:
+            raise IdpUnavailable("unreachable:ConnectError")
+        return {"id": subject} if subject in self.known else None
+
+
+def env_with(idp):
+    db = GuardDb()
+    keys = JwksKeyHolder(JwtPolicy(ISSUER, AUDIENCE), JWKS_URL,
+                         client=httpx.Client(transport=httpx.MockTransport(Jwks(KEY_1).handler)))
+    return TestClient(create_app(logto_settings(), db, MemoryObjectStore(), keys=keys, idp=idp),
+                      raise_server_exceptions=False), db
+
+
+def test_a_first_sign_in_asks_logto_once_and_a_returning_user_never():
+    idp = KnownUsers("subject-1")
+    client, db = env_with(idp)
+    token = sign(sub="subject-1")
+    assert session(client, token).status_code == 200 and session(client, token).status_code == 200
+    assert idp.asked == ["subject-1"] and len(rows(db, User)) == 1
+
+
+def test_a_token_from_before_the_account_was_deleted_creates_nothing():
+    """LR-3: deletion clears the subject, and the token stays valid for up to 15 minutes."""
+    idp = KnownUsers("subject-1")
+    client, db = env_with(idp)
+    token = sign(sub="subject-1")
+    assert session(client, token).status_code == 200
+    # A completed DELETE /me: the Logto user is gone and the row is a tombstone without the subject.
+    idp.known.clear()
+    db.update(Membership, status="inactive")
+    db.update(User, idp_subject=None, deleted_at=datetime.now(timezone.utc))
+    for _ in range(2):
+        _assert_unauthenticated(session(client, token))
+    [tombstone] = rows(db, User)
+    assert tombstone.idp_subject is None and len(rows(db, Membership)) == 1  # no new user, no new tenant
+
+
+def test_a_subject_logto_does_not_know_gets_no_account_and_keeps_its_sign_up_allowance():
+    client, db = env_with(KnownUsers("someone-else"))
+    for _ in range(8):  # more than the 5 sign-ups an IP may make in a day
+        _assert_unauthenticated(session(client, sign(sub="never-existed")))
+    assert rows(db, User) == []
+    assert session(client, sign(sub="someone-else")).status_code == 200
+
+
+def test_when_logto_cannot_be_asked_nothing_is_created_and_the_app_may_retry():
+    client, db = env_with(KnownUsers("subject-1", down=True))
+    r = session(client, sign(sub="subject-1"))
+    assert r.status_code == 503 and r.json()["code"] == "provider_unavailable" and r.headers["retry-after"] == "30"
+    assert rows(db, User) == []
 
 
 @pytest.mark.parametrize("kwargs", [{"json": {"invite_choice": "join"}}, {"json": []}, {"content": b"nope"},

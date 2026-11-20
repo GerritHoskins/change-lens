@@ -33,10 +33,20 @@ List<SignInMethod> platformMethods(BuildContext context, AuthSession session) {
       : [SignInMethod.google, if (apple) SignInMethod.apple, SignInMethod.email];
 }
 
+/// A failure's event code as shown under its message (L35): a fixed technical string from the app, the
+/// backend or a plugin, never personal data. One code repeats a value from the callback URL, so only
+/// the characters such codes use are kept, and at most 60 of them.
+String? shownFailureCode(String? code) {
+  final clean = code?.replaceAll(RegExp(r'[^A-Za-z0-9_.:\-]'), '') ?? '';
+  if (clean.isEmpty) return null;
+  return clean.length > 60 ? clean.substring(0, 60) : clean;
+}
+
 /// Runs one method at a time and reports how it ended, for the screen and the sheet alike.
 mixin _SignInRunner<T extends StatefulWidget> on State<T> {
   SignInMethod? working;
   AuthFailureKind? failure;
+  String? failureCode;
 
   AuthSession get session;
 
@@ -44,14 +54,14 @@ mixin _SignInRunner<T extends StatefulWidget> on State<T> {
     if (working != null) return;
     final l = AppLocalizations.of(context);
     final before = session.state;
-    setState(() { working = method; failure = null; });
+    setState(() { working = method; failure = null; failureCode = null; });
     calmAnnounce(context, l.signInWorking);
     try {
       await (method == SignInMethod.email ? session.signInWithEmail() : session.signInWithProvider(method));
       // Nothing changed: the browser or the provider sheet was closed. Not an error, so no banner.
       if (mounted && identical(session.state, before)) calmAnnounce(context, l.signInCancelled(methodName(l, method)));
     } on AuthFailure catch (e) {
-      if (mounted) setState(() => failure = e.kind);
+      if (mounted) setState(() { failure = e.kind; failureCode = shownFailureCode(e.code); });
     } finally {
       if (mounted) setState(() => working = null);
     }
@@ -63,6 +73,15 @@ mixin _SignInRunner<T extends StatefulWidget> on State<T> {
     AuthFailureKind.rejected => l.signInRejected,
     null => null,
   };
+
+  /// The failure message, with the event code under it when there is one.
+  Widget failureBanner(String error) {
+    final code = failureCode;
+    return Semantics(liveRegion: true, child: CalmWarning(key: const Key('sign-in-error'), text: error,
+      child: code == null ? null : Text(AppLocalizations.of(context).signInFailureCode(code),
+        key: const Key('sign-in-error-code'),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: CalmColors.of(context).warning))));
+  }
 
   Widget methodButton(SignInMethod method) {
     final l = AppLocalizations.of(context);
@@ -139,8 +158,7 @@ class _SignInScreenState extends State<SignInScreen> with _SignInRunner {
               child: CalmCard(key: const Key('sign-in-notice'), color: colors.soft,
                 child: Text(notice, style: text.bodyMedium)))),
           // An error takes the chips' place, so the buttons don't move down.
-          if (error != null) Padding(padding: const EdgeInsets.only(bottom: 20),
-            child: Semantics(liveRegion: true, child: CalmWarning(key: const Key('sign-in-error'), text: error)))
+          if (error != null) Padding(padding: const EdgeInsets.only(bottom: 20), child: failureBanner(error))
           else if (link == null) const Padding(padding: EdgeInsets.only(bottom: 28), child: _TopicChips()),
           for (final method in methods) methodButton(method),
           if (methods.contains(SignInMethod.email))
@@ -243,8 +261,7 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> with _SignInR
           child: Text(l.sessionLastMethod(methodName(l, last)), key: const Key('session-last-method'),
             style: text.bodyMedium)),
         const SizedBox(height: 20),
-        if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
-          child: Semantics(liveRegion: true, child: CalmWarning(key: const Key('sign-in-error'), text: error))),
+        if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: failureBanner(error)),
         for (final method in shown) methodButton(method),
         if (shown.length < all.length) Align(alignment: AlignmentDirectional.centerStart,
           child: TextButton(key: const Key('session-other-methods'),
