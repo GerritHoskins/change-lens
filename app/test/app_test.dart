@@ -49,6 +49,7 @@ class Backend {
   bool failUploads = false;
   bool failComparisonOnce = false;
   Map<String, int> comparisonCounts = {};
+  Map<String, dynamic>? latestComparison;
 
   Future<http.Response> handle(http.Request r) async {
     requests.add(r);
@@ -56,7 +57,7 @@ class Backend {
     if (r.headers['authorization'] != 'Bearer dev-token-0123456789') return http.Response('{"code":"unauthorized"}', 401);
     if (r.method == 'GET' && p == '/projects') {
       return http.Response(jsonEncode({'projects': [{'id': 'p1', 'name': 'Relaunch', 'client_label': null,
-        'comparison_counts': comparisonCounts}]}), 200);
+        'comparison_counts': comparisonCounts, 'latest_comparison': latestComparison}]}), 200);
     }
     if (r.method == 'GET' && p == '/projects/p1/versions') return http.Response(jsonEncode({'versions': versions}), 200);
     if (r.method == 'GET' && p.startsWith('/versions/')) {
@@ -329,15 +330,25 @@ void main() {
 
   testWidgets('Project reading status refreshes without a manual pull', (tester) async {
     final (_, backend, _) = await pumpApp(tester, () => const ProjectsScreen());
-    backend.comparisonCounts = {'waiting_for_versions': 1};
+    expect(find.text('No comparison yet'), findsOneWidget);
+    final latest = {'id': 'c1', 'status': 'waiting_for_versions', 'earlier_label': 'Brief v1',
+      'later_label': 'Brief v2', 'created_at': '2026-11-21T09:00:00Z'};
+    backend.latestComparison = latest;
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('1 comparison: Reading versions'), findsOneWidget);
-    backend.comparisonCounts = {'queued': 1};
+    expect(find.text('Reading Brief v2…'), findsOneWidget);
+    backend.latestComparison = {...latest, 'status': 'queued'};
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.text('1 comparison: Queued'), findsOneWidget);
-    expect(find.text('1 comparison: Reading versions'), findsNothing);
+    expect(find.text('Comparing…'), findsOneWidget);
+    expect(find.text('Reading Brief v2…'), findsNothing);
+    // The report arrives: the row turns into the hero with the server's counts.
+    backend.latestComparison = {...latest, 'status': 'complete', 'findings': 2, 'needs_review': 0, 'reviewed': 0,
+      'topic_counts': {'budget': 2}};
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('home-hero-p1')), findsOneWidget);
+    expect(find.text('1 brief changed.'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 

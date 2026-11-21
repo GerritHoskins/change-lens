@@ -12,6 +12,7 @@ import 'auth/logto.dart';
 import 'auth/session.dart';
 import 'l10n/app_localizations.dart';
 import 'design/calm_theme.dart';
+import 'design/keyboard_guard.dart';
 import 'screens/account_gate.dart';
 import 'services.dart';
 
@@ -57,7 +58,18 @@ class ChangeLensApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) => PrivacyCover(child: child!),
+          // Phones use the full width. On a large screen that ignores the portrait lock (Android 16
+          // at 600 dp and wider, an unfolded foldable), the phone layout keeps a readable measure,
+          // centred on `ground`.
+          // Screens without an AppBar (sign-in, onboarding, consent) set no status-bar style of
+          // their own: dark icons on the light ground, light icons on the dark one.
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: (Theme.of(context).brightness == Brightness.dark
+                ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+              .copyWith(statusBarColor: Colors.transparent),
+            child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor,
+              child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 600),
+                child: KeyboardGuard(child: PrivacyCover(child: child!)))))),
           home: home,
         ),
       );

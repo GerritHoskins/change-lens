@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons_500.dart';
 abstract final class CalmIcons {
   static const IconData add = LucideIcons500.plus;
   static const IconData approval = LucideIcons500.mailCheck;
+  static const IconData arrowDown = LucideIcons500.arrowDown;
   static const IconData arrowUp = LucideIcons500.arrowUp;
   static const IconData arrowForward = LucideIcons500.arrowRight;
   static const IconData back = LucideIcons500.arrowLeft;
@@ -25,6 +26,7 @@ abstract final class CalmIcons {
   static const IconData openExternal = LucideIcons500.externalLink;
   static const IconData paste = LucideIcons500.clipboardPaste;
   static const IconData pickPdf = LucideIcons500.fileUp;
+  static const IconData progress = LucideIcons500.loaderCircle;
   static const IconData settings = LucideIcons500.settings;
   static const IconData swap = LucideIcons500.arrowUpDown;
   static const IconData text = LucideIcons500.text;

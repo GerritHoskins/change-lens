@@ -121,3 +121,42 @@ def test_version_text_and_original_for_the_evidence_view(env):
     assert r.headers["cache-control"] == "no-store"
     assert env.get("/versions/%s/original" % v, TOKEN_B).status_code == 404
     assert env.get("/versions/%s/text" % v, TOKEN_B).status_code == 404
+
+
+def test_projects_list_summarises_each_projects_latest_comparison(env):
+    """Home screen: the list's counts equal the report's, follow reviews, and stay inside the tenant."""
+    idle = env.project(name="Never compared")
+    _, _, cid = _compared(env)
+    report = env.get("/comparisons/%s/findings" % cid).json()
+    shown = [f for f in report["findings"] if f["group"] in ("needs_review", "prioritised")]
+    assert shown, "the fixture pair must produce findings the report shows"
+    by_id = {p["id"]: p for p in env.get("/projects").json()["projects"]}
+    assert by_id[idle]["latest_comparison"] is None
+    latest = next(p for p in by_id.values() if p["id"] != idle)["latest_comparison"]
+    assert (latest["id"], latest["earlier_label"], latest["later_label"]) == (cid, "v1", "v2")
+    assert latest["status"] == report["status"]
+    assert latest["findings"] == len(shown) and latest["reviewed"] == 0
+    assert latest["needs_review"] == sum(f["group"] == "needs_review" for f in shown)
+    assert sum(latest["topic_counts"].values()) == len(shown)
+    for topic, count in latest["topic_counts"].items():
+        assert count == sum(f["topic"] == topic for f in shown)
+    # A note is not a review; a confirm is; a correction keeps the finding counted once.
+    assert _post(env, "/findings/%s/reviews" % shown[0]["id"], {"action": "note", "note": "ask"}).status_code == 201
+    noted = next(p for p in env.get("/projects").json()["projects"] if p["id"] != idle)["latest_comparison"]
+    assert noted["reviewed"] == 0
+    assert _post(env, "/findings/%s/reviews" % shown[0]["id"],
+                 {"action": "corrected", "correction": {"explanation": "Reworded."}}).status_code == 201
+    after = next(p for p in env.get("/projects").json()["projects"] if p["id"] != idle)["latest_comparison"]
+    assert (after["findings"], after["reviewed"]) == (len(shown), 1)
+    assert env.get("/projects", TOKEN_B).json()["projects"] == []
+
+
+def test_projects_list_reports_a_newer_unfinished_comparison_without_counts(env):
+    a, b, _ = _compared(env)
+    pid = env.get("/projects").json()["projects"][0]["id"]
+    c = env.upload(pid, label="v3", text="\n".join(LATER_LINES + ["Launch: 1 May"])).json()["id"]
+    env.worker.run_until_idle()
+    newer = env.compare(pid, b, c).json()["id"]
+    latest = env.get("/projects").json()["projects"][0]["latest_comparison"]
+    assert (latest["id"], latest["status"], latest["earlier_label"], latest["later_label"]) == (newer, "queued", "v2", "v3")
+    assert [latest[k] for k in ("findings", "needs_review", "reviewed", "topic_counts")] == [None] * 4

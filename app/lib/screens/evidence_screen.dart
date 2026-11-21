@@ -125,7 +125,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       body = ParsedTextView(pages: pages!, evidence: e,
           note: presentation!.mode == 'text_fallback' ? l.highlightFallback : null);
     } else {
-      body = error == null ? const Center(child: CircularProgressIndicator()) :
+      body = error == null ? Center(child: CircularProgressIndicator(semanticsLabel: l.loading)) :
         CalmLoadError(onRetry: loading ? null : _load);
     }
     return Scaffold(
@@ -141,7 +141,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
         if (pdf != null && !textView && presentation?.mode == 'text_fallback')
           Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
             child: CalmWarning(text: l.evidenceFallbackReview)),
-        if (loading && presentation != null) const LinearProgressIndicator(),
+        if (loading && presentation != null) LinearProgressIndicator(semanticsLabel: l.loading),
         Expanded(child: body),
       ])),
     );
@@ -169,18 +169,24 @@ class ParsedTextView extends StatelessWidget {
     final ok = e.charStart >= 0 && e.charEnd >= e.charStart && e.charEnd <= text.length &&
         text.substring(e.charStart, e.charEnd) == e.quote;
     final colors = CalmColors.of(context);
-    final mark = TextStyle(backgroundColor: colors.marker, color: colors.onMarker, fontWeight: FontWeight.w600);
+    // Translucent `marker-fill` on light, so a text selection shows through; on dark the mark stays
+    // solid, because its ink text needs the lime behind it.
+    final mark = TextStyle(backgroundColor: colors.dark ? colors.marker : CalmColors.markerFill,
+      color: colors.onMarker, fontWeight: FontWeight.w600);
     return ListView(padding: const EdgeInsets.all(20), children: [
       if (note != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: CalmWarning(text: note!)),
       // The mark is colour and weight only, so the passage is also named before the page text is read.
       Semantics(container: true, label: AppLocalizations.of(context).evidenceMarkedA11y(e.quote),
-        child: SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyLarge, children: ok
+        // Selection here is `link`, not the marker: lime under a lime mark would not show.
+        child: TextSelectionTheme(
+          data: TextSelectionTheme.of(context).copyWith(selectionColor: colors.link.withValues(alpha: .35)),
+          child: SelectableText.rich(TextSpan(style: Theme.of(context).textTheme.bodyLarge, children: ok
           ? [
               TextSpan(text: text.substring(0, e.charStart)),
               TextSpan(text: e.quote, style: mark),
               TextSpan(text: text.substring(e.charEnd)),
             ]
-          : [TextSpan(text: e.quote, style: mark)]))),
+          : [TextSpan(text: e.quote, style: mark)])))),
     ]);
   }
 }

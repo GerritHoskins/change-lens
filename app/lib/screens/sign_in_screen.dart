@@ -199,7 +199,6 @@ class _TopicChips extends StatelessWidget {
 /// once the session is back, and "Sign out" leaves to the sign-in screen.
 Future<void> showSessionExpiredSheet(BuildContext context, AuthSession session) => showModalBottomSheet<void>(
   context: context, isScrollControlled: true, useSafeArea: true, isDismissible: false, enableDrag: false,
-  barrierColor: CalmColors.ink.withValues(alpha: .4),
   routeSettings: const RouteSettings(name: SessionExpiredSheet.routeName),
   builder: (_) => SessionExpiredSheet(session: session));
 
@@ -251,23 +250,26 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> with _SignInR
     final last = session.lastMethod != null && all.contains(session.lastMethod) ? session.lastMethod : null;
     final shown = last == null || showAll ? [?last, ...all.where((m) => m != last)] : [last];
     final error = failureText(l);
+    // The sheet can't be dragged, so it has no handle: `space-6` above the title instead (artboard
+    // "Expired session"). The last-used method is a `title` line, and the two text buttons are centred
+    // under the pill they are alternatives to.
     return PopScope(canPop: false, child: CalmSurfaceScope(child: SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
       child: SafeArea(top: false, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Semantics(header: true, namesRoute: true, child: Text(l.sessionExpiredTitle, style: text.headlineMedium)),
-        const SizedBox(height: 8),
-        Text(l.sessionExpiredBody, style: text.bodyMedium?.copyWith(color: colors.muted)),
-        if (last != null) Padding(padding: const EdgeInsets.only(top: 12),
+        const SizedBox(height: 12),
+        Text(l.sessionExpiredBody, style: text.bodyLarge?.copyWith(color: colors.muted)),
+        if (last != null) Padding(padding: const EdgeInsets.only(top: 16),
           child: Text(l.sessionLastMethod(methodName(l, last)), key: const Key('session-last-method'),
-            style: text.bodyMedium)),
-        const SizedBox(height: 20),
+            style: text.titleMedium)),
+        const SizedBox(height: 12),
         if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: failureBanner(error)),
         for (final method in shown) methodButton(method),
-        if (shown.length < all.length) Align(alignment: AlignmentDirectional.centerStart,
+        if (shown.length < all.length) Center(
           child: TextButton(key: const Key('session-other-methods'),
             onPressed: working == null ? () => setState(() => showAll = true) : null,
             child: Text(l.sessionOtherMethods))),
-        Align(alignment: AlignmentDirectional.centerStart, child: TextButton(key: const Key('session-sign-out'),
+        Center(child: TextButton(key: const Key('session-sign-out'),
           onPressed: working == null ? session.signOut : null, child: Text(l.signOut))),
       ])))));
   }

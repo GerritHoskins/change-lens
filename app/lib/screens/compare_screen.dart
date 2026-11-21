@@ -37,6 +37,7 @@ class _CompareScreenState extends State<CompareScreen> {
   bool busy = false, loading = false, initialized = false;
   String? error;
   ComparisonSubmission? submission;
+  ThemeData? _onMarker; // the newer slot's light colours, built once
 
   bool get locked => busy || submission != null;
   bool get distinct => earlier?.versionId == null || later?.versionId == null ||
@@ -117,7 +118,17 @@ class _CompareScreenState extends State<CompareScreen> {
     }
   }
 
+  /// The earlier slot is a `surface` card whose fields sit on `ground`. The newer slot is filled with
+  /// `marker` (marker means new): like `on-marker`, its content keeps the light theme's colours in
+  /// both themes, so the text is ink and the field white.
   Widget _slot(bool before) {
+    if (before) return CalmCard(child: CalmSurfaceScope(child: Builder(builder: (context) => _slotContent(context, true))));
+    return Theme(data: _onMarker ??= calmTheme(Brightness.light, platform: Theme.of(context).platform),
+      child: Builder(builder: (context) => CalmCard(color: CalmColors.of(context).marker,
+        child: _slotContent(context, false))));
+  }
+
+  Widget _slotContent(BuildContext context, bool before) {
     final l = AppLocalizations.of(context);
     final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
@@ -125,22 +136,19 @@ class _CompareScreenState extends State<CompareScreen> {
     final label = before ? l.earlierVersion : l.newerVersion;
     final key = before ? 'earlier' : 'newer';
     final currentExists = versions.any((v) => v.id == value?.versionId);
-    return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(CalmRadius.lg),
-        border: before ? null : Border.all(color: colors.marker, width: 2)),
-      child: CalmCard(child: CalmSurfaceScope(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    // On the lime block, secondary text stays ink: grey on a colour reads as washed out.
+    final quiet = before ? colors.muted : colors.onMarker;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Semantics(header: true, child: Text(label, style: text.titleMedium)),
       const SizedBox(height: 12),
       if (value != null && value.versionId == null)
         Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(value.bytes == null ? CalmIcons.text : CalmIcons.document, color: colors.muted),
+          Icon(value.bytes == null ? CalmIcons.text : CalmIcons.document, color: quiet),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(value.label!, style: text.titleMedium),
             const SizedBox(height: 4),
-            Text(l.readyToSubmit, style: text.bodyMedium?.copyWith(color: colors.muted)),
+            Text(l.readyToSubmit, style: text.bodyMedium?.copyWith(color: quiet)),
           ])),
         ])),
       if (versions.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 4),
@@ -155,13 +163,13 @@ class _CompareScreenState extends State<CompareScreen> {
           }),
         )),
       // Secondary actions: plain ink text buttons, aligned with the card's text edge.
-      Transform.translate(offset: const Offset(-12, 0), child: Wrap(spacing: 4, children: [
+      Transform.translate(offset: const Offset(-12, 0), child: Wrap(spacing: 8, children: [
         TextButton.icon(key: Key('$key-paste'), onPressed: locked ? null : () => _input(before, paste: true),
             icon: const Icon(CalmIcons.paste), label: Text(l.importPaste)),
         TextButton.icon(key: Key('$key-pdf'), onPressed: locked ? null : () => _input(before, paste: false),
             icon: const Icon(CalmIcons.pickPdf), label: Text(l.importPdf)),
       ])),
-    ]))));
+    ]);
   }
 
   @override
@@ -172,6 +180,23 @@ class _CompareScreenState extends State<CompareScreen> {
     final scopes = {Scope.complete: (l.scopeComplete, l.scopeCompleteHint),
       Scope.partial: (l.scopePartial, l.scopePartialHint), Scope.unknown: (l.scopeUnknown, l.scopeUnknownHint)};
     return Scaffold(appBar: AppBar(),
+      // The main action is pinned in the thumb zone, as on every other screen; what blocks or follows
+      // it sits directly above. The bar scrolls if an error at large text makes it taller than half
+      // the screen.
+      bottomNavigationBar: CalmPinnedBar(child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .5),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (error != null) Semantics(liveRegion: true, child: Padding(
+                padding: const EdgeInsets.only(bottom: 12), child: CalmWarning(text: error!))),
+            if (error == l.compareLoadFailed) TextButton(onPressed: loading ? null : _load, child: Text(l.retry)),
+            if (submission != null && !busy && error == null) Padding(
+                padding: const EdgeInsets.only(bottom: 12), child: Text(l.compareRetrySame)),
+            FilledButton(key: const Key('start'), onPressed: complete && !busy ? _start : null,
+                child: Text(busy ? l.submittingComparison : submission != null ? l.retry : l.startComparison)),
+            const SizedBox(height: 8),
+            Text(l.compareSubmitHint, style: text.bodySmall?.copyWith(color: colors.muted)),
+          ])))),
       body: SafeArea(top: false, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         CalmPageHeader(title: l.compareBriefs,
@@ -187,7 +212,7 @@ class _CompareScreenState extends State<CompareScreen> {
           const SizedBox(height: 16),
         ],
         Text(l.confirmIntro, style: text.bodyMedium?.copyWith(color: colors.muted)),
-        if (loading) const LinearProgressIndicator(),
+        if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
         const SizedBox(height: 20),
         _slot(true),
         Padding(padding: const EdgeInsets.symmetric(vertical: 4),
@@ -215,15 +240,6 @@ class _CompareScreenState extends State<CompareScreen> {
           child: CalmRadioRows(children: [for (final e in scopes.entries) CalmRadioRow<Scope>(
             key: Key('scope-${e.key.name}'), value: e.key, enabled: !locked,
             title: e.value.$1, subtitle: e.value.$2)])),
-        const SizedBox(height: 24),
-        if (error != null) Semantics(liveRegion: true, child: Padding(
-            padding: const EdgeInsets.only(bottom: 12), child: CalmWarning(text: error!))),
-        if (error == l.compareLoadFailed) TextButton(onPressed: loading ? null : _load, child: Text(l.retry)),
-        if (submission != null && !busy && error == null) Text(l.compareRetrySame),
-        FilledButton(key: const Key('start'), onPressed: complete && !busy ? _start : null,
-            child: Text(busy ? l.submittingComparison : submission != null ? l.retry : l.startComparison)),
-        const SizedBox(height: 8),
-        Text(l.compareSubmitHint, style: text.bodySmall?.copyWith(color: colors.muted)),
       ]))));
   }
 }

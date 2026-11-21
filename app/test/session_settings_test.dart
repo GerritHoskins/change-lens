@@ -13,7 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'account_screens_test.dart' show pumpGate, tapKey;
+import 'account_screens_test.dart' show tallView, pumpGate, tapKey;
 
 List<String> announced(WidgetTester tester) => [for (final a in tester.takeAnnouncements()) a.message];
 
@@ -56,6 +56,7 @@ void main() {
     });
 
     testWidgets('Android order: Google, Apple, email, all the same height', (tester) async {
+      tallView(tester);
       await pumpGate(tester);
       expect(top(tester, 'sign-in-google'), lessThan(top(tester, 'sign-in-apple')));
       expect(top(tester, 'sign-in-apple'), lessThan(top(tester, 'sign-in-email')));
@@ -65,6 +66,7 @@ void main() {
     });
 
     testWidgets('Apple, Google and email are the same white pill, ink label, in light and dark', (tester) async {
+      tallView(tester);
       await pumpGate(tester);
       OutlinedButton pill(String key) =>
           tester.widget(find.descendant(of: find.byKey(Key(key)), matching: find.byType(OutlinedButton)));
@@ -90,6 +92,7 @@ void main() {
     });
 
     testWidgets('iOS order: Apple, Google, email', (tester) async {
+      tallView(tester);
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
         await pumpGate(tester);

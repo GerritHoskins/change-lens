@@ -12,7 +12,8 @@ import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'project_screen.dart';
 import 'compare_screen.dart';
-import 'comparison_screen.dart';
+import 'projects_home.dart';
+import 'report_screen.dart';
 import 'onboarding_screen.dart';
 import 'settings_screen.dart';
 
@@ -32,7 +33,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Services? _services;
   Api? _api;
   Timer? _timer;
-  bool _fetching = false;
+  bool _fetching = false, _loaded = false;
 
   @override
   void didChangeDependencies() {
@@ -42,6 +43,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       _services = s;
       _api = s.api;
       projects = [];
+      _loaded = false;
       _load();
     }
     _timer ??= Timer.periodic(const Duration(seconds: 3), (_) {
@@ -57,10 +59,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (!s.configured || _fetching) return;
     final api = s.api;
     _fetching = true;
-    setState(() => loading = projects.isEmpty);
+    // Only the first load shows progress: a poll must not swap the empty state for a bar every 3 s.
+    if (!_loaded) setState(() => loading = true);
     try {
       final p = await api.projects();
       if (!mounted || !identical(api, s.api)) return;
+      // A poll that changed nothing rebuilds nothing.
+      final same = _loaded && error == null && !loading && p.length == projects.length &&
+          [for (var i = 0; i < p.length; i++) p[i].signature == projects[i].signature].every((e) => e);
+      _loaded = true;
+      if (same) return;
       setState(() {
         projects = p;
         loading = false;
@@ -68,6 +76,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       });
     } on Exception catch (e) {
       if (!mounted || !identical(api, s.api)) return;
+      _loaded = true; // the error and Retry stay; later polls don't bring the progress bar back
       setState(() {
         loading = false;
         error = userErrorMessage(AppLocalizations.of(context), e);
@@ -79,25 +88,48 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final l = AppLocalizations.of(context);
     final form = GlobalKey<FormState>();
     final name = TextEditingController(), client = TextEditingController();
-    final ok = await showCalmSheet<bool>(context, builder: (context) => Form(key: form, child: CalmSheet(
-      title: l.newProject,
-      action: l.create, actionKey: const Key('create-project'),
-      onAction: () { if (form.currentState!.validate()) Navigator.pop(context, true); },
-      children: [
-        TextFormField(key: const Key('project-name'), controller: name, autofocus: true,
-          validator: calmRequired(l.requiredProjectName), autovalidateMode: AutovalidateMode.onUserInteraction,
-          textInputAction: TextInputAction.next, decoration: InputDecoration(labelText: l.projectName)),
-        TextField(controller: client, decoration: InputDecoration(labelText: l.clientLabel)),
-      ],
-    )));
+    final ok = await showCalmSheet<bool>(context, builder: (context) {
+      void submit() { if (form.currentState!.validate()) Navigator.pop(context, true); }
+      return Form(key: form, child: CalmSheet(
+        title: l.newProject,
+        action: l.create, actionKey: const Key('create-project'),
+        onAction: submit,
+        children: [
+          TextFormField(key: const Key('project-name'), controller: name, autofocus: true,
+            validator: calmRequired(l.requiredProjectName), autovalidateMode: AutovalidateMode.onUserInteraction,
+            textInputAction: TextInputAction.next, decoration: InputDecoration(labelText: l.projectName)),
+          // The keyboard's Done key on the last field creates the project, like the button.
+          TextField(key: const Key('project-client'), controller: client, textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(), decoration: InputDecoration(labelText: l.clientLabel)),
+        ],
+      ));
+    });
+    final projectName = name.text.trim(), clientLabel = client.text.trim();
     if (ok != true || !mounted) return;
     try {
-      await ServicesScope.of(context).api.createProject(name.text.trim(),
-          clientLabel: client.text.trim().isEmpty ? null : client.text.trim());
+      await ServicesScope.of(context).api.createProject(projectName,
+          clientLabel: clientLabel.isEmpty ? null : clientLabel);
       await _load();
     } on Exception catch (e) {
       if (mounted) setState(() => error = userErrorMessage(AppLocalizations.of(context), e));
     }
+  }
+
+  /// Opens the project; with [report], its latest report on top, so Back lands on the project.
+  Future<void> _open(Project p, {String? report}) async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final closed = navigator.push<bool>(MaterialPageRoute(
+      settings: const RouteSettings(name: ProjectScreen.routeName), builder: (_) => ProjectScreen(project: p)));
+    if (report != null) {
+      unawaited(navigator.push(MaterialPageRoute<void>(builder: (_) => ReportScreen(comparisonId: report))));
+    }
+    final deleted = await closed;
+    if (!mounted) return;
+    await _load();
+    if (!mounted || deleted == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
   }
 
   @override
@@ -106,6 +138,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final s = ServicesScope.of(context);
     final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
+    // Two tiles side by side need room: at large text every project is a row instead.
+    final home = HomeLayout(projects, tiles: MediaQuery.textScalerOf(context).scale(10) <= 13);
     return Scaffold(
       appBar: AppBar(title: Text(l.appTitle), actions: [
         PopupMenuButton<_ProjectsMenu>(
@@ -131,58 +165,40 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         const SizedBox(width: 8),
       ]),
       // The main action sits in the thumb zone, as on Finding and the review summary.
-      bottomNavigationBar: s.configured && projects.isNotEmpty ? SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      bottomNavigationBar: s.configured && projects.isNotEmpty ? CalmPinnedBar(
         child: FilledButton.icon(key: const Key('compare-briefs'),
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
-          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))) : null,
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))) : null,
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))
-          : SafeArea(top: false, child: RefreshIndicator(
+          : SafeArea(top: false, child: RefreshIndicator.adaptive(
               onRefresh: _load,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
-                CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro),
-                if (loading) const LinearProgressIndicator(),
+                // With projects, the headline leads with the result; without, it names the screen.
+                if (projects.isEmpty) CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro)
+                else HomeHeadline(changed: home.changed),
+                if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
                 if (!loading && error == null && projects.isEmpty)
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
-                for (final p in projects)
-                  Material(color: Colors.transparent, child: InkWell(
-                    borderRadius: BorderRadius.circular(CalmRadius.md),
-                    onTap: () async {
-                      final deleted = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(settings: const RouteSettings(name: ProjectScreen.routeName),
-                          builder: (_) => ProjectScreen(project: p)));
-                      if (!mounted) return;
-                      await _load();
-                      if (!context.mounted || deleted == null) return;
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
-                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p.name, style: text.titleMedium),
-                          if (p.clientLabel != null) Padding(padding: const EdgeInsets.only(top: 5),
-                            child: Text(p.clientLabel!, style: text.bodyMedium?.copyWith(color: colors.muted))),
-                          if (p.comparisonCounts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8),
-                            child: Text([
-                              for (final entry in p.comparisonCounts.entries)
-                                l.projectComparisons(entry.value, comparisonStatusLabel(l, entry.key)),
-                            ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
-                        ])),
-                        const SizedBox(width: 12),
-                        Icon(CalmIcons.chevronRight, color: colors.muted),
-                      ]),
-                    ),
-                  )),
-                const SizedBox(height: 20),
+                // The bento (home artboard): hero, a pair of tiles, rows; `space-3` apart.
+                if (home.hero case final hero?) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: HomeHero(key: Key('home-hero-${hero.id}'), project: hero,
+                    onTap: () => _open(hero, report: hero.latest!.id))),
+                if (home.tiles.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    for (final (i, p) in home.tiles.indexed) ...[
+                      if (i > 0) const SizedBox(width: 14),
+                      Expanded(child: HomeTile(key: Key('home-tile-${p.id}'), project: p, onTap: () => _open(p))),
+                    ],
+                  ]))),
+                for (final p in home.rows) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: HomeRow(key: Key('home-row-${p.id}'), project: p, onTap: () => _open(p))),
+                const SizedBox(height: 6),
                 Align(alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(key: const Key('new-project'), onPressed: _create,
                     icon: const Icon(CalmIcons.add), label: Text(l.newProject))),

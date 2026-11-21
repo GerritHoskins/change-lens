@@ -4,6 +4,7 @@
 // revision and the original stays in the history (AC-15).
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDatePickerMode, showCupertinoModalPopup;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:intl/intl.dart';
@@ -174,6 +175,10 @@ class _FindingScreenState extends State<FindingScreen> {
         reportIndex = nextIndex;
         id = nextId;
       });
+      // "Confirm and next" swaps the finding in place: say which one is on screen now.
+      if (f.id != nextId && nextIndex >= 0) {
+        calmAnnounce(context, AppLocalizations.of(context).findingPosition(nextIndex + 1, widget.report.findings.length));
+      }
     });
   }
 
@@ -234,7 +239,7 @@ class _FindingScreenState extends State<FindingScreen> {
     final date = DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag());
     if (d == null) {
       return Scaffold(appBar: AppBar(title: Text(l.findingTitle)),
-          body: error == null ? const Center(child: CircularProgressIndicator()) :
+          body: error == null ? Center(child: CircularProgressIndicator(semanticsLabel: l.loading)) :
             CalmLoadError(onRetry: loading ? null : _load));
     }
     final f = d.finding;
@@ -249,7 +254,7 @@ class _FindingScreenState extends State<FindingScreen> {
             if (busy) Semantics(liveRegion: true, child: Text(l.saving)),
             if (error != null) CalmWarning(text: l.contentLoadFailed,
               child: TextButton(onPressed: busy || loading ? null : _load, child: Text(l.retry))),
-            if (checking) Text(l.evidenceChecking),
+            if (checking) Semantics(liveRegion: true, child: Text(l.evidenceChecking)),
             if (evidenceError != null) ...[
               Text(l.evidenceCheckFailed),
               Align(alignment: AlignmentDirectional.centerStart,
@@ -416,6 +421,25 @@ class _ApprovalSheetState extends State<ApprovalSheet> {
   @override
   void dispose() { evidence.dispose(); statedBy.dispose(); super.dispose(); }
 
+  /// iOS: the system's date wheels in a bottom popup with Done; elsewhere Material's calendar.
+  Future<DateTime?> _pickDate() {
+    final first = DateTime(2000), last = DateTime.now();
+    if (Theme.of(context).platform != TargetPlatform.iOS) {
+      return showDatePicker(context: context, initialDate: statedAt, firstDate: first, lastDate: last);
+    }
+    var value = statedAt;
+    return showCupertinoModalPopup<DateTime>(context: context, builder: (context) => Material(
+      color: Theme.of(context).cardTheme.color,
+      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Align(alignment: AlignmentDirectional.centerEnd, child: TextButton(key: const Key('approval-date-done'),
+          onPressed: () => Navigator.pop(context, value),
+          child: Text(MaterialLocalizations.of(context).okButtonLabel))),
+        SizedBox(height: 216, child: CupertinoDatePicker(mode: CupertinoDatePickerMode.date,
+          initialDateTime: statedAt, minimumDate: first, maximumDate: last,
+          onDateTimeChanged: (d) => value = d)),
+      ]))));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -439,8 +463,7 @@ class _ApprovalSheetState extends State<ApprovalSheet> {
           icon: const Icon(CalmIcons.calendar),
           label: Text(l.approvalStatedOn(date.format(statedAt))),
           onPressed: () async {
-            final picked = await showDatePicker(context: context, initialDate: statedAt,
-                firstDate: DateTime(2000), lastDate: DateTime.now());
+            final picked = await _pickDate();
             if (picked != null) setState(() => statedAt = picked);
           },
         )),

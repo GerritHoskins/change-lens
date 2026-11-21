@@ -93,7 +93,7 @@ class EvidenceDefinitionSheet extends StatelessWidget {
       DefinitionRow(title: l.evidenceModePdf, details: [l.defModePdf],
         leading: const Icon(CalmIcons.document, size: 20),
         // A PDF page is white in both themes.
-        preview: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white,
+        preview: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: CalmColors.paper,
             border: Border.all(color: CalmColors.light.line), borderRadius: radius),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 7, children: [
             bar(.7),

@@ -28,7 +28,7 @@ ButtonStyle calmProviderPill(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   return OutlinedButton.styleFrom(
     minimumSize: const Size(CalmSize.targetMin, CalmSize.buttonMain),
-    backgroundColor: Colors.white, disabledBackgroundColor: Colors.white,
+    backgroundColor: CalmColors.paper, disabledBackgroundColor: CalmColors.paper,
     foregroundColor: CalmColors.ink, disabledForegroundColor: CalmColors.ink.withValues(alpha: .38),
     side: dark ? BorderSide.none : const BorderSide(color: CalmColors.ink, width: CalmSize.dash),
   );
@@ -117,7 +117,9 @@ class CalmCountSummary extends StatelessWidget {
       for (var i = 0; i < rows.length; i++) ...[
         if (i > 0) Divider(height: 1, color: colors.line),
         MergeSemantics(child: Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Row(children: [
-          SizedBox(width: 64, child: Text('${rows[i].$1}', style: text.headlineMedium)),
+          ConstrainedBox(constraints: const BoxConstraints(minWidth: 64),
+            child: Padding(padding: const EdgeInsetsDirectional.only(end: 12),
+              child: Text('${rows[i].$1}', style: text.headlineMedium))),
           Expanded(child: Text(rows[i].$2, style: text.bodyLarge)),
         ]))),
       ],

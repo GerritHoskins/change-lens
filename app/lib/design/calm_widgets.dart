@@ -43,10 +43,25 @@ class CalmCard extends StatelessWidget {
   );
 }
 
+/// The main action pinned under a scrolling screen (Projects, Project, Compare). A `line` hairline
+/// closes the list above it, so content scrolling underneath is not cut off mid-word.
+class CalmPinnedBar extends StatelessWidget {
+  const CalmPinnedBar({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor,
+      border: Border(top: BorderSide(color: CalmColors.of(context).line))),
+    child: SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 16), child: child)));
+}
+
 class CalmPageHeader extends StatelessWidget {
-  const CalmPageHeader({super.key, required this.title, this.subtitle, this.liveRegion = false});
+  const CalmPageHeader({super.key, required this.title, this.subtitle, this.liveRegion = false, this.style});
   final String title;
   final String? subtitle;
+  /// The title's style when a screen's artboard sets it smaller than `headline` (onboarding steps 2 to 6).
+  final TextStyle? style;
   /// Announce changes to the title (a polled status) instead of repeating it in a second line.
   final bool liveRegion;
 
@@ -56,7 +71,7 @@ class CalmPageHeader extends StatelessWidget {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       // The headline names the route: screens show it once here instead of again in the app bar.
       Semantics(header: true, namesRoute: true, liveRegion: liveRegion,
-        child: CalmFitText(title, style: Theme.of(context).textTheme.headlineLarge!)),
+        child: CalmFitText(title, style: style ?? Theme.of(context).textTheme.headlineLarge!)),
       if (subtitle?.isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 10),
         child: Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)),
     ]),
@@ -156,8 +171,11 @@ class SourcePairSummary extends StatelessWidget {
   }
 }
 
+/// Android's "Remove animations" sets `disableAnimations`; iOS's Reduce Motion sets `reduceMotion`
+/// instead, which MediaQuery does not carry, so it is read from the platform dispatcher.
 bool calmReduceMotion(BuildContext context) =>
-    MediaQuery.disableAnimationsOf(context) || MediaQuery.accessibleNavigationOf(context);
+    MediaQuery.disableAnimationsOf(context) || MediaQuery.accessibleNavigationOf(context) ||
+    View.of(context).platformDispatcher.accessibilityFeatures.reduceMotion;
 
 /// Recovery stays reachable even when the message needs to scroll at large text sizes.
 class CalmLoadError extends StatelessWidget {

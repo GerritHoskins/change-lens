@@ -42,6 +42,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   late int step = ((widget.resumeAt ?? 1) - 1).clamp(0, OnboardingScreen.steps - 1);
   final titleFocus = FocusNode(debugLabel: 'onboarding-title');
+  bool _edgeDrag = false;
 
   bool get replay => widget.mode == OnboardingMode.replay;
   bool get last => step == OnboardingScreen.steps - 1;
@@ -52,7 +53,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _go(int to) {
     setState(() => step = to);
     if (!replay) widget.onStep?.call(to + 1); // the replay never writes (O-23)
-    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) titleFocus.requestFocus(); });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      titleFocus.requestFocus();
+      // The screen stays; its content is swapped. Say where the user is now.
+      final l = AppLocalizations.of(context);
+      calmAnnounce(context, '${l.onbStep(to + 1, OnboardingScreen.steps)}. ${_step(context, l).$1}');
+    });
   }
 
   void _leave() {
@@ -72,7 +79,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Step 1 back leaves like Skip or Close; later steps go back one step.
       canPop: step == 0,
       onPopInvokedWithResult: (didPop, _) { if (!didPop) _go(step - 1); },
-      child: Scaffold(body: SafeArea(bottom: false, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // With canPop false, iOS switches its edge-swipe off. A swipe from the left edge still means
+      // "back": here, one step back.
+      child: Scaffold(body: GestureDetector(
+        behavior: HitTestBehavior.translucent, excludeFromSemantics: true,
+        onHorizontalDragStart: (d) => _edgeDrag = ios && step > 0 && d.localPosition.dx < 32,
+        onHorizontalDragEnd: (d) {
+          if (_edgeDrag && (d.primaryVelocity ?? 0) > 200) _go(step - 1);
+          _edgeDrag = false;
+        },
+        child: SafeArea(bottom: false, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Row(children: [
           if (step > 0)
             IconButton(key: const Key('onb-back'), tooltip: MaterialLocalizations.of(context).backButtonTooltip,
@@ -93,7 +109,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // CalmPageHeader brings its own 8 px above the title.
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Focus(focusNode: titleFocus, child: CalmPageHeader(title: title)),
+            // Step 1 keeps the 38/40 headline; steps 2 to 6 carry more and set it at 32/35 (artboards).
+            Focus(focusNode: titleFocus, child: CalmPageHeader(title: title,
+              style: step == 0 ? null : theme.textTheme.displaySmall)),
             // Gaps follow the canvas artboards: tighter where a step carries more.
             ..._spaced(content, switch (step) { 0 || 5 => 20, 1 => 14, _ => 16 }),
           ]))),
@@ -103,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: FilledButton(key: const Key('onb-main'),
               onPressed: last ? _leave : () => _go(step + 1),
               child: Text(!last ? l.onbNext : replay ? l.onbDone : l.onbStart)))),
-      ]))),
+      ])))),
     );
   }
 
@@ -123,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(child: _Slot(label: l.newerVersion, newer: true, vertical: true)),
           ])),
           Padding(padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Icon(CalmIcons.chevronDown, color: colors.muted)),
+            child: Icon(CalmIcons.arrowDown, color: colors.muted)),
           CalmCard(padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
             child: Text(l.reportHeading, style: text.headlineSmall)),
         ])),
@@ -149,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ]),
       2 => (l.onbEvidenceTitle, [
         Text(l.onbEvidenceBody, style: body),
-        _Example(children: [IgnorePointer(child: FindingTile(finding: deadlineExample, onTap: () {}))]),
+        _Example(children: [IgnorePointer(child: FindingTile(finding: deadlineExample, onTap: null))]),
       ]),
       3 => (l.onbUncertainTitle, [
         Text(l.onbUncertainBody, style: body),
@@ -160,7 +178,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(width: 10),
             Expanded(child: Text('${l.groupNeedsReview} · 1', style: text.titleSmall)),
           ])),
-          IgnorePointer(child: FindingTile(finding: hostingExample, onTap: () {})),
+          IgnorePointer(child: FindingTile(finding: hostingExample, onTap: null)),
         ]),
         Text(l.onbUncertainSummary, style: body),
       ]),
@@ -209,7 +227,8 @@ class _Illustration extends StatelessWidget {
     child: ExcludeSemantics(child: IgnorePointer(child: child)));
 }
 
-/// A compare slot as the compare screen draws it: a surface card, the newer one with the lime marker.
+/// A compare slot as the compare screen draws it: the earlier one on `surface`, the newer one filled
+/// with `marker` and `on-marker` content in both themes (marker means new).
 class _Slot extends StatelessWidget {
   const _Slot({required this.label, required this.newer, this.vertical = false});
   final String label;
@@ -218,19 +237,19 @@ class _Slot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = CalmColors.of(context);
-    final style = Theme.of(context).textTheme.titleSmall;
-    const icon = Icon(CalmIcons.document, size: 20);
+    final text = Theme.of(context).textTheme;
+    final ink = newer ? colors.onMarker : null;
+    // Side by side the label is `label` (14/20); stacked it is the 16/22 title.
+    final style = (vertical ? text.labelMedium : text.titleSmall)?.copyWith(color: ink);
+    final icon = Icon(CalmIcons.document, size: 20, color: ink);
     return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(CalmRadius.md),
-        border: newer ? Border.all(color: colors.marker, width: CalmSize.dash) : null),
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(CalmRadius.md)),
-        child: Padding(padding: const EdgeInsets.fromLTRB(14, 12, 14, 12), child: vertical
+      decoration: BoxDecoration(color: newer ? colors.marker : Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(CalmRadius.md)),
+      child: Padding(padding: vertical ? const EdgeInsets.all(14) : const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: vertical
           ? Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 10,
               children: [icon, Text(label, style: style)])
-          : Row(spacing: 12, children: [icon, Expanded(child: Text(label, style: style))]))),
+          : Row(spacing: 12, children: [icon, Expanded(child: Text(label, style: style))])),
     );
   }
 }

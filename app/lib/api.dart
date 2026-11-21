@@ -6,6 +6,10 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'project_summary.dart';
+
+export 'project_summary.dart';
+
 class ApiException implements Exception {
   ApiException(this.status, this.code, [this.detail]);
 
@@ -15,18 +19,6 @@ class ApiException implements Exception {
 
   @override
   String toString() => detail == null ? code : '$code ($detail)';
-}
-
-class Project {
-  Project(Map<String, dynamic> j)
-      : id = j['id'] as String,
-        name = j['name'] as String,
-        clientLabel = j['client_label'] as String?,
-        comparisonCounts = Map<String, int>.from(j['comparison_counts'] as Map? ?? const {});
-
-  final String id, name;
-  final String? clientLabel;
-  final Map<String, int> comparisonCounts;
 }
 
 class Version {
@@ -43,6 +35,8 @@ class Version {
   final int warnings;
 
   bool get ready => status == 'parsed';
+
+  String get signature => '$id|$label|$kind|$status|$rejectReason|$warnings';
 }
 
 /// Only allowlisted status fields; provider details and document content are not status copy.
@@ -70,6 +64,9 @@ class Comparison {
   final List<ComparisonWarning> warnings;
 
   bool get finished => const {'complete', 'partial', 'failed'}.contains(status);
+
+  String get signature => '$id|$earlierId|$laterId|$scope|$status|'
+      '${[for (final w in warnings) '${w.code}:${w.versionId}:${w.reason}'].join(',')}';
 }
 
 /// Scope of the newer version, as confirmed by the user (AC-14). No default exists.
@@ -176,6 +173,8 @@ class Api {
 
   final String baseUrl, token;
   final http.Client _client;
+  /// The two most recently used original documents, in memory only (see [ReportApi.original]).
+  final _originals = <String, Future<Uint8List>>{};
 
   /// With signed-in accounts the client adds the bearer itself and [token] is empty.
   Map<String, String> get _auth => token.isEmpty ? {} : {'Authorization': 'Bearer $token'};
@@ -460,8 +459,23 @@ extension ReportApi on Api {
     return [for (final p in j['pages'] as List) p as String];
   }
 
-  /// The original document, held in memory only (AC-25).
-  Future<Uint8List> original(String versionId) async {
+  /// The original document, held in memory only (AC-25). Versions are immutable, so the two most
+  /// recently used originals (a comparison's earlier and newer side) are kept for this Api's lifetime:
+  /// stepping through findings doesn't download the same PDF again. A failed fetch is not kept.
+  Future<Uint8List> original(String versionId) {
+    final kept = _originals.remove(versionId);
+    final bytes = kept ?? _fetchOriginal(versionId);
+    _originals[versionId] = bytes; // most recently used last
+    if (kept == null) {
+      bytes.then((_) {}, onError: (_) {
+        if (identical(_originals[versionId], bytes)) _originals.remove(versionId);
+      });
+      while (_originals.length > 2) { _originals.remove(_originals.keys.first); }
+    }
+    return bytes;
+  }
+
+  Future<Uint8List> _fetchOriginal(String versionId) async {
     final res = await _client.get(_u('/versions/$versionId/original'), headers: _auth);
     if (res.statusCode != 200) throw ApiException(res.statusCode, 'http_${res.statusCode}');
     return res.bodyBytes;

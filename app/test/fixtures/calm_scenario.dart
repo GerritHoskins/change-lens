@@ -8,7 +8,12 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 const cedarProject = {'id': 'cedar', 'name': 'Cedar website', 'client_label': 'Northstar Studio',
-  'comparison_counts': {'partial': 1}};
+  'comparison_counts': <String, int>{},
+  // The summary of [CedarScenario.reportJson]: two prioritised findings and one that needs a second look.
+  'latest_comparison': {'id': 'cedar-comparison', 'status': 'partial', 'earlier_label': 'Brief v2',
+    'later_label': 'Brief v3', 'created_at': '2026-11-07T11:00:00Z', 'findings': 3, 'needs_review': 1,
+    'reviewed': 0, 'topic_counts': {'deadlines': 1, 'deliverables': 0, 'responsibilities': 1,
+      'approval_wording': 0, 'budget': 1, 'other': 0}}};
 const cedarVersions = [
   {'id': 'v2', 'label': 'Brief v2', 'kind': 'text', 'status': 'parsed'},
   {'id': 'v3', 'label': 'Brief v3', 'kind': 'text', 'status': 'parsed'},

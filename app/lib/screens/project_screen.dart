@@ -69,6 +69,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
             comparisonStatusLabel(l, now.status)));
         }
       }
+      // A poll that changed nothing rebuilds nothing (the timeline is rebuilt with the screen).
+      final same = !loading && error == null && v.length == versions.length && c.length == comparisons.length &&
+          [for (var i = 0; i < v.length; i++) v[i].signature == versions[i].signature].every((e) => e) &&
+          [for (var i = 0; i < c.length; i++) c[i].signature == comparisons[i].signature].every((e) => e);
+      if (same) return;
       setState(() {
         versions = v;
         comparisons = c;
@@ -93,13 +98,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
         title: Text(l.deleteProject),
         content: Text(l.deleteProjectConfirmation(widget.project.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
-          TextButton(
-            key: const Key('confirm-delete-project'),
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.deleteProject),
-          ),
+          calmDialogAction(context, label: l.cancel, onPressed: () => Navigator.pop(context, false)),
+          calmDialogAction(context, key: const Key('confirm-delete-project'), label: l.deleteProject,
+            destructive: true, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -211,27 +212,27 @@ class _ProjectScreenState extends State<ProjectScreen> {
         )),
       ]),
       // The main action sits in the thumb zone, as on Finding and the review summary.
-      bottomNavigationBar: _deleteStarted ? null : SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      bottomNavigationBar: _deleteStarted ? null : CalmPinnedBar(
         child: FilledButton.icon(key: const Key('compare'), onPressed: _compare,
-          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs)))),
+          icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))),
       body: _deleteStarted ? Center(child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (_deleting) const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text(_deleteFailed ? l.deleteProjectFailed : l.deletingProject, textAlign: TextAlign.center),
+          Semantics(liveRegion: true,
+            child: Text(_deleteFailed ? l.deleteProjectFailed : l.deletingProject, textAlign: TextAlign.center)),
           if (_deleteFailed) Padding(padding: const EdgeInsets.only(top: 16), child: FilledButton(
             key: const Key('retry-delete-project'), onPressed: _delete, child: Text(l.retryDeleteProject),
           )),
         ]),
-      )) : SafeArea(top: false, child: RefreshIndicator(
+      )) : SafeArea(top: false, child: RefreshIndicator.adaptive(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
           CalmPageHeader(title: widget.project.name, subtitle: widget.project.clientLabel),
-          if (loading) const LinearProgressIndicator(),
+          if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
             child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
           Wrap(spacing: 8, runSpacing: 8, children: [

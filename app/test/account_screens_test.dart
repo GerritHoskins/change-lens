@@ -20,6 +20,14 @@ class NoPicker implements DocumentPicker {
   Future<void> purge() async {}
 }
 
+/// A tall view at the app's 600 px content cap. The default 800×600 test surface is wider than the cap,
+/// and the test font is wider than Roboto, so tests that need all sign-in methods built use this.
+void tallView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(600, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 Future<AuthHarness> pumpGate(WidgetTester tester, {bool stored = false, Map<String, dynamic>? onboarding,
     bool apple = true, Locale locale = const Locale('en'), void Function(AuthHarness)? before,
     bool consentFlow = false}) async {
@@ -43,6 +51,7 @@ Future<void> tapKey(WidgetTester tester, String key) async {
 
 void main() {
   testWidgets('Signed out: Apple, Google and email on iOS; no Apple on Android', (tester) async {
+    tallView(tester);
     await pumpGate(tester);
     expect(find.text('What changed, and which changes matter?'), findsOneWidget);
     for (final key in ['sign-in-apple', 'sign-in-google', 'sign-in-email']) {
@@ -56,6 +65,7 @@ void main() {
   });
 
   testWidgets('First launch: sign-in, then onboarding saving each step, then Projects on Start', (tester) async {
+    tallView(tester);
     final h = await pumpGate(tester);
     await tapKey(tester, 'sign-in-email');
     expect(find.byType(OnboardingScreen), findsOneWidget);

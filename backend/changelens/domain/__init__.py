@@ -211,6 +211,32 @@ class TenantRepo:
             counts.setdefault(project_id, {})[status] = count
         return counts
 
+    def latest_comparisons(self) -> dict:
+        """Project id -> its most recently created comparison (the projects list's summary)."""
+        q = (select(Comparison).where(Comparison.tenant_id == self.tenant_id)
+             .distinct(Comparison.project_id)
+             .order_by(Comparison.project_id, Comparison.created_at.desc(), Comparison.id.desc()))
+        return {c.project_id: c for c in self.s.scalars(q)}
+
+    def version_labels(self, ids) -> dict:
+        q = select(SourceVersion.id, SourceVersion.label).where(
+            SourceVersion.tenant_id == self.tenant_id, SourceVersion.id.in_(list(ids)))
+        return dict(self.s.execute(q).all())
+
+    def finding_summary_rows(self, comparison_ids) -> list:
+        """Counting columns only, never evidence or explanations."""
+        q = select(Finding.id, Finding.comparison_id, Finding.category, Finding.review_group,
+                   Finding.supersedes_id).where(Finding.tenant_id == self.tenant_id,
+                                                Finding.comparison_id.in_(list(comparison_ids)))
+        return list(self.s.execute(q).all())
+
+    def reviewed_finding_ids(self, finding_ids) -> set:
+        """Findings with a confirm, correct or dismiss; a note alone is not a review."""
+        q = select(ReviewEvent.finding_id).where(ReviewEvent.tenant_id == self.tenant_id,
+                                                 ReviewEvent.finding_id.in_(list(finding_ids)),
+                                                 ReviewEvent.action != "note").distinct()
+        return set(self.s.scalars(q))
+
     def comparisons_of(self, project_id: uuid.UUID) -> list[Comparison]:
         q = (select(Comparison)
              .where(Comparison.tenant_id == self.tenant_id, Comparison.project_id == project_id)
