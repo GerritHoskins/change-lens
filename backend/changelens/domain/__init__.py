@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from changelens.domain.bounds import UNFINISHED
 from changelens.domain.identity import IdentityRepo
 from changelens.domain.models import (
     AccountOnboarding, ClientApprovalRecord, Comparison, ComparisonCostTombstone, ConsentEvent, FactCacheEntry,
@@ -203,7 +204,7 @@ class TenantRepo:
     def active_comparison_counts(self) -> dict:
         q = (select(Comparison.project_id, Comparison.status, func.count(Comparison.id))
              .where(Comparison.tenant_id == self.tenant_id,
-                    Comparison.status.in_(("waiting_for_versions", "queued", "running")))
+                    Comparison.status.in_(UNFINISHED))
              .group_by(Comparison.project_id, Comparison.status))
         counts = {}
         for project_id, status, count in self.s.execute(q):
@@ -272,6 +273,29 @@ class TenantRepo:
         # unique constraint remains a second guard; this lock is released on transaction end.
         self.s.execute(text("SELECT pg_advisory_xact_lock(:key)"),
                        {"key": comparison_lock_id(self.tenant_id, key)})
+
+    def lock_account(self) -> None:
+        """Serialise this account's uploads while its bounds are counted (LR-10). Taken after the project and
+        key locks and by the upload routes only; released on transaction end."""
+        self.s.execute(text("SELECT pg_advisory_xact_lock(:key)"),
+                       {"key": comparison_lock_id(self.tenant_id, "account:bounds")})
+
+    def unparsed_version_count(self) -> int:
+        q = (select(func.count(SourceVersion.id)).join(Project, Project.id == SourceVersion.project_id)
+             .where(SourceVersion.tenant_id == self.tenant_id, SourceVersion.status == "uploaded",
+                    Project.deleted_at.is_(None)))
+        return self.s.scalar(q) or 0
+
+    def unfinished_comparison_count(self) -> int:
+        q = (select(func.count(Comparison.id)).join(Project, Project.id == Comparison.project_id)
+             .where(Comparison.tenant_id == self.tenant_id, Comparison.status.in_(UNFINISHED),
+                    Project.deleted_at.is_(None)))
+        return self.s.scalar(q) or 0
+
+    def stored_bytes(self) -> int:
+        """Bytes of every original the account still has a row for, deleted projects included."""
+        q = select(func.coalesce(func.sum(SourceVersion.size_bytes), 0)).where(SourceVersion.tenant_id == self.tenant_id)
+        return int(self.s.scalar(q))
 
     def try_object_write_lock(self, lock_id: int) -> bool:
         return bool(self.s.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": lock_id}))

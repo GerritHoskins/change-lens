@@ -138,6 +138,22 @@ class TenantRepo:
         self.db.active_locks.add(lock_id)
         self.held_locks.add(lock_id)
 
+    def lock_account(self):
+        self.lock_comparison_key("account:bounds")
+
+    def _live(self, collection):
+        return [row for row in self.state[collection].values()
+                if row.tenant_id == self.tenant_id and self.project(row.project_id) is not None]
+
+    def unparsed_version_count(self):
+        return sum(1 for v in self._live("versions") if v.status == "uploaded")
+
+    def unfinished_comparison_count(self):
+        return sum(1 for c in self._live("comparisons") if c.status in ("waiting_for_versions", "queued", "running"))
+
+    def stored_bytes(self):
+        return sum(v.size_bytes for v in self.state["versions"].values() if v.tenant_id == self.tenant_id)
+
     def try_object_write_lock(self, lock_id):
         if lock_id in self.db.active_locks:
             return False

@@ -4,6 +4,7 @@ Fixed windows: per account per minute (every authenticated request), per IP per 
 fail authentication, and `POST /session`), and new accounts per IP per UTC day (the sign-up cap in
 `POST /session`: one counter for new account rows, one for Logto users that native Google or Apple sign-in
 creates, so a social sign-up counts once in each). Over a limit is `429 rate_limited` with `Retry-After`.
+The upload routes also take one of the process's upload slots (`UploadSlots`), with the same answer when none is free.
 
 Keys are an HMAC-SHA256 of the scope and the account ID or IP with a secret key, so the counters never
 hold a raw address. Nothing here logs an IP. Counts live in Postgres (`rate_limit_hit`, migration 0005),
@@ -57,6 +58,32 @@ class RateLimiter:
         if hits > limit:
             retry = max(1, math.ceil(start + window - now))
             raise ApiError(429, "rate_limited", headers={"Retry-After": str(retry)})
+
+
+class UploadSlots:
+    """Upload requests that hold a body in memory at once, in this process (LR-10). Uploads are never spooled
+    to disk, so their number bounds the memory they take. One account gets at most half of the slots, so it
+    can't hold all of them with slow uploads."""
+
+    def __init__(self, limit: int):
+        self.limit, self.per_account = limit, max(1, limit // 2)
+        self.used, self.by_account = 0, {}
+        self._lock = threading.Lock()
+
+    def take(self, account) -> bool:
+        with self._lock:
+            held = self.by_account.get(account, 0)
+            if self.used >= self.limit or held >= self.per_account:
+                return False
+            self.used, self.by_account[account] = self.used + 1, held + 1
+            return True
+
+    def release(self, account) -> None:
+        with self._lock:
+            held = self.by_account.pop(account, 0)
+            if held > 1:
+                self.by_account[account] = held - 1
+            self.used -= 1 if held else 0
 
 
 def limiter(request: Request) -> RateLimiter:

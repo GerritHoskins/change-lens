@@ -20,7 +20,6 @@ from starlette.concurrency import run_in_threadpool
 
 from changelens import MODEL_CONFIG_ID, PIPELINE_VERSION, jobs
 from changelens.api import uploads
-from changelens.api.auth import current_tenant
 from changelens.api.errors import ApiError, not_found
 from changelens.domain.spend import cap_reached
 from changelens.domain.comparison_queue import advance_comparison
@@ -142,6 +141,10 @@ def create_confirmed(state, tenant, project_id, key: str, earlier: Slot, later: 
             # (I-14) is checked here too, once it exists.
             if cap_reached(repo, state.settings) is not None:
                 raise ApiError(429, "spend_cap_reached", "the monthly spend cap is reached")
+            # Per-account bounds on queued work and stored bytes (LR-10), after the replay above was answered.
+            new = [slot.data for slot in (earlier, later) if slot.version_id is None]
+            uploads.check_bounds(repo, state.settings, new_versions=len(new), new_bytes=sum(map(len, new)),
+                                 new_comparison=True)
             # Lock existing versions in deterministic order. This prevents a parse completion
             # from racing past creation of its waiting comparison.
             versions = {}
@@ -197,7 +200,8 @@ def create_confirmed(state, tenant, project_id, key: str, earlier: Slot, later: 
 
 
 @router.post("/projects/{project_id}/comparisons", status_code=202)
-async def create_comparison(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+async def create_comparison(project_id: uuid.UUID, request: Request,
+                            tenant: uuid.UUID = Depends(uploads.upload_slot)):
     key = request.headers.get("Idempotency-Key", "")
     if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", key) is None:
         raise ApiError(422, "idempotency_key_required", "send a unique Idempotency-Key of 16-128 letters, digits, _ or -")
