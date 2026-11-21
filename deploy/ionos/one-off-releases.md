@@ -147,3 +147,52 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
     ```bash
     cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
     ```
+
+## The backup job behind the egress proxy (once, LR-13)
+
+Until this release the backup job is on the `outbound` network and can reach any host. From it the job is on
+`data` only, with no route out: rclone uploads through the egress proxy, which lets HTTPS through to the hosts
+in `/etc/changelens/egress-allowlist.txt` and nothing else. The backup job is recreated and its log starts
+again; nothing else in this change restarts a service. The restore test is unchanged. **Not yet run on the server.** Checked in Docker on 2026-11-21 with this
+`compose.yaml` and made-up keys: before the change the container connected to `1.1.1.1:443` and to
+`example.com`; after it neither, and the storage host answered through the proxy.
+
+1. **Before: the job's storage host is on the allow-list.** Prints the host and `on the list`:
+   ```bash
+   H=$(sed -n 's|^RCLONE_CONFIG_IONOS_ENDPOINT=https://||p' /etc/changelens/backup.env | tr -d '/\r') && grep -qxF "$H" /etc/changelens/egress-allowlist.txt && echo "$H: on the list" || echo "$H: missing"
+   ```
+   `missing`: add the host as a line of its own to `/etc/changelens/egress-allowlist.txt`, then
+   `cd /opt/changelens/deploy/ionos && docker compose restart egress` (the proxy reads the list at start).
+2. **The release:** the app release command.
+3. **Both are up**, and the backup job was created just now:
+   ```bash
+   docker compose ps backup egress
+   ```
+4. **No route out.** Prints `rc=1`:
+   ```bash
+   docker compose exec -T backup sh -c 'nc -z -w 5 1.1.1.1 443; echo rc=$?'
+   ```
+5. **A host off the list is refused by the proxy.** Prints `rc=1`, then a line with `TCP_DENIED/403` and
+   `CONNECT example.com:443`:
+   ```bash
+   docker compose exec -T backup sh -c 'rclone lsf --retries 1 --low-level-retries 1 --contimeout 8s --timeout 10s --http-url https://example.com :http: >/dev/null 2>&1; echo rc=$?'
+   ```
+   ```bash
+   docker compose exec -T egress grep -F 'example.com' /var/log/squid/access.log | tail -n 1
+   ```
+6. **The job's own bucket is reachable.** Prints the number of base backups in it, above `0`:
+   ```bash
+   docker compose exec -T backup sh -c 'rclone lsf --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/base/" | wc -l'
+   ```
+7. **The job ships.** Within about ten minutes the log shows `started` and then `wal shipped=…`, and no
+   `wal upload failed`; a day later `base backup uploaded` (the command that ends the L32 release):
+   ```bash
+   docker compose logs --since 15m backup | tail -n 5
+   ```
+
+`wal upload failed` keeps appearing: nothing is lost, the segments wait in the archive volume and the monitor
+mails after 30 minutes. Step 1 again first. Back to the file before this release, then `git checkout
+compose.yaml` once the cause is found:
+```bash
+git -C /opt/changelens show d97bbdc:deploy/ionos/compose.yaml > /opt/changelens/deploy/ionos/compose.yaml && docker compose up -d backup
+```
