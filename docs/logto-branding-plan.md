@@ -5,9 +5,11 @@ Prepared 2026-11-16. Repository `C:\Users\Gerrit\job-search\POCs\change-lens`, b
 Windows checkout, about 400 files show as modified with no content change (CRLF): never stage those.
 
 **Status 2026-11-20:** §4.1–§4.5 and §6 are implemented in the repository (`deploy/ionos/brand/`,
-`deploy/ionos/logto/`, `scripts/logto/apply-branding.py`, Caddyfile, compose, runbook). Nothing is applied to a
-server yet and §5 has not been run: on the iPhone sitting of 2026-11-20 the live pages still showed a lime brand
-colour set in the Console, Logto's layout and Logto's copy. §4.6 (`ui_locales`) is still open.
+`deploy/ionos/logto/`, `scripts/logto/apply-branding.py`, Caddyfile, compose, runbook). §4.6 (`ui_locales`) is
+still open.
+
+**Status 2026-11-21:** applied to `auth.pixeltronic.dev` with `--apply`; the sign-in page was checked in a browser
+at phone width, light and dark. The rest of §5 (code and MFA pages, real devices, English) has not been run.
 
 Designs: https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr, row "Logto hosted pages". There are 7 artboards,
 each with toggles for locale (en/de), dark and state.
@@ -73,6 +75,7 @@ We change tokens, type and a few shapes.
 |---|---|---|
 | Logo | none | Logo D lockup, 40 px tall, light and dark files (`docs/brand/`) |
 | Favicon | Logto | Logo D mark, light and dark |
+| Code, MFA and error pages (no logo slot in Logto) | none | Logo D mark, top right in the back-arrow row (owner, 2026-11-21; not on the canvas) |
 | Brand colour (buttons, links, focus) | purple | ink `#111114`; dark `#F3F3EF` |
 | Background, surfaces, text, borders, error | Logto neutrals | ground, surface, ink, muted, control-border, line, error (DESIGN.md) |
 | Font | system stack | Roboto 400/600/700, self-hosted |
@@ -135,7 +138,8 @@ Keep the desired values in `deploy/ionos/logto/sign-in-experience.json`. The scr
 The stylesheet is `deploy/ionos/logto/custom.css` (moved from `docs/logto-branding/` on 2026-11-20). It has three tiers:
 1. **Theme variables** (`--color-*`, `--font-*`, `--radius`) under `html[data-theme] body`. Robust.
 2. **Stable hooks**: Logto's own unhashed `logto_*` classes.
-3. **FRAGILE**: three CSS-module suffix selectors, for the headline, the pill button and the focused code box.
+3. **FRAGILE**: four CSS-module suffix selectors, for the headline, the pill button, the focused code box and
+   the mark in the back-arrow row.
 
 Notes:
 - The brand colour isn't in the CSS: Logto sets it inline on `<body>` from §4.3.
