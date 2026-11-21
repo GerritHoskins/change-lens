@@ -77,9 +77,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     } on Exception catch (e) {
       if (!mounted || !identical(api, s.api)) return;
       _loaded = true; // the error and Retry stay; later polls don't bring the progress bar back
+      final message = userErrorMessage(AppLocalizations.of(context), e);
+      if (!loading && error == message) return; // still offline: nothing to redraw
       setState(() {
         loading = false;
-        error = userErrorMessage(AppLocalizations.of(context), e);
+        error = message;
       });
     } finally { _fetching = false; }
   }
