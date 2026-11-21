@@ -16,6 +16,7 @@ from changelens import jobs
 from changelens.api import uploads
 from changelens.api.auth import current_tenant
 from changelens.api.errors import ApiError, not_found
+from changelens.api.project_summaries import latest_comparison_summaries
 from changelens.domain.models import Comparison, Project, SourceVersion
 from changelens.domain.storage_intents import prepare_write, write_prepared, reconcile_write
 
@@ -63,8 +64,9 @@ def create_project(body: ProjectIn, request: Request, tenant: uuid.UUID = Depend
 def list_projects(request: Request, tenant: uuid.UUID = Depends(current_tenant)):
     with request.app.state.db.tenant_scope(tenant) as repo:
         counts = repo.active_comparison_counts()
-        return {"projects": [{**_project_out(p), "comparison_counts": counts.get(p.id, {})}
-                             for p in repo.projects()]}
+        latest = latest_comparison_summaries(repo)
+        return {"projects": [{**_project_out(p), "comparison_counts": counts.get(p.id, {}),
+                              "latest_comparison": latest.get(p.id)} for p in repo.projects()]}
 
 
 @router.get("/projects/{project_id}/versions")

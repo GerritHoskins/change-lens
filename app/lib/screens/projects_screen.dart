@@ -12,7 +12,8 @@ import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'project_screen.dart';
 import 'compare_screen.dart';
-import 'comparison_screen.dart';
+import 'projects_home.dart';
+import 'report_screen.dart';
 import 'onboarding_screen.dart';
 import 'settings_screen.dart';
 
@@ -114,12 +115,31 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
+  /// Opens the project; with [report], its latest report on top, so Back lands on the project.
+  Future<void> _open(Project p, {String? report}) async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final closed = navigator.push<bool>(MaterialPageRoute(
+      settings: const RouteSettings(name: ProjectScreen.routeName), builder: (_) => ProjectScreen(project: p)));
+    if (report != null) {
+      unawaited(navigator.push(MaterialPageRoute<void>(builder: (_) => ReportScreen(comparisonId: report))));
+    }
+    final deleted = await closed;
+    if (!mounted) return;
+    await _load();
+    if (!mounted || deleted == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final s = ServicesScope.of(context);
     final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
+    // Two tiles side by side need room: at large text every project is a row instead.
+    final home = HomeLayout(projects, tiles: MediaQuery.textScalerOf(context).scale(10) <= 13);
     return Scaffold(
       appBar: AppBar(title: Text(l.appTitle), actions: [
         PopupMenuButton<_ProjectsMenu>(
@@ -157,47 +177,27 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
-                CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro),
+                // With projects, the headline leads with the result; without, it names the screen.
+                if (projects.isEmpty) CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro)
+                else HomeHeadline(changed: home.changed),
                 if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
                 if (!loading && error == null && projects.isEmpty)
                   CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
-                for (final p in projects)
-                  // A project is a `surface` row on `ground`, `space-3` apart (home artboard).
-                  Semantics(button: true, child: Padding(padding: const EdgeInsets.only(bottom: 14), child: Material(
-                    color: Theme.of(context).cardTheme.color,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.md)),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                    onTap: () async {
-                      final deleted = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(settings: const RouteSettings(name: ProjectScreen.routeName),
-                          builder: (_) => ProjectScreen(project: p)));
-                      if (!mounted) return;
-                      await _load();
-                      if (!context.mounted || deleted == null) return;
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p.name, style: text.titleMedium),
-                          if (p.clientLabel != null) Padding(padding: const EdgeInsets.only(top: 5),
-                            child: Text(p.clientLabel!, style: text.bodyMedium?.copyWith(color: colors.muted))),
-                          if (p.comparisonCounts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8),
-                            child: Text([
-                              for (final entry in p.comparisonCounts.entries)
-                                l.projectComparisons(entry.value, comparisonStatusLabel(l, entry.key)),
-                            ].join(' · '), style: text.bodyMedium?.copyWith(color: colors.muted))),
-                        ])),
-                        const SizedBox(width: 12),
-                        Icon(CalmIcons.chevronRight, color: colors.muted),
-                      ]),
-                    ),
-                  )))),
+                // The bento (home artboard): hero, a pair of tiles, rows; `space-3` apart.
+                if (home.hero case final hero?) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: HomeHero(key: Key('home-hero-${hero.id}'), project: hero,
+                    onTap: () => _open(hero, report: hero.latest!.id))),
+                if (home.tiles.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    for (final (i, p) in home.tiles.indexed) ...[
+                      if (i > 0) const SizedBox(width: 14),
+                      Expanded(child: HomeTile(key: Key('home-tile-${p.id}'), project: p, onTap: () => _open(p))),
+                    ],
+                  ]))),
+                for (final p in home.rows) Padding(padding: const EdgeInsets.only(bottom: 14),
+                  child: HomeRow(key: Key('home-row-${p.id}'), project: p, onTap: () => _open(p))),
                 const SizedBox(height: 6),
                 Align(alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(key: const Key('new-project'), onPressed: _create,

@@ -120,6 +120,40 @@ they confirmed by mistake.
 
 ---
 
+## A2. Projects list: the latest comparison per project (home screen; built 2026-11-21)
+
+`GET /projects` gains one additive field per project, `latest_comparison`, so the home screen can lead
+with the result without one report request per project.
+
+```jsonc
+{ "projects": [ {
+    "id": "…", "name": "Spring campaign 2027", "client_label": null, "created_at": "…",
+    "comparison_counts": {},                    // unchanged
+    "latest_comparison": {                      // null when the project was never compared
+      "id": "…", "status": "complete",          // any comparison status
+      "earlier_label": "v1", "later_label": "v2", "created_at": "…",
+      "findings": 6,                            // what the report headline counts
+      "needs_review": 2, "reviewed": 0,
+      "topic_counts": { "deadlines": 1, "deliverables": 2, "responsibilities": 0,
+                        "approval_wording": 1, "budget": 2, "other": 0 } } } ] }
+```
+
+- **Latest** is the project's most recently created comparison (`created_at DESC, id DESC`), whatever
+  its status. It is the order of the user's runs, not an order of versions (AC-14).
+- **Counts follow the report** (`GET /comparisons/{id}/findings`): only the current revision of each
+  finding counts. `findings` is the number in the groups `needs_review` and `prioritised` (the report
+  headline); `needs_review` is the part of it in that group; `topic_counts` covers the same findings
+  with all six topics present, so it sums to `findings`. Findings in the group `other`, unexplained
+  differences and withheld findings are not counted here; the report still names them (AC-13).
+- `reviewed` is how many of those findings have a confirm, correct or dismiss on any revision. A note
+  alone is not a review, and a client-approval record never counts (AC-12).
+- `findings`, `needs_review`, `reviewed` and `topic_counts` are **null unless `status` is `complete`
+  or `partial`**. A client must not show null as 0. A report with nothing to show sends 0.
+- Labels are the versions' labels as entered; no evidence or explanation text is included. Tenant
+  scoping is the list's. Tests: `unit/test_project_summaries.py`, `integration/test_reviews.py`.
+
+---
+
 ## B. I-14 fair-use allowance
 
 The allowance belongs to the **tenant**, like the spend cap. In v1 one account is exactly one tenant,

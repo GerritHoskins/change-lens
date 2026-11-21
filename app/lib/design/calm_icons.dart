@@ -26,6 +26,7 @@ abstract final class CalmIcons {
   static const IconData openExternal = LucideIcons500.externalLink;
   static const IconData paste = LucideIcons500.clipboardPaste;
   static const IconData pickPdf = LucideIcons500.fileUp;
+  static const IconData progress = LucideIcons500.loaderCircle;
   static const IconData settings = LucideIcons500.settings;
   static const IconData swap = LucideIcons500.arrowUpDown;
   static const IconData text = LucideIcons500.text;

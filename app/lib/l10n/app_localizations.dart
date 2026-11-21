@@ -2131,11 +2131,131 @@ abstract class AppLocalizations {
   /// **'ChangeLens had a problem on its side. Try again in a moment.'**
   String get errorServer;
 
-  /// No description provided for @projectComparisons.
+  /// No description provided for @homeHeadline.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 comparison} other{{count} comparisons}}: {status}'**
-  String projectComparisons(int count, String status);
+  /// **'{count, plural, =1{1 brief changed.} other{{count} briefs changed.}}'**
+  String homeHeadline(int count);
+
+  /// No description provided for @homeHeadlineLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s see what moved.'**
+  String get homeHeadlineLead;
+
+  /// No description provided for @homeQuiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new to check.'**
+  String get homeQuiet;
+
+  /// No description provided for @homeQuietLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare two briefs to see what moved.'**
+  String get homeQuietLead;
+
+  /// No description provided for @homeMovedUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{thing moved} other{things moved}}'**
+  String homeMovedUnit(int count);
+
+  /// No description provided for @homeToCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} to check'**
+  String homeToCheck(int count);
+
+  /// No description provided for @homeToCheckUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'to check'**
+  String get homeToCheckUnit;
+
+  /// No description provided for @homeAllChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'All checked'**
+  String get homeAllChecked;
+
+  /// No description provided for @homeNotCompared.
+  ///
+  /// In en, this message translates to:
+  /// **'No comparison yet'**
+  String get homeNotCompared;
+
+  /// No description provided for @homeReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading {label}…'**
+  String homeReading(String label);
+
+  /// No description provided for @homeComparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparing…'**
+  String get homeComparing;
+
+  /// No description provided for @homeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison failed'**
+  String get homeFailed;
+
+  /// No description provided for @homeSecondLook.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 needs a second look} other{{count} need a second look}}'**
+  String homeSecondLook(int count);
+
+  /// No description provided for @homePairA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'{earlier} compared with the newer {newer}'**
+  String homePairA11y(String earlier, String newer);
+
+  /// No description provided for @homeOpenReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the report'**
+  String get homeOpenReport;
+
+  /// No description provided for @homeTopicDeadlines.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 deadline} other{{count} deadlines}}'**
+  String homeTopicDeadlines(int count);
+
+  /// No description provided for @homeTopicDeliverables.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 deliverable} other{{count} deliverables}}'**
+  String homeTopicDeliverables(int count);
+
+  /// No description provided for @homeTopicResponsibilities.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 responsibility} other{{count} responsibilities}}'**
+  String homeTopicResponsibilities(int count);
+
+  /// No description provided for @homeTopicApprovalWording.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} approval wording'**
+  String homeTopicApprovalWording(int count);
+
+  /// No description provided for @homeTopicBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} budget'**
+  String homeTopicBudget(int count);
+
+  /// No description provided for @homeTopicOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} other'**
+  String homeTopicOther(int count);
 
   /// No description provided for @historyCompareAgain.
   ///

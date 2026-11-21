@@ -1241,14 +1241,133 @@ class AppLocalizationsDe extends AppLocalizations {
       'Bei ChangeLens ist ein Problem aufgetreten. Versuche es gleich noch einmal.';
 
   @override
-  String projectComparisons(int count, String status) {
+  String homeHeadline(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Vergleiche',
-      one: '1 Vergleich',
+      other: '$count Briefings geändert.',
+      one: '1 Briefing geändert.',
     );
-    return '$_temp0: $status';
+    return '$_temp0';
+  }
+
+  @override
+  String get homeHeadlineLead => 'Sieh dir an, was sich geändert hat.';
+
+  @override
+  String get homeQuiet => 'Nichts Neues zu prüfen.';
+
+  @override
+  String get homeQuietLead =>
+      'Vergleiche zwei Briefings und sieh, was sich geändert hat.';
+
+  @override
+  String homeMovedUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Änderungen',
+      one: 'Änderung',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeToCheck(int count) {
+    return '$count zu prüfen';
+  }
+
+  @override
+  String get homeToCheckUnit => 'zu prüfen';
+
+  @override
+  String get homeAllChecked => 'Alles geprüft';
+
+  @override
+  String get homeNotCompared => 'Noch kein Vergleich';
+
+  @override
+  String homeReading(String label) {
+    return '$label wird gelesen …';
+  }
+
+  @override
+  String get homeComparing => 'Wird verglichen …';
+
+  @override
+  String get homeFailed => 'Vergleich fehlgeschlagen';
+
+  @override
+  String homeSecondLook(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count brauchen einen zweiten Blick',
+      one: '1 braucht einen zweiten Blick',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homePairA11y(String earlier, String newer) {
+    return '$earlier verglichen mit dem neueren $newer';
+  }
+
+  @override
+  String get homeOpenReport => 'Bericht öffnen';
+
+  @override
+  String homeTopicDeadlines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Fristen',
+      one: '1 Frist',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeTopicDeliverables(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Leistungen',
+      one: '1 Leistung',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeTopicResponsibilities(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Zuständigkeiten',
+      one: '1 Zuständigkeit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeTopicApprovalWording(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Freigabeformulierungen',
+      one: '1 Freigabeformulierung',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeTopicBudget(int count) {
+    return '$count Budget';
+  }
+
+  @override
+  String homeTopicOther(int count) {
+    return '$count Sonstiges';
   }
 
   @override

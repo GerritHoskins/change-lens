@@ -6,6 +6,10 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'project_summary.dart';
+
+export 'project_summary.dart';
+
 class ApiException implements Exception {
   ApiException(this.status, this.code, [this.detail]);
 
@@ -15,21 +19,6 @@ class ApiException implements Exception {
 
   @override
   String toString() => detail == null ? code : '$code ($detail)';
-}
-
-class Project {
-  Project(Map<String, dynamic> j)
-      : id = j['id'] as String,
-        name = j['name'] as String,
-        clientLabel = j['client_label'] as String?,
-        comparisonCounts = Map<String, int>.from(j['comparison_counts'] as Map? ?? const {});
-
-  final String id, name;
-  final String? clientLabel;
-  final Map<String, int> comparisonCounts;
-
-  /// Everything a list row shows; equal signatures mean a poll changed nothing.
-  String get signature => '$id|$name|$clientLabel|$comparisonCounts';
 }
 
 class Version {

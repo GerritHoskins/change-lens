@@ -88,10 +88,17 @@ partial processing, personal review and client approval always have explicit tex
 
 ## Components and state map
 
-- **Projects:** Compare is the main action, pinned at the bottom like every other screen's; each project a `surface` row on `ground` (radius 18, `space-3` apart) with actual server
-  comparison counts. The home artboard's hero and tiles need finding counts per project, which the
-  list response does not carry, so they are not built. The report headline leads with the count
-  ("6 things moved", "6 Änderungen"). Empty state, creation, refresh and connection recovery remain.
+- **Projects (home artboard, built 2026-11-21):** Compare is the main action, pinned at the bottom like every
+  other screen's. The headline leads with the result ("2 briefs changed.", then a `muted` line); with nothing
+  to check it says so. A bento follows, `space-3` apart, built only from the list response's
+  `latest_comparison` (server counts, never derived): one `marker` hero (radius 28) for the changed project
+  compared most recently, with name, "v1 → v2", the count in `figure`, two topic counts as white pills plus
+  "+N", the dashed `review` pill for "need a second look" and an ink arrow disc; it opens the report. Then a
+  pair of `surface` tiles (radius 24, min 148) for the next projects to check or being read, never a lone
+  tile and none at large text; then `surface` rows (radius 18, min 56) with the status in words ("All
+  checked", "3 to check", a failure in `error`). "Changed" means the latest comparison has findings without
+  a review. Each block is one button whose label says all of it. Empty state, creation, refresh and
+  connection recovery remain.
 - **Project:** Compare pinned at the bottom as the main action, and immutable versions; deletion remains a
   distinct destructive confirmation using the existing server behavior.
 - **History (P6, WP-D, 2026-11-16; owner-approved drafts on the WP-D/E canvas):** one list
