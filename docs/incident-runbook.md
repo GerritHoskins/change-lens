@@ -169,7 +169,7 @@ restart the services that read it (`docker compose up -d`).
 |---|---|---|---|
 | Server login (SSH key, root) | The owner's PC | IONOS console and `~/.ssh/authorized_keys` on the server | Check for unknown keys and users first |
 | Postgres passwords (superuser, owner, app, Logto, backup) | `postgres.env`, `admin.env`, `changelens.env`, `worker.env`, `logto.env`, `backup.env` | `ALTER ROLE … PASSWORD` in Postgres, then the files | Each of the six files names one or more of them. The backup role's: change it in `postgres.env` and `backup.env`, run `docker compose up -d`, then the role script (runbook F) |
-| Object storage keys (documents; backups) | `changelens.env` and `worker.env`; `backup.env` | IONOS console | Each side's key belongs to an IONOS user of its own, let into one bucket by a bucket policy (runbook F, "Separate storage keys"; on the server since 2026-11-19, LR-13). The account owner's key reaches both buckets and is kept off the server |
+| Object storage keys (documents; backups) | `changelens.env` and `worker.env`; `backup.env` | IONOS console | Each side's key belongs to an IONOS user of its own, let into one bucket by a bucket policy (`deploy/ionos/one-off-releases.md`, "Separate storage keys"; on the server since 2026-11-19, LR-13). The account owner's key reaches both buckets and is kept off the server |
 | Model key `IONOS_API_TOKEN` | `worker.env` | IONOS console | Only the worker reads it |
 | Logto Management credential | `changelens.env` | Logto console, the machine-to-machine app (runbook C5) | It can link identities and delete users. The api and retention read it; the worker doesn't start when it is given it |
 | `CHANGELENS_RATE_LIMIT_KEY` | `changelens.env` | A new random value | Counters start again |

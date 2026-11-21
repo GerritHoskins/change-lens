@@ -180,10 +180,14 @@ the main action is a 60-pixel pill.
 
 **Recorded exceptions to one main action (designed 2026-11-14, built 2026-11-16).** Two
 first-launch screens have no black main pill. (1) Sign-in shows its methods as buttons of the
-same 60-pixel height, because App Review 4.8 requires an *equivalent* option. Apple uses
-Apple's own button (`SignInWithAppleButton`: logo, black on light, white on dark). Google is
-an outlined ink pill until Google's official "G" asset is bundled (not in the repository).
-Email is an outlined ink pill. (2) The usage-events consent screen (D-18 tier B) shows Allow
+same 60-pixel height, because App Review 4.8 requires an *equivalent* option. All three are
+the same pill with the `title` label (`CalmProviderButton`, `calmProviderPill`), in the two
+styles Apple allows for its button: white with a 2-pixel ink outline on the light theme,
+plain white on the dark theme, ink content on both. This pill does not flip with the theme.
+Apple adds Apple's logo in the label's colour before the label (changed 2026-11-20: the
+package's black `SignInWithAppleButton` drew a 26-pixel label on a black pill and read as the
+main action on the iPhone). Google has no "G" until Google's official asset is bundled (not in
+the repository). (2) The usage-events consent screen (D-18 tier B) shows Allow
 and Don't allow as two identical outlined ink pills (`CalmEqualPillPair`), nothing preselected,
 no Back, because refusing must be as easy as accepting. With `CHANGELENS_CONSENT=true` it follows
 onboarding until the account has answered for the current policy version; without the flag no route

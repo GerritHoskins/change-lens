@@ -1,7 +1,8 @@
 /*
  * ChangeLens branding for the Logto 1.45 sign-in experience (OSS, auth.pixeltronic.dev).
- * Source of truth for Console → Sign-in experience → Branding → Custom CSS (applied by script, see
- * docs/logto-branding-plan.md §4.4). Calm Bold tokens: DESIGN.md.
+ * Source of truth for Console → Sign-in experience → Branding → Custom CSS. Never paste it into the
+ * Console by hand: scripts/logto/apply-branding.py applies it together with sign-in-experience.json
+ * (docs/logto-branding-plan.md §4.4). Calm Bold tokens: DESIGN.md.
  *
  * Not set here: the brand colour. Logto writes --color-brand-* inline on <body> from the Console values
  * (light #111114, dark #F3F3EF), which beats any stylesheet.
@@ -9,8 +10,12 @@
  * Three kinds of rule, from robust to fragile:
  *   1. Theme variables under html[data-theme] body: Logto's own design tokens. Safe across upgrades.
  *   2. Stable hooks: .logto_page-container, .logto_main-content, .logto_branding-header, .logto_signature.
- *   3. FRAGILE: suffix matches on CSS-module class names ([class$='_headline'], [class*='_primary']).
+ *   3. FRAGILE: suffix matches on CSS-module class names ([class$='_headline'], [class*='_primary'],
+ *      [class*='_passcode']). Production names are `<hash>_<local>` (packages/experience/vite.config.ts).
  *      Re-check these on every Logto upgrade (S7 runbook, "Logto upgrade").
+ *
+ * The code and MFA pages (SecondaryPageLayout) have no .logto_branding-header: their title already uses
+ * --font-headline-1 on mobile and is left-aligned, so tier 1 covers it.
  */
 
 /* Roboto, the app's bundled font, served from this origin by Caddy: no third-party font request. */
@@ -50,6 +55,10 @@ html[data-theme='light'] body {
   --color-line-border: #86868E !important;    /* control-border */
   --color-line-divider: #DCDCD6 !important;   /* line */
   --color-danger-default: #C4320A !important; /* error */
+  --color-bg-float: #FFFFFF !important;       /* desktop card: surface on ground */
+  --color-bg-state-disabled: #E4E4DE !important; /* disabled */
+  --color-type-disable: #8A8A92 !important;   /* disabled-text */
+  --color-bg-toast: #111114 !important;       /* as the app's snackbar: ink, label in ground white */
 }
 
 html[data-theme='dark'] body {
@@ -62,14 +71,23 @@ html[data-theme='dark'] body {
   --color-line-border: #76767E !important;
   --color-line-divider: #34343A !important;
   --color-danger-default: #FF8A65 !important;
+  --color-bg-float: #1E1E22 !important;
+  --color-bg-body-overlay: #1E1E22 !important;
+  --color-bg-float-overlay: #1E1E22 !important;
+  --color-bg-state-disabled: #2A2A2F !important;
+  --color-type-disable: #6E6E76 !important;
   /* Logto paints the primary button label with --color-static-white. On the dark brand colour (#F3F3EF)
-     that would be white on near-white, so it becomes ink. Also used by Logto's toast: check it (§5). */
+     that would be white on near-white, so it becomes ink. Logto's toast label uses the same variable, so
+     the toast turns light too (Logto's default is dark grey, which would leave ink on grey). */
   --color-static-white: #111114 !important;
+  --color-bg-toast: #F3F3EF !important;
 }
 
 /* 2. Stable hooks ------------------------------------------------------------------------------- */
 .logto_branding-header { align-items: flex-start !important; }
-.logto_main-content a { text-decoration: underline; text-underline-offset: 2px; }
+/* Links are ink and underlined. !important: Logto's TextLink sets `text-decoration: none` from a
+   two-class module selector, which outranks this one. */
+.logto_main-content a { text-decoration: underline !important; text-underline-offset: 2px; }
 
 /* 3. FRAGILE: CSS-module suffix selectors (re-check on every Logto upgrade) ---------------------- */
 /* Calm Bold headline: large, heavy, left-aligned (Logto: centred 20 px on mobile). */
@@ -86,3 +104,6 @@ html[data-theme='dark'] body {
   border-radius: 999px !important;
   font: var(--font-label-1) !important;
 }
+/* Code boxes: Logto's focus is a 1 px border in the brand colour, one grey step from the 1 px
+   control-border. 2 px ink makes the focused box readable without colour (box-sizing is border-box). */
+.logto_main-content [class*='_passcode'] input:focus { border-width: 2px !important; }
