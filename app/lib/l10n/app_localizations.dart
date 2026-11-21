@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Reading versions'**
   String get comparisonReading;
 
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get loading;
+
   /// No description provided for @loadingComparison.
   ///
   /// In en, this message translates to:
@@ -1153,6 +1159,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to projects'**
   String get returnToProjects;
+
+  /// No description provided for @reportCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing moved} =1{1 thing moved} other{{count} things moved}}'**
+  String reportCount(int count);
 
   /// No description provided for @reportHeading.
   ///

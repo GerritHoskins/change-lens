@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons_500.dart';
 abstract final class CalmIcons {
   static const IconData add = LucideIcons500.plus;
   static const IconData approval = LucideIcons500.mailCheck;
+  static const IconData arrowDown = LucideIcons500.arrowDown;
   static const IconData arrowUp = LucideIcons500.arrowUp;
   static const IconData arrowForward = LucideIcons500.arrowRight;
   static const IconData back = LucideIcons500.arrowLeft;

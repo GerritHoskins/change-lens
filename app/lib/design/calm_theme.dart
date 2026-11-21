@@ -26,7 +26,12 @@ class CalmColors extends ThemeExtension<CalmColors> {
   final Color muted, line, soft, marker, onMarker, warning, warningSurface, quote, review, link;
 
   static const ink = Color(0xff111114);
+  /// White in both themes: the provider pill (Apple's allowed style) and a PDF page preview.
+  static const paper = Color(0xffffffff);
   static const markerFill = Color(0x8cdfff4f);
+  /// The dimmed screen behind a sheet: ink at 40% on light. On dark, ink over a near-black ground
+  /// changes nothing, so the scrim is black at 60%. Sheets take it from `bottomSheetTheme`.
+  static const scrim = Color(0x66111114), scrimDark = Color(0x99000000);
 
   static CalmColors of(BuildContext context) =>
       Theme.of(context).extension<CalmColors>() ?? light;
@@ -132,7 +137,9 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
     surface: background, onSurface: ink, onSurfaceVariant: colors.muted,
     surfaceContainerLowest: background, surfaceContainerLow: surface,
     surfaceContainer: surface, surfaceContainerHigh: colors.soft, surfaceContainerHighest: colors.soft,
-    outline: colors.line, outlineVariant: colors.line,
+    // `outline` bounds controls (an unselected switch thumb and track), so it is `control-border`;
+    // `outlineVariant` stays the decorative `line`.
+    outline: controlBorder, outlineVariant: colors.line,
     error: dark ? const Color(0xffff8a65) : const Color(0xffc4320a),
   );
   // Roboto is bundled at 400/600/700 (owner choice over Inter Tight), so the tokens'
@@ -144,7 +151,7 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
   final text = TextTheme(
     displayLarge: role(54, FontWeight.w700, 54, tracking: -2),   // display
     displayMedium: role(64, FontWeight.w700, 56, tracking: -2),  // figure
-    displaySmall: role(38, FontWeight.w700, 40, tracking: -1.4),
+    displaySmall: role(32, FontWeight.w700, 35, tracking: -1.4),  // compact headline (onboarding steps 2 to 6)
     headlineLarge: role(38, FontWeight.w700, 40, tracking: -1.4), // headline
     headlineMedium: role(28, FontWeight.w700, 32, tracking: -.8), // value
     headlineSmall: role(24, FontWeight.w700, 29, tracking: -.4),
@@ -228,13 +235,15 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
     bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface, showDragHandle: true,
       surfaceTintColor: Colors.transparent, elevation: 0, modalElevation: 0,
       dragHandleColor: colors.line, dragHandleSize: const Size(40, 5),
-      modalBarrierColor: CalmColors.ink.withValues(alpha: .4),
+      modalBarrierColor: dark ? CalmColors.scrimDark : CalmColors.scrim,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(
         top: Radius.circular(CalmRadius.sheet)))),
     snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, backgroundColor: ink,
       contentTextStyle: text.bodyMedium?.copyWith(color: background)),
     textSelectionTheme: TextSelectionThemeData(cursorColor: colors.link,
-      selectionColor: colors.marker.withValues(alpha: .55), selectionHandleColor: colors.link),
+      // Marker behind ink text on light; on dark, selected text stays light, so the selection is `link`.
+      selectionColor: dark ? colors.link.withValues(alpha: .4) : colors.marker.withValues(alpha: .55),
+      selectionHandleColor: colors.link),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: primary, linearTrackColor: colors.line),
   );
 }

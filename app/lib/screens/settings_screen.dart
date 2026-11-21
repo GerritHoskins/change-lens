@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 
 import '../auth/session.dart';
+import '../design/calm_controls.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
@@ -56,13 +57,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(l.deleteAccountConfirmTitle),
         content: Text(l.deleteAccountConfirmBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
-          TextButton(
-            key: const Key('confirm-delete-account'),
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.deleteAccount),
-          ),
+          calmDialogAction(context, label: l.cancel, onPressed: () => Navigator.pop(context, false)),
+          calmDialogAction(context, key: const Key('confirm-delete-account'), label: l.deleteAccount,
+            destructive: true, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -113,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text('Access token lifetime: ${widget.session.accessTokenLifetime} s',
             key: const Key('token-lifetime'), style: text.bodySmall?.copyWith(color: colors.muted))),
         Padding(padding: const EdgeInsets.symmetric(vertical: 28), child: Divider(color: colors.line, height: 1)),
-        Text(l.deleteAccount, style: text.titleMedium),
+        Semantics(header: true, child: Text(l.deleteAccount, style: text.titleMedium)),
         const SizedBox(height: 8),
         Text(l.deleteAccountIntro, style: text.bodyMedium),
         const SizedBox(height: 16),

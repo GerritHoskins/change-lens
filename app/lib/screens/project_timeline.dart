@@ -6,6 +6,7 @@
 // version. Versions compared with the same earlier version but not with each other are a fork:
 // shown together, not ranked. Versions in no comparison are listed apart, in label order.
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 
 import '../api.dart';
 import '../design/calm_icons.dart';
@@ -343,20 +344,22 @@ class _VersionTile extends StatelessWidget {
       // Quiet on purpose: it repeats on every row and must not outweigh the version names.
       Flexible(child: Text(l.historyCompareFrom, style: text.bodySmall?.copyWith(color: colors.muted))),
     ]);
+    // The label replaces the row's text, so the tap is passed on with it: without onTap here the
+    // node would say "button" and do nothing for TalkBack and VoiceOver.
     return Semantics(key: Key('version-${version.id}'), button: onTap != null, excludeSemantics: true,
+      onTap: onTap,
       label: onTap != null ? l.historyVersionA11y(version.label, versionMeta(l, version))
           : '${version.label}, ${versionMeta(l, version)}',
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(CalmRadius.md),
-        child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (rail) ...[
+        // The rail is positioned over the row's own height: no second layout pass to measure it.
+        child: Stack(children: [
+          if (rail) PositionedDirectional(start: 0, top: 0, bottom: 0,
             // The dot sits on the name's first line, however tall the row's details grow.
-            _Rail(top: top, bottom: bottom, lead: 8 + (MediaQuery.textScalerOf(context).scale(22) - 12) / 2,
-              child: Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: ink))),
-            SizedBox(width: large ? 8 : 12),
-          ],
-          Expanded(child: Container(
+            child: _Rail(top: top, bottom: bottom, lead: 8 + (MediaQuery.textScalerOf(context).scale(22) - 12) / 2,
+              child: Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: ink)))),
+          Padding(padding: EdgeInsetsDirectional.only(start: rail ? (large ? 28 : 32) : 0), child: Container(
             constraints: const BoxConstraints(minHeight: 64),
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: rail ? null : BoxDecoration(border: Border(bottom: BorderSide(color: colors.line))),
@@ -374,7 +377,7 @@ class _VersionTile extends StatelessWidget {
                 if (onTap != null) ...[const SizedBox(height: 8), compareFrom()],
               ]),
           )),
-        ])),
+        ]),
       ));
   }
 }
@@ -402,13 +405,18 @@ class _LinkTile extends StatelessWidget {
     final cause = failed ? comparisonFailureMessages(l, comparison, versions).firstOrNull : null;
     // With Compare again on the card, the generic "start a new comparison" advice would repeat it.
     final why = cause == l.comparisonFailedDetails && onCompareAgain != null ? l.comparisonFailedShort : cause;
-    return IntrinsicHeight(key: Key('link-${comparison.id}'),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    void open() => Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ComparisonScreen(comparisonId: comparison.id, versions: versions)));
+    return Stack(key: Key('link-${comparison.id}'), children: [
         // A plain rail: the card's own "earlier → newer" carries the direction.
-        _Rail(top: true, bottom: bottom, child: const SizedBox.shrink()),
-        SizedBox(width: large ? 8 : 12),
-        Expanded(child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Semantics(
-          button: true, excludeSemantics: true,
+        PositionedDirectional(start: 0, top: 0, bottom: 0,
+          child: _Rail(top: true, bottom: bottom, child: const SizedBox.shrink())),
+        Padding(padding: EdgeInsetsDirectional.only(start: large ? 28 : 32, top: 4, bottom: 4), child: Semantics(
+          // One node for the card: its tap opens the comparison, and "Compare again" (hidden with the
+          // card's other text) is offered as a custom action.
+          button: true, excludeSemantics: true, onTap: open,
+          customSemanticsActions: onCompareAgain == null ? null
+              : {CustomSemanticsAction(label: l.historyCompareAgain): onCompareAgain!},
           label: [l.historyLinkA11y(earlier, newer, scope, status), ?why].join(' '),
           child: Material(
             color: Theme.of(context).cardTheme.color,
@@ -416,8 +424,7 @@ class _LinkTile extends StatelessWidget {
               side: BorderSide(color: colors.line)),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => ComparisonScreen(comparisonId: comparison.id, versions: versions))),
+              onTap: open,
               child: Padding(
                 padding: large ? const EdgeInsets.all(12) : const EdgeInsetsDirectional.fromSTEB(16, 12, 14, 12),
                 child: Row(children: [
@@ -449,7 +456,7 @@ class _LinkTile extends StatelessWidget {
                 ])),
             ),
           ),
-        ))),
-      ]));
+        )),
+      ]);
   }
 }

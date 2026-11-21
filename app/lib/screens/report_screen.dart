@@ -84,20 +84,27 @@ class _ReportScreenState extends State<ReportScreen> {
     return Scaffold(
       appBar: AppBar(title: r == null ? Text(l.reportTitle) : null),
       body: r == null
-          ? error == null ? const Center(child: CircularProgressIndicator()) :
+          ? error == null ? Center(child: CircularProgressIndicator(semanticsLabel: l.loading)) :
               CalmLoadError(onRetry: loading ? null : _load)
-          : RefreshIndicator(
+          : RefreshIndicator.adaptive(
               onRefresh: _load,
               child: ListView(
                 key: PageStorageKey('report-${widget.comparisonId}'),
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
-                CalmPageHeader(title: l.reportHeading),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.viewPaddingOf(context).bottom), children: [
+                // The result leads: "6 things moved".
+                // Only what this screen lists is counted; the rest is under "more differences".
+                CalmPageHeader(title: l.reportCount(needsReview.length + r.inGroup('prioritised').length)),
                 SourcePairSummary(earlier: _label(r.earlierId, l), newer: _label(r.laterId, l), scope: r.scope ?? widget.scope),
                 Padding(padding: const EdgeInsets.only(bottom: 4),
                   child: Text(l.reviewProgress(reviewed, r.findings.length),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.muted))),
-                if (loading) const LinearProgressIndicator(),
+                // The review bar of the report artboard: `action` on `disabled`; the line above says it.
+                if (r.findings.isNotEmpty) ExcludeSemantics(child: Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 14),
+                  child: LinearProgressIndicator(value: reviewed / r.findings.length, minHeight: 8,
+                    borderRadius: BorderRadius.circular(CalmRadius.sheet), backgroundColor: colors.soft))),
+                if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
                 if (error != null) CalmWarning(text: l.contentLoadFailed,
                   child: TextButton(onPressed: loading ? null : _load, child: Text(l.retry))),
                 ...warnings(l, r),
@@ -183,7 +190,7 @@ class _AllDifferencesScreenState extends State<AllDifferencesScreen> {
       appBar: AppBar(),
       body: ListView(
         key: PageStorageKey('all-differences-${report.earlierId}-${report.laterId}'),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+        padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.viewPaddingOf(context).bottom), children: [
         CalmPageHeader(title: l.allDifferencesTitle),
         SourcePairSummary(
           earlier: widget.versions.where((v) => v.id == report.earlierId).firstOrNull?.label ?? l.sourceUnavailable,

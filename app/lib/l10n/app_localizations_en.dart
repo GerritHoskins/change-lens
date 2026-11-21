@@ -48,6 +48,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comparisonReading => 'Reading versions';
 
   @override
+  String get loading => 'Loading…';
+
+  @override
   String get loadingComparison => 'Loading comparison…';
 
   @override
@@ -633,6 +636,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnToProjects => 'Back to projects';
+
+  @override
+  String reportCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count things moved',
+      one: '1 thing moved',
+      zero: 'Nothing moved',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get reportHeading => 'What changed';

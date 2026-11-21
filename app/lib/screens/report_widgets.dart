@@ -46,15 +46,21 @@ class TopicFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final colors = CalmColors.of(context);
+    final label = Theme.of(context).textTheme.labelMedium;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(spacing: 8, children: [
         ChoiceChip(label: Text(l.topicAll), selected: selected == null,
           onSelected: (_) => onSelected(null)),
         // A topic with nothing in it is no filter; it stays only while selected, so it can be cleared.
+        // Unpressed, a topic chip shows its topic colour with `on-topic` ink in both themes; pressed,
+        // every chip turns `action`, so the selection reads the same for all topics (TopicChip).
         for (final topic in findingTopics)
           if ((counts[topic] ?? 0) > 0 || selected == topic) ChoiceChip(key: ValueKey('topic-$topic'),
-            label: Text('${topicLabel(l, topic)} (${counts[topic] ?? 0})'),
+            label: Text('${topicLabel(l, topic)} ${counts[topic] ?? 0}'),
+            backgroundColor: colors.topicSurface(topic),
+            labelStyle: selected == topic ? null : label?.copyWith(color: colors.topicForeground(topic)),
             selected: selected == topic, onSelected: (_) => onSelected(topic)),
       ])),
     );
@@ -104,7 +110,8 @@ class QuoteCard extends StatelessWidget {
     ].join(' · ');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Material(
+      // A quote that opens its source says so; a plain quote is text.
+      child: Semantics(button: onTap != null, child: Material(
         color: colors.quote,
         borderRadius: BorderRadius.circular(CalmRadius.lg),
         child: InkWell(
@@ -133,7 +140,7 @@ class QuoteCard extends StatelessWidget {
             ]),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -143,7 +150,8 @@ class FindingTile extends StatelessWidget {
   const FindingTile({super.key, required this.finding, required this.onTap});
 
   final Finding finding;
-  final VoidCallback onTap;
+  /// Null for a static example (onboarding): the tile is then not announced as a button.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +207,7 @@ class FindingTile extends StatelessWidget {
       );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
-      child: uncertain ? CalmDashedBorder(child: tile) : tile,
+      child: Semantics(button: onTap != null, child: uncertain ? CalmDashedBorder(child: tile) : tile),
     );
   }
 }

@@ -40,6 +40,7 @@ so the tokens' 800 weight renders as 700 and 500 as 400.
 | display | displayLarge | 54 / 54 / 700 | -2 |
 | figure | displayMedium | 64 / 56 / 700 | -2 |
 | headline (screen title) | headlineLarge | 38 / 40 / 700 | -1.4 |
+| compact headline (onboarding steps 2 to 6) | displaySmall | 32 / 35 / 700 | -1.4 |
 | value | headlineMedium | 28 / 32 / 700 | -0.8 |
 | title | titleMedium | 17 / 22 / 600 | |
 | body (quotes) | bodyLarge | 16 / 23 / 400 | |
@@ -87,8 +88,10 @@ partial processing, personal review and client approval always have explicit tex
 
 ## Components and state map
 
-- **Projects:** Compare is the main action, pinned at the bottom like every other screen's; simple project rows with actual server
-  comparison counts. Empty state, creation, refresh and connection recovery remain.
+- **Projects:** Compare is the main action, pinned at the bottom like every other screen's; each project a `surface` row on `ground` (radius 18, `space-3` apart) with actual server
+  comparison counts. The home artboard's hero and tiles need finding counts per project, which the
+  list response does not carry, so they are not built. The report headline leads with the count
+  ("6 things moved", "6 Änderungen"). Empty state, creation, refresh and connection recovery remain.
 - **Project:** Compare pinned at the bottom as the main action, and immutable versions; deletion remains a
   distinct destructive confirmation using the existing server behavior.
 - **History (P6, WP-D, 2026-11-16; owner-approved drafts on the WP-D/E canvas):** one list
@@ -111,7 +114,12 @@ partial processing, personal review and client approval always have explicit tex
   No dates, page counts or finding progress: the list responses don't carry them.
 - **Compare:** one form for project, ordered inputs and newer scope. Nothing is
   preselected. Swap resets scope because it now describes a different source.
-  Pending ambiguous submissions retain their body and idempotency key.
+  Pending ambiguous submissions retain their body and idempotency key. The earlier slot is a
+  `surface` card; the newer slot is filled with `marker` and keeps ink text and a white field in
+  both themes, as on the onboarding slots (2026-11-21; it was a 2-pixel marker outline). Start is
+  pinned at the bottom with its hint, and an error sits directly above it. The pinned bars of
+  Projects, Project and Compare (`CalmPinnedBar`) carry a `line` hairline, so a list scrolling
+  under them is not cut mid-word.
 - **Status:** actual reading/queued/running/terminal status; no invented progress
   percentage. The user can return to the project while processing continues.
 - **Report:** source pair/scope, personal-review count, all-differences access,
@@ -135,7 +143,9 @@ partial processing, personal review and client approval always have explicit tex
   does not claim that a physical PDF page was viewed.
 - **Forms:** new project, version import, correction, note and approval are Calm
   sheets (title, content, one main pill, Cancel under it) that scroll with the
-  keyboard and large text. Choices open a sheet of radio rows instead of a
+  keyboard and large text. The keyboard in a sheet closes on a tap on the sheet outside a field,
+  on dragging its content, on Cancel, and whenever the sheet closes (the platform is told to hide
+  it, 2026-11-21); Done on New project's last field creates the project. Choices open a sheet of radio rows instead of a
   dropdown; only the destructive delete confirmation stays an adaptive dialog. Saving feedback is localized and announced. Client approval remains
   a separate, unverified record; confirming a finding never records approval.
 - **Sign-in (WP-A, 2026-11-16):** Logo D lockup, the promise heading and body, the six
@@ -146,7 +156,9 @@ partial processing, personal review and client approval always have explicit tex
   account's methods; a completed link is announced (`linkDone`).
 - **Expired session:** a non-dismissible sheet over the current screen, never a route
   reset, so an in-memory compare draft survives. The last-used method comes first, the
-  others behind "Other ways to sign in"; Sign out is the secondary action. If a different
+  others behind "Other ways to sign in"; Sign out is the secondary action. No handle (it can't be
+  dragged): 28 pixels above the title, the last-used method as a `title` line, and the two text
+  buttons centred under the pill. If a different
   account signs in, the old one is treated as signed out and every screen above Projects closes.
 - **Settings (WP-B):** opened from the Projects menu. Account (identity, signed-in method,
   Sign out, Delete account with the adaptive destructive dialog, error and retry), then
@@ -200,6 +212,24 @@ through `userErrorMessage` (sign-in ended, not found, not accepted, server probl
 connection), never the exception's text; an upload over a server limit names the limit. The
 partial status reads "Some content couldn't be read", so it no longer collides with the
 "Partial update" scope, and project rows say "1 comparison: <status>".
+
+**Audit fixes (2026-11-21).** History rows and comparison cards replace their text with one spoken
+label, so the tap is passed to that node and "Compare again" is a custom screen-reader action. Project
+rows, finding tiles and quotes that open a source carry the button role; loading spinners are
+labelled. Topic filter chips show their topic colour with ink text until pressed, with the count
+after the name ("Budget 1"); the report shows the review bar (`action` on `disabled`) under the
+"Your review" line. On iOS: alert actions are Cupertino actions, pull-to-refresh is the adaptive
+indicator, the approval date uses the date wheels, and a swipe from the left edge steps back in
+onboarding (where `canPop` is off). The two most recently used original PDFs stay in memory for the
+Api's lifetime, so stepping through findings fetches each once. A poll that changed nothing rebuilds
+nothing. Dark-theme text selection is `link` at 40%, because selected text stays light there.
+Disabled labels keep the `disabled-text` token and the 38% dim of the design system: disabled
+controls are exempt from contrast minimums and always come with a `muted` line saying what is missing. A step
+change in onboarding and "Confirm and next" on a finding are announced with the new position. The
+sheet scrim is ink at 40% on light and black at 60% on dark (`bottomSheetTheme`). On a screen wider
+than 600 pixels (a large Android screen that ignores the portrait lock) the phone layout is centred
+at 600 on `ground`. Example finding tiles in onboarding are not announced as buttons. The marked
+quote in readable text uses `marker-fill` on light, so a selection shows through it.
 
 ## Motion and platform behavior
 

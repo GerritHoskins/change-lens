@@ -48,6 +48,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get comparisonReading => 'Versionen werden gelesen';
 
   @override
+  String get loading => 'Wird geladen…';
+
+  @override
   String get loadingComparison => 'Vergleich wird geladen…';
 
   @override
@@ -637,6 +640,18 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get returnToProjects => 'Zurück zu den Projekten';
+
+  @override
+  String reportCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Änderungen',
+      one: '1 Änderung',
+      zero: 'Keine Änderungen',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get reportHeading => 'Was sich geändert hat';

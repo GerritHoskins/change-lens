@@ -11,6 +11,7 @@
   "comparePickFailed": "The PDF could not be prepared. Try picking it again.",
   "useText": "Use this text",
   "comparisonReading": "Reading versions",
+  "loading": "Loading…",
   "loadingComparison": "Loading comparison…",
   "settingsSaveFailed": "Settings could not be saved. Please try again.",
   "evidenceChecking": "Checking the source passages…",
@@ -268,6 +269,8 @@
   "swapVersions": "Swap earlier and newer",
   "comparisonReturnHint": "You can leave this screen and return to the comparison from its project.",
   "returnToProjects": "Back to projects",
+  "reportCount": "{count, plural, =0{Nothing moved} =1{1 thing moved} other{{count} things moved}}",
+  "@reportCount": {"placeholders": {"count": {"type": "int"}}},
   "reportHeading": "What changed",
   "reviewProgress": "Your review · {reviewed} of {total}",
   "@reviewProgress": {

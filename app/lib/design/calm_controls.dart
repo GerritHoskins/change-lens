@@ -1,6 +1,8 @@
 // Calm Bold controls that Material does not draw on its own: the bottom sheet, radio rows and a
 // select field that chooses in a sheet instead of a Material dropdown overlay.
+import 'package:flutter/cupertino.dart' show CupertinoDialogAction;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import 'calm_icons.dart';
@@ -31,10 +33,35 @@ class CalmSurfaceScope extends StatelessWidget {
   }
 }
 
+/// The focused field gives up focus, which closes the keyboard and leaves what was typed.
+void calmDismissKeyboard() => FocusManager.instance.primaryFocus?.unfocus();
+
 /// Opens a Calm Bold sheet: `surface`, `radius-sheet` top corners, a handle, the screen dimmed ink 40%.
+/// However the sheet closes (its button, Cancel, a drag, the scrim), the platform is told to hide the
+/// keyboard, so none is left up over a screen that has no field to close it from. A sheet opened over
+/// another sheet's focused field (a choice inside Correct) leaves that field its keyboard.
 Future<T?> showCalmSheet<T>(BuildContext context, {required WidgetBuilder builder}) =>
     showModalBottomSheet<T>(context: context, isScrollControlled: true, useSafeArea: true,
-      barrierColor: CalmColors.ink.withValues(alpha: .4), builder: builder);
+      builder: builder)
+        .whenComplete(() => WidgetsBinding.instance.addPostFrameCallback((_) {
+          final owned = FocusManager.instance.primaryFocus?.context
+              ?.findAncestorStateOfType<EditableTextState>() != null;
+          if (!owned) SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+        }));
+
+/// One action of an adaptive alert: Cupertino's own action on iOS and macOS (red when destructive), an
+/// ink or `error` text button elsewhere.
+Widget calmDialogAction(BuildContext context, {Key? key, required String label,
+    required VoidCallback onPressed, bool destructive = false}) {
+  final theme = Theme.of(context);
+  if (theme.platform == TargetPlatform.iOS || theme.platform == TargetPlatform.macOS) {
+    return CupertinoDialogAction(key: key, onPressed: onPressed, isDestructiveAction: destructive,
+      child: Text(label));
+  }
+  return TextButton(key: key, onPressed: onPressed,
+    style: destructive ? TextButton.styleFrom(foregroundColor: theme.colorScheme.error) : null,
+    child: Text(label));
+}
 
 /// The validator of a field that must not be blank: [message] names what is missing. The sheet sits
 /// in a [Form], and its main button calls `validate()`: every message shows at its field and the first
@@ -70,9 +97,13 @@ class CalmSheet extends StatelessWidget {
     final colors = CalmColors.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: CalmSurfaceScope(child: Column(mainAxisSize: MainAxisSize.min,
+      // A tap on the sheet outside a field or button closes the keyboard, as does dragging the content.
+      child: CalmSurfaceScope(child: GestureDetector(
+        behavior: HitTestBehavior.translucent, excludeFromSemantics: true, onTap: calmDismissKeyboard,
+        child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Flexible(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Semantics(header: true, namesRoute: true, child: Text(title, style: theme.textTheme.headlineMedium)),
               if (lead != null) Padding(padding: const EdgeInsets.only(top: 8),
@@ -83,9 +114,10 @@ class CalmSheet extends StatelessWidget {
           SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (action != null) FilledButton(key: actionKey, onPressed: onAction, child: Text(action!)),
-              TextButton(onPressed: () => Navigator.pop(context), child: Text(dismissLabel ?? l.cancel)),
+              TextButton(onPressed: () { calmDismissKeyboard(); Navigator.pop(context); },
+                child: Text(dismissLabel ?? l.cancel)),
             ]))),
-        ])),
+        ]))),
     );
   }
 }
@@ -159,7 +191,9 @@ class CalmSelectField<T> extends StatelessWidget {
   final ValueChanged<T>? onChanged;
 
   Future<void> _choose(BuildContext context) async {
-    final picked = await showCalmSheet<T>(context, builder: (context) => CalmSheet(title: label, children: [
+    // Opened from the navigator's context: a field on a block that keeps its own colours (the lime
+    // newer slot) must not pass that local theme on to the sheet.
+    final picked = await showCalmSheet<T>(Navigator.of(context).context, builder: (context) => CalmSheet(title: label, children: [
       RadioGroup<T>(groupValue: value, onChanged: (v) => Navigator.pop(context, v),
         child: CalmRadioRows(children: [for (final o in options)
           CalmRadioRow<T>(value: o.value, title: o.label, subtitle: o.detail, enabled: o.enabled)])),
