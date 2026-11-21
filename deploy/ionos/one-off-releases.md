@@ -153,9 +153,17 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
 Until this release the backup job is on the `outbound` network and can reach any host. From it the job is on
 `data` only, with no route out: rclone uploads through the egress proxy, which lets HTTPS through to the hosts
 in `/etc/changelens/egress-allowlist.txt` and nothing else. The backup job is recreated and its log starts
-again; nothing else in this change restarts a service. The restore test is unchanged. **Not yet run on the server.** Checked in Docker on 2026-11-21 with this
-`compose.yaml` and made-up keys: before the change the container connected to `1.1.1.1:443` and to
-`example.com`; after it neither, and the storage host answered through the proxy.
+again; nothing else in this change needs a restart. The restore test is unchanged. Checked in Docker on
+2026-11-21 with this `compose.yaml` and made-up keys: before the change the container connected to
+`1.1.1.1:443` and to `example.com`; after it neither, and the storage host answered through the proxy.
+
+**Done on the server on 2026-11-21**, with the checkout at `93d3e84`. The backup job was recreated; the proxy
+was not restarted. Step 4 printed `rc=1`. Step 5 printed `rc=1`, and the proxy logged `TCP_DENIED/403` for
+`CONNECT example.com:443`. Step 6 listed 6 base backups. Step 7 showed `backup started` at 16:04:33 UTC and
+`wal shipped=1` at 16:07:34 UTC, with no `wal upload failed`. Step 1's line was not in the output that was
+kept; step 6 shows that the proxy lets the job's storage host through. The run of the release command that
+was kept found the backup job already running and started the api, the worker and retention again. Not looked
+at: the proxy's own log line for the storage host. Still to come: `base backup uploaded` within a day.
 
 1. **Before: the job's storage host is on the allow-list.** Prints the host and `on the list`:
    ```bash

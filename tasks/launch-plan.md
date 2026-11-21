@@ -112,7 +112,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
-- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, a fifth with L33 on 2026-11-21; 2 medium open: L34 and the backup job's internet access (LR-13: built 2026-11-21, not yet on the server); runbook drafted)
+- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, a fifth with L33 and a sixth with the backup job's internet access (LR-13) on 2026-11-21, both on the server; 1 medium open: L34; runbook drafted)
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18; on the server since the release of 2026-11-19, not checked there)
 - [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, `deploy/ionos/one-off-releases.md`; the base backup and a comparison from the iPhone ran on 2026-11-20)
 - [x] L33 Per-account bounds on uploads and queued work (L22, LR-10) (built 2026-11-21 with the limits the owner kept; on the server since the release of the same day; the refusal itself was not triggered there)
