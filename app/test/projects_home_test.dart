@@ -202,7 +202,7 @@ void main() {
       expect(find.descendant(of: find.byType(HomeRow), matching: find.text(text)), findsWidgets, reason: text);
     }
     final failed = tester.widget<Text>(find.text('Comparison failed'));
-    expect(failed.style!.color, CalmColors.light.dark ? isNull : const Color(0xffc4320a));
+    expect(failed.style!.color, CalmColors.light.dark ? isNull : CalmColors.errorLight);
     expect(find.textContaining('0 to check'), findsNothing);
   });
 

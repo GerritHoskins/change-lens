@@ -141,7 +141,7 @@ List<Widget> warnings(AppLocalizations l, Report r) {
     if (r.warnings.contains('cost_ceiling')) l.warningCeiling,
     if (r.withheld > 0) l.withheld(r.withheld),
   ];
-  return [if (messages.isNotEmpty) CalmWarning(text: messages.join('\n\n'))];
+  return [if (messages.isNotEmpty) CalmWarning(kind: CalmMessageKind.warning, text: messages.join('\n\n'))];
 }
 
 /// Every finding, then text no finding explains, then moved or reformatted text (AC-5, AC-13, AC-18).

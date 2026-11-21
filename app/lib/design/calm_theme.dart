@@ -36,6 +36,16 @@ class CalmColors extends ThemeExtension<CalmColors> {
   static CalmColors of(BuildContext context) =>
       Theme.of(context).extension<CalmColors>() ?? light;
 
+  /// Message colours ([CalmMessage]): each kind has an accent (border and icon, 3:1+ on its surface
+  /// and on ground) and a tinted surface that ink text reads on at 12:1+. `error` is the scheme's
+  /// error colour. Amber is not `review` orange and never dashed; blue is `link`.
+  static const errorLight = Color(0xffc81e1e), errorDark = Color(0xffff8a8a);
+  Color get error => dark ? errorDark : errorLight;
+  Color get errorSurface => dark ? const Color(0xff3a1d1d) : const Color(0xfffdecec);
+  Color get caution => dark ? const Color(0xffffc857) : const Color(0xff8a5300);
+  Color get cautionSurface => dark ? const Color(0xff33290f) : const Color(0xfffff3d6);
+  Color get infoSurface => dark ? const Color(0xff25234a) : const Color(0xffecebff);
+
   static const light = CalmColors(dark: false, muted: Color(0xff5e5e66),
     line: Color(0xffdcdcd6), soft: Color(0xffe4e4de), marker: Color(0xffdfff4f),
     onMarker: ink, warning: ink, warningSurface: Colors.white, quote: Colors.white,
@@ -140,7 +150,8 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
     // `outline` bounds controls (an unselected switch thumb and track), so it is `control-border`;
     // `outlineVariant` stays the decorative `line`.
     outline: controlBorder, outlineVariant: colors.line,
-    error: dark ? const Color(0xffff8a65) : const Color(0xffc4320a),
+    // A true red, so it can't be read as `review` orange.
+    error: colors.error,
   );
   // Roboto is bundled at 400/600/700 (owner choice over Inter Tight), so the tokens'
   // 800 and 500 weights map to 700 and 400.

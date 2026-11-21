@@ -131,9 +131,9 @@ class _FindingScreenState extends State<FindingScreen> {
         // GET resolves the current chain revision. Never retry the rejected mutation automatically.
         setState(() { detail = null; presentations.clear(); pageOpened = false; });
         await _load();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.findingChanged)));
+        if (mounted) calmSnack(context, l.findingChanged, kind: CalmMessageKind.warning);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.saveFailed(userErrorMessage(l, e)))));
+        calmSnack(context, l.saveFailed(userErrorMessage(l, e)), kind: CalmMessageKind.error);
       }
     } finally {
       if (mounted) setState(() => busy = false);
@@ -263,7 +263,7 @@ class _FindingScreenState extends State<FindingScreen> {
             if (evidenceModes(presentations).containsValue('text_fallback'))
               Semantics(sortKey: const OrdinalSortKey(0), liveRegion: true,
                 child: Padding(padding: const EdgeInsets.only(bottom: 8),
-                  child: CalmWarning(key: const Key('review-fallback'), text: l.evidenceFallbackReview))),
+                  child: CalmWarning(key: const Key('review-fallback'), kind: CalmMessageKind.warning, text: l.evidenceFallbackReview))),
             Semantics(sortKey: const OrdinalSortKey(1), child:
               SizedBox(width: double.infinity, child:
                 FilledButton(key: const Key('review-confirm'), onPressed: canReview ? () => _review('confirmed') : null,

@@ -55,7 +55,7 @@ html[data-theme='light'] body {
   --color-type-secondary: #5E5E66 !important; /* muted */
   --color-line-border: #86868E !important;    /* control-border */
   --color-line-divider: #DCDCD6 !important;   /* line */
-  --color-danger-default: #C4320A !important; /* error */
+  --color-danger-default: #C81E1E !important; /* error */
   --color-bg-float: #FFFFFF !important;       /* desktop card: surface on ground */
   --color-bg-state-disabled: #E4E4DE !important; /* disabled */
   --color-type-disable: #8A8A92 !important;   /* disabled-text */
@@ -71,7 +71,7 @@ html[data-theme='dark'] body {
   --color-type-secondary: #A6A6AE !important;
   --color-line-border: #76767E !important;
   --color-line-divider: #34343A !important;
-  --color-danger-default: #FF8A65 !important;
+  --color-danger-default: #FF8A8A !important;
   --color-bg-float: #1E1E22 !important;
   --color-bg-body-overlay: #1E1E22 !important;
   --color-bg-float-overlay: #1E1E22 !important;

@@ -1,6 +1,7 @@
 // I-18 screens: the first-launch gate (sign-in → onboarding until completed → Projects; O-23), the
 // sign-in methods per platform, the link_required prompt (AC-26), errors and notices, and in-app account
 // deletion (Apple 5.1.1(v)). Widget tests with fakes; not device evidence.
+import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/auth/session.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/onboarding_screen.dart';
@@ -131,6 +132,7 @@ void main() {
     h.server.sessionStatus = 401;
     await tapKey(tester, 'sign-in-email');
     expect(find.textContaining("The accounts weren't linked"), findsOneWidget);
+    expect(tester.widget<CalmWarning>(find.byKey(const Key('sign-in-notice'))).kind, CalmMessageKind.warning);
   });
 
   testWidgets('Errors: unavailable and rejected sign-ins say so; a cancel says nothing', (tester) async {
@@ -155,6 +157,7 @@ void main() {
     await h.session.restore();
     await tester.pumpAndSettle();
     expect(find.text('Your session ended. Sign in again to continue.'), findsOneWidget);
+    expect(tester.widget<CalmWarning>(find.byKey(const Key('sign-in-notice'))).kind, CalmMessageKind.warning);
   });
 
   testWidgets('Offline on start keeps the session and retries', (tester) async {
@@ -211,5 +214,6 @@ void main() {
     expect(find.text("You're signed in."), findsOneWidget); // a refresh on start carries no ID token here
     await tapKey(tester, 'sign-out');
     expect(find.text("You're signed out."), findsOneWidget);
+    expect(tester.widget<CalmWarning>(find.byKey(const Key('sign-in-notice'))).kind, CalmMessageKind.info);
   });
 }

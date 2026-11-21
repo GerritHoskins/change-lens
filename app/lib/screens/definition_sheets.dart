@@ -104,11 +104,11 @@ class EvidenceDefinitionSheet extends StatelessWidget {
           ]))),
       DefinitionRow(title: l.evidenceModeFallback, details: [l.defModeFallback],
         leading: const Icon(CalmIcons.text, size: 20),
-        // The same 2px solid ink border as CalmWarning.
+        // The same amber surface and 2px solid border as the fallback banner (CalmWarning, warning).
         preview: Container(padding: const EdgeInsets.fromLTRB(12, 10, 12, 10), decoration: BoxDecoration(
-            color: colors.warningSurface, border: Border.all(color: colors.warning, width: CalmSize.dash),
+            color: colors.cautionSurface, border: Border.all(color: colors.caution, width: CalmSize.dash),
             borderRadius: radius),
-          child: Text(sampleQuote, locale: en, style: text.bodySmall?.copyWith(color: colors.warning)))),
+          child: Text(sampleQuote, locale: en, style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface)))),
       DefinitionRow(title: l.evidenceModeText, details: [l.defModeText],
         leading: const Icon(CalmIcons.paste, size: 20),
         preview: Container(padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),

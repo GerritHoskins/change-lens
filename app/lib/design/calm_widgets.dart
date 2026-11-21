@@ -117,26 +117,64 @@ String userErrorMessage(AppLocalizations l, Object error) => switch (error) {
   _ => l.errorConnection, // transport failures: no response reached the app
 };
 
+/// What a message is. Each kind has its own colour and its own icon, so the kind never rests on
+/// colour alone: error (red, a circled "!"), warning (amber, a triangle), info (blue, a circled "i").
+enum CalmMessageKind { error, warning, info }
+
+({Color accent, Color surface, IconData icon}) calmMessageLook(BuildContext context, CalmMessageKind kind) {
+  final colors = CalmColors.of(context);
+  return switch (kind) {
+    CalmMessageKind.error => (accent: colors.error, surface: colors.errorSurface, icon: CalmIcons.error),
+    CalmMessageKind.warning => (accent: colors.caution, surface: colors.cautionSurface, icon: CalmIcons.warning),
+    CalmMessageKind.info => (accent: colors.link, surface: colors.infoSurface, icon: CalmIcons.info),
+  };
+}
+
+/// A message banner: tinted surface, 2px solid border and icon in the kind's colour, ink text.
+/// Solid, never the dashed review style. Errors are the default; pass [kind] for anything else.
 class CalmWarning extends StatelessWidget {
-  const CalmWarning({super.key, required this.text, this.child});
+  const CalmWarning({super.key, required this.text, this.child, this.kind = CalmMessageKind.error});
   final String text;
   final Widget? child;
+  final CalmMessageKind kind;
 
   @override
   Widget build(BuildContext context) {
-    final colors = CalmColors.of(context);
+    final look = calmMessageLook(context, kind);
+    final ink = Theme.of(context).colorScheme.onSurface;
     return DecoratedBox(
-      // Text fallback banner: surface with a 2px solid ink border; never the dashed review style.
-      decoration: BoxDecoration(color: colors.warningSurface,
-        border: Border.all(color: colors.warning, width: CalmSize.dash),
+      decoration: BoxDecoration(color: look.surface,
+        border: Border.all(color: look.accent, width: CalmSize.dash),
         borderRadius: BorderRadius.circular(CalmRadius.lg)),
       child: Padding(padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.warning, height: 1.55)),
-          if (child != null) Padding(padding: const EdgeInsets.only(top: 6), child: child!),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ExcludeSemantics(child: Icon(look.icon, size: 20, color: look.accent)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: ink, height: 1.55)),
+            if (child != null) Padding(padding: const EdgeInsets.only(top: 6), child: child!),
+          ])),
         ])),
     );
   }
+}
+
+/// A floating snackbar for something that just happened. Errors and warnings fill with their colour;
+/// info keeps the ink snackbar. Every kind carries its icon.
+void calmSnack(BuildContext context, String message, {CalmMessageKind kind = CalmMessageKind.info}) {
+  final look = calmMessageLook(context, kind);
+  final theme = Theme.of(context);
+  final filled = kind != CalmMessageKind.info;
+  // On the light theme the accents are dark (white reads at 5.7:1+); on dark they are light (ink, 8:1+).
+  final foreground = !filled ? theme.scaffoldBackgroundColor
+      : CalmColors.of(context).dark ? CalmColors.ink : Colors.white;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    backgroundColor: filled ? look.accent : null,
+    content: Row(children: [
+      ExcludeSemantics(child: Icon(look.icon, size: 20, color: foreground)),
+      const SizedBox(width: 12),
+      Expanded(child: Text(message, style: theme.textTheme.bodyMedium?.copyWith(color: foreground))),
+    ])));
 }
 
 class SourcePairSummary extends StatelessWidget {
@@ -187,7 +225,9 @@ class CalmLoadError extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Center(child: Padding(padding: const EdgeInsets.all(20),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Flexible(child: SingleChildScrollView(child: Text(l.contentLoadFailed))),
+        ExcludeSemantics(child: Icon(CalmIcons.error, size: 28, color: Theme.of(context).colorScheme.error)),
+        const SizedBox(height: 12),
+        Flexible(child: SingleChildScrollView(child: Text(l.contentLoadFailed, textAlign: TextAlign.center))),
         const SizedBox(height: 12),
         TextButton(onPressed: onRetry, child: Text(l.retry)),
       ])));
