@@ -8,8 +8,10 @@ Windows checkout, about 400 files show as modified with no content change (CRLF)
 `deploy/ionos/logto/`, `scripts/logto/apply-branding.py`, Caddyfile, compose, runbook). §4.6 (`ui_locales`) is
 still open.
 
-**Status 2026-11-21:** applied to `auth.pixeltronic.dev` with `--apply`; the sign-in page was checked in a browser
-at phone width, light and dark. The rest of §5 (code and MFA pages, real devices, English) has not been run.
+**Status 2026-11-21:** applied to `auth.pixeltronic.dev` with `--apply`. The sign-in and error pages were checked
+in a browser at phone width, in German, light and dark, with all requests on the own origin. The owner checked the
+code and two-step pages on an iPhone. Not run from §5: English, Android, the two-step setup page that has a skip
+button, the contrast check and the comparison with the canvas.
 
 Designs: https://claude.ai/artifact/NZAbbmaXfh1Vp7A9V99rMr, row "Logto hosted pages". There are 7 artboards,
 each with toggles for locale (en/de), dark and state.
