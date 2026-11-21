@@ -350,7 +350,7 @@ cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && doc
 The release with task L32, the release with the Logto log filter (LR-12) and the separate storage keys
 (LR-13) were done on the server on 2026-11-19. Their steps and checks are in
 [`one-off-releases.md`](one-off-releases.md). The release that puts the backup job behind the egress proxy
-(LR-13) is there too; it has not run on the server yet.
+(LR-13) is there too; it ran on the server on 2026-11-21.
 
 ### Logto upgrade
 
