@@ -129,6 +129,9 @@ class _SignInScreenState extends State<SignInScreen> with _SignInRunner {
       SignedOutReason.linkFailed => l.linkFailedNotice,
       null => null,
     };
+    // A session that ended or a link that failed asks the user to act: a warning. The rest only inform.
+    final noticeKind = reason == SignedOutReason.expired || reason == SignedOutReason.linkFailed
+        ? CalmMessageKind.warning : CalmMessageKind.info;
     final error = failureText(l);
     final methods = link != null
         ? [for (final m in platformMethods(context, session)) if (link.methods.contains(m)) m]
@@ -155,8 +158,7 @@ class _SignInScreenState extends State<SignInScreen> with _SignInRunner {
           ],
           if (notice != null && link == null) Padding(padding: const EdgeInsets.only(bottom: 20),
             child: Semantics(liveRegion: true,
-              child: CalmCard(key: const Key('sign-in-notice'), color: colors.soft,
-                child: Text(notice, style: text.bodyMedium)))),
+              child: CalmWarning(key: const Key('sign-in-notice'), kind: noticeKind, text: notice))),
           // An error takes the chips' place, so the buttons don't move down.
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 20), child: failureBanner(error))
           else if (link == null) const Padding(padding: EdgeInsets.only(bottom: 28), child: _TopicChips()),

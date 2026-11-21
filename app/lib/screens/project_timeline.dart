@@ -401,7 +401,7 @@ class _LinkTile extends StatelessWidget {
     final scope = scopeLabel(l, comparison.scope);
     final status = comparisonStatusLabel(l, comparison.status);
     final failed = comparison.status == 'failed', partial = comparison.status == 'partial';
-    final statusColor = failed ? Theme.of(context).colorScheme.error : partial ? colors.warning : colors.muted;
+    final statusColor = failed ? Theme.of(context).colorScheme.error : partial ? colors.caution : colors.muted;
     final cause = failed ? comparisonFailureMessages(l, comparison, versions).firstOrNull : null;
     // With Compare again on the card, the generic "start a new comparison" advice would repeat it.
     final why = cause == l.comparisonFailedDetails && onCompareAgain != null ? l.comparisonFailedShort : cause;

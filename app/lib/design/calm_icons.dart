@@ -18,6 +18,7 @@ abstract final class CalmIcons {
   static const IconData compare = LucideIcons500.arrowRightLeft;
   static const IconData document = LucideIcons500.fileText;
   static const IconData fork = LucideIcons500.gitFork;
+  static const IconData error = LucideIcons500.circleAlert;
   static const IconData info = LucideIcons500.info;
   static const IconData language = LucideIcons500.languages;
   static const IconData limits = LucideIcons500.ruler;
@@ -30,5 +31,6 @@ abstract final class CalmIcons {
   static const IconData settings = LucideIcons500.settings;
   static const IconData swap = LucideIcons500.arrowUpDown;
   static const IconData text = LucideIcons500.text;
+  static const IconData warning = LucideIcons500.triangleAlert;
   static const IconData online = LucideIcons500.wifi;
 }

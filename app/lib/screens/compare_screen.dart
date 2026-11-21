@@ -227,7 +227,7 @@ class _CompareScreenState extends State<CompareScreen> {
             }),
             icon: const Icon(CalmIcons.swap), label: Text(l.swapVersions)))),
         _slot(false),
-        if (!distinct) Padding(padding: const EdgeInsets.only(top: 12), child: CalmWarning(text: l.sameVersion)),
+        if (!distinct) Padding(padding: const EdgeInsets.only(top: 12), child: CalmWarning(kind: CalmMessageKind.warning, text: l.sameVersion)),
         const SizedBox(height: 28),
         Row(children: [
           Expanded(child: Semantics(header: true, child: Text(l.scopeQuestion, style: text.titleLarge))),

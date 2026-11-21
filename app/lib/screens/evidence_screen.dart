@@ -102,8 +102,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       if (mounted) setState(() { pages = text; textView = true; });
     } on Exception {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).contentLoadFailed)));
+        calmSnack(context, AppLocalizations.of(context).contentLoadFailed, kind: CalmMessageKind.error);
       }
     } finally { if (mounted) setState(() => loading = false); }
   }
@@ -140,7 +139,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
           ])),
         if (pdf != null && !textView && presentation?.mode == 'text_fallback')
           Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: CalmWarning(text: l.evidenceFallbackReview)),
+            child: CalmWarning(kind: CalmMessageKind.warning, text: l.evidenceFallbackReview)),
         if (loading && presentation != null) LinearProgressIndicator(semanticsLabel: l.loading),
         Expanded(child: body),
       ])),
@@ -174,7 +173,7 @@ class ParsedTextView extends StatelessWidget {
     final mark = TextStyle(backgroundColor: colors.dark ? colors.marker : CalmColors.markerFill,
       color: colors.onMarker, fontWeight: FontWeight.w600);
     return ListView(padding: const EdgeInsets.all(20), children: [
-      if (note != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: CalmWarning(text: note!)),
+      if (note != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: CalmWarning(kind: CalmMessageKind.warning, text: note!)),
       // The mark is colour and weight only, so the passage is also named before the page text is read.
       Semantics(container: true, label: AppLocalizations.of(context).evidenceMarkedA11y(e.quote),
         // Selection here is `link`, not the marker: lime under a lime mark would not show.

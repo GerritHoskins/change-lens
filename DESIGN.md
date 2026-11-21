@@ -73,17 +73,28 @@ Source: app/lib/design/calm_theme.dart. ThemeMode.system follows the device them
 | marker / on-marker | #DFFF4F / #111114 | same |
 | marker-fill (PDF highlight) | #DFFF4F at 55% | same |
 | review (dashed border, ? disc) | #F05A1E | same |
-| error | #C4320A | #FF8A65 |
+| error / error-surface | #C81E1E / #FDECEC | #FF8A8A / #3A1D1D |
+| warning / warning-surface | #8A5300 / #FFF3D6 | #FFC857 / #33290F |
+| info-surface (accent is link) | #ECEBFF | #25234A |
 | topic deadlines / deliverables / responsibilities | #CDBEFF / #A8F0C6 / #A9DCFF | same |
 | topic approval wording / budget / other | #FFB3D1 / #FFE45C / #E4E4DE | same |
 | on-topic | #111114 | same |
 
-The text fallback banner is surface with a 2px solid ink border. Needs-review
-findings use a 2px dashed review border and the ? disc; failed and rejected
-states use error text.
+**Messages (changed 2026-11-21, owner: messages must be more noticeable).** A message
+banner (`CalmWarning`) has one of three kinds, each with its own colour and its own icon, so
+the kind never rests on colour alone: **error** (red `error`, circled "!") for a failed load,
+save or sign-in; **warning** (amber `warning`, triangle) for the text fallback banner, the
+report's processing warnings and a choice that can't proceed; **info** (blue `link`, circled
+"i") for a notice such as "You signed out" (a session that ended or a failed account link is a
+warning: the user has to act). Each banner is its kind's tinted surface with a
+2px solid border and a 20px icon in the kind's colour; the text stays ink (12:1 or more on
+every tint). Snackbars (`calmSnack`) fill with the error or warning colour and carry the same
+icon; an info snackbar keeps the ink fill. `error` moved from orange-red (#C4320A) to a true
+red, so it can't be read as `review`; amber is never dashed. Needs-review findings keep the
+2px dashed review border and the ? disc; failed and rejected states use error text.
 
-Measured text pairs, including the topic foregrounds, have contrast from 5.52:1
-upward. Separator colors are decorative and are not used as text. Uncertainty,
+Measured text pairs, including the topic foregrounds, have contrast from 5.25:1
+upward (error on ground). Separator colors are decorative and are not used as text. Uncertainty,
 partial processing, personal review and client approval always have explicit text.
 
 ## Components and state map

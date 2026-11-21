@@ -130,8 +130,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (!mounted) return;
     await _load();
     if (!mounted || deleted == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(deleted ? l.projectDeleted : l.projectDeletionPending)));
+    calmSnack(context, deleted ? l.projectDeleted : l.projectDeletionPending);
   }
 
   @override
