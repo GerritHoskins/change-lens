@@ -109,7 +109,7 @@ class HomeHero extends StatelessWidget {
       if (pair) l.homePairA11y(c.earlierLabel!, c.laterLabel!),
       l.reportCount(c.findings!),
       for (final (topic, count) in topics) homeTopicCount(l, topic, count),
-      if (c.needsReview! > 0) l.homeSecondLook(c.needsReview!),
+      if ((c.needsReview ?? 0) > 0) l.homeSecondLook(c.needsReview!),
       l.homeToCheck(c.toCheck),
       l.homeOpenReport,
     ].join(', ');
@@ -142,7 +142,7 @@ class HomeHero extends StatelessWidget {
           const SizedBox(height: 16),
           Row(children: [
             Expanded(child: Align(alignment: AlignmentDirectional.centerStart,
-              child: c.needsReview! > 0 ? HomeReviewPill(text: l.homeSecondLook(c.needsReview!)) : null)),
+              child: (c.needsReview ?? 0) > 0 ? HomeReviewPill(text: l.homeSecondLook(c.needsReview!)) : null)),
             const SizedBox(width: 12),
             // The arrow disc is `on-marker` ink with white, in both themes: it sits on marker.
             Container(width: 52, height: 52, alignment: Alignment.center,
@@ -153,6 +153,12 @@ class HomeHero extends StatelessWidget {
   }
 }
 
+/// A pill's corner radius: half the height of ONE line of its 14/20 label at the current text size
+/// plus the vertical padding. A one-line pill is fully round; when large text wraps the label, the
+/// corners stay that size instead of growing into the text, as a stadium's would.
+double _pillRadius(BuildContext context, double verticalPadding) =>
+    MediaQuery.textScalerOf(context).scale(20) / 2 + verticalPadding;
+
 /// A white pill on the hero: a topic count in words. White, not the topic colour, because the block
 /// under it is `marker`.
 class _Pill extends StatelessWidget {
@@ -161,7 +167,8 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const ShapeDecoration(color: CalmColors.paper, shape: StadiumBorder()),
+    decoration: BoxDecoration(color: CalmColors.paper,
+      borderRadius: BorderRadius.circular(_pillRadius(context, 6))),
     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: CalmColors.ink))));
 }
@@ -173,22 +180,24 @@ class HomeReviewPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    foregroundPainter: const _DashedPill(),
+    foregroundPainter: _DashedPill(_pillRadius(context, 7)),
     child: DecoratedBox(
-      decoration: ShapeDecoration(color: CalmColors.of(context).review, shape: const StadiumBorder()),
+      decoration: BoxDecoration(color: CalmColors.of(context).review,
+        borderRadius: BorderRadius.circular(_pillRadius(context, 7))),
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: CalmColors.ink)))));
 }
 
 class _DashedPill extends CustomPainter {
-  const _DashedPill();
+  const _DashedPill(this.radius);
+  final double radius;
 
   @override
   void paint(Canvas canvas, Size size) {
     const inset = CalmSize.dash / 2;
     final rect = (Offset.zero & size).deflate(inset);
     final paint = Paint()..color = CalmColors.ink..style = PaintingStyle.stroke..strokeWidth = CalmSize.dash;
-    final path = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)));
+    final path = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius - inset)));
     for (final metric in path.computeMetrics()) {
       for (var d = 0.0; d < metric.length; d += 10) {
         canvas.drawPath(metric.extractPath(d, d + 6), paint);
@@ -197,7 +206,7 @@ class _DashedPill extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DashedPill old) => false;
+  bool shouldRepaint(_DashedPill old) => old.radius != radius;
 }
 
 /// A square `surface` tile: the name on top, then a count "to check" or a status in words.

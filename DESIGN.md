@@ -82,7 +82,7 @@ The text fallback banner is surface with a 2px solid ink border. Needs-review
 findings use a 2px dashed review border and the ? disc; failed and rejected
 states use error text.
 
-Measured text pairs, including the topic foregrounds, have contrast from 5.67:1
+Measured text pairs, including the topic foregrounds, have contrast from 5.52:1
 upward. Separator colors are decorative and are not used as text. Uncertainty,
 partial processing, personal review and client approval always have explicit text.
 
