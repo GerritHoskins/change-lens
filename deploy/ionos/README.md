@@ -13,7 +13,7 @@ through IONOS SMTP. **Nothing here opens sign-ups**: that waits for S1–S6 bein
 | `Caddyfile` | TLS for `api.pixeltronic.dev` and `auth.pixeltronic.dev`; no access log |
 | `postgres/init/` | Logto's database (first start only) and the backup job's database role |
 | `logto/` | Logto's start script and the filter that keeps email addresses and sign-in tokens out of its log |
-| `squid/squid.conf` | The worker's egress proxy: HTTPS to the allow-listed hosts only |
+| `squid/squid.conf` | The egress proxy of the worker and the backup job: HTTPS to the allow-listed hosts only |
 | `backup/` | WAL shipping, daily base backup, 30-day expiry, Logto audit-log pruning, restore test |
 | `monitor.sh` | Host cron job: endpoints, containers, backups, disk, global spend cap; alert mail |
 | `env/*.example` | One template per secret file in `/etc/changelens/` |
@@ -349,7 +349,8 @@ cd /opt/changelens && git pull && cd deploy/ionos && docker compose build && doc
 
 The release with task L32, the release with the Logto log filter (LR-12) and the separate storage keys
 (LR-13) were done on the server on 2026-11-19. Their steps and checks are in
-[`one-off-releases.md`](one-off-releases.md).
+[`one-off-releases.md`](one-off-releases.md). The release that puts the backup job behind the egress proxy
+(LR-13) is there too; it has not run on the server yet.
 
 ### Logto upgrade
 
@@ -410,6 +411,9 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
   value has to be changed in both files.
 - The parse child keeps the worker's network (Postgres and the egress proxy). It holds no credential, can't
   read the worker's, and can't start a process.
+- The egress allow-list names hosts, not buckets or accounts, and the worker and the backup job share it: a
+  compromised one could still reach another bucket at the same IONOS endpoint with a key of its own, and the
+  backup job could reach the model API's host. The restore test, run by hand, has direct internet access.
 - Secrets reach the processes as environment variables from root-only files, not as files; `docker inspect`
   shows them to root. Only the sign-in secrets (C8) are files.
 - The images' OS packages (`apt`/`apk`) aren't hash-pinned; the base images and Python wheels are.

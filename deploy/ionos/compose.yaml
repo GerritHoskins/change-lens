@@ -9,7 +9,8 @@
 #   data     internal, no internet: Postgres and the ChangeLens processes that talk to it.
 #   authdb   internal, no internet: Postgres and Logto only. Logto is not on `data`, so the worker has no
 #            route to Logto (03 §6, LR-4); the api and retention reach it through Caddy on `edge`.
-#   outbound the egress proxy and the backup job: the only way out for the worker is the proxy's allow-list.
+#   outbound the egress proxy, and the restore test while it runs. The worker and the backup job have no route
+#            out: their only way is the proxy's allow-list (LR-13 for the backup job).
 name: changelens
 
 x-app: &app
@@ -180,11 +181,19 @@ services:
     volumes:
       - wal-archive:/wal-archive
       - backup-work:/work
-    networks: [data, outbound]
+    environment:
+      # No route to the internet (LR-13): rclone reaches object storage through the proxy's allow-list, and
+      # the Postgres tools connect to `postgres` directly.
+      HTTPS_PROXY: http://egress:3128
+      HTTP_PROXY: http://egress:3128
+      NO_PROXY: postgres,localhost,127.0.0.1
+    networks: [data]
     mem_limit: 512m
     depends_on:
       postgres:
         condition: service_healthy
+      egress:
+        condition: service_started
     restart: unless-stopped
     logging: *logging
 
@@ -213,6 +222,7 @@ services:
     volumes:
       - restore-data:/restore
       - /etc/changelens/backup-identity.txt:/run/backup-identity.txt:ro
+    # Run by hand, with direct internet access for its duration and no route to the databases or the proxy.
     networks: [outbound]
     restart: "no"
 
