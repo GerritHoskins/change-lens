@@ -11,11 +11,12 @@
  *   1. Theme variables under html[data-theme] body: Logto's own design tokens. Safe across upgrades.
  *   2. Stable hooks: .logto_page-container, .logto_main-content, .logto_branding-header, .logto_signature.
  *   3. FRAGILE: suffix matches on CSS-module class names ([class$='_headline'], [class*='_primary'],
- *      [class*='_passcode']). Production names are `<hash>_<local>` (packages/experience/vite.config.ts).
+ *      [class*='_passcode'], [class*='_navBar']). Production names are `<hash>_<local>` (packages/experience/vite.config.ts).
  *      Re-check these on every Logto upgrade (S7 runbook, "Logto upgrade").
  *
  * The code and MFA pages (SecondaryPageLayout) have no .logto_branding-header: their title already uses
- * --font-headline-1 on mobile and is left-aligned, so tier 1 covers it.
+ * --font-headline-1 on mobile and is left-aligned, so tier 1 covers it. They get the mark alone, in the
+ * back-arrow row (tier 3).
  */
 
 /* Roboto, the app's bundled font, served from this origin by Caddy: no third-party font request. */
@@ -103,6 +104,21 @@ html[data-theme='dark'] body {
   height: 60px !important;
   border-radius: 999px !important;
   font: var(--font-label-1) !important;
+}
+/* The ChangeLens mark on the pages without a branding header (code, MFA, error): at the right end of the
+   row that holds the back arrow. Not drawn where Logto puts a skip button in that corner. */
+.logto_main-content [class*='_navBar']:not(:has([class*='_skipButton']))::after {
+  content: '';
+  position: absolute;
+  right: -5px; /* the file has 5 px of air around the mark; this puts the mark itself on the gutter */
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  transform: translateY(-50%);
+  background: url('/changelens-brand/changelens-favicon-light.svg') center / contain no-repeat;
+}
+html[data-theme='dark'] .logto_main-content [class*='_navBar']:not(:has([class*='_skipButton']))::after {
+  background-image: url('/changelens-brand/changelens-favicon-dark.svg');
 }
 /* Code boxes: Logto's focus is a 1 px border in the brand colour, one grey step from the 1 px
    control-border. 2 px ink makes the focused box readable without colour (box-sizing is border-box). */

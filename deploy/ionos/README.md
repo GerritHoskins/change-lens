@@ -360,8 +360,8 @@ and stops if it finds none:
 ```bash
 V=$(grep -o 'svhd/logto:[0-9][0-9.]*' compose.yaml | cut -d: -f2) && [ -n "$V" ] && echo "Logto $V" && docker compose pull logto && docker compose run --rm --entrypoint sh logto -c "npm run cli db alteration deploy $V" && docker compose up -d logto
 ```
-After each Logto upgrade, open a sign-in page and the code page and check two things: the headline is left-aligned
-at 32 px and the main button is a 60 px pill. Those come from the FRAGILE selectors in `logto/custom.css`; if they
+After each Logto upgrade, open a sign-in page and the code page and check three things: the headline is left-aligned
+at 32 px, the main button is a 60 px pill, and the code page shows the ChangeLens mark at the top right. Those come from the FRAGILE selectors in `logto/custom.css`; if they
 stop matching, the pages keep our colours and font in Logto's own layout.
 
 Sign-in page branding (colours, logos, custom CSS, custom phrases; `docs/logto-branding-plan.md`). The desired
