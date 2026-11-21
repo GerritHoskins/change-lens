@@ -483,7 +483,7 @@ the deployed system, and write the incident-response runbook with the 72-hour Ar
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
 
-Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 4 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19), 5 low. Open: 3 medium (L33, L34, and the rest of LR-13: the storage keys were split on the server on 2026-11-19, the backup job's internet access is open) and 20 low to fix, schedule or accept.
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 5 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19, LR-10 in L33 on 2026-11-21), 5 low. Open: 2 medium (L34, and the rest of LR-13: the storage keys were split on the server on 2026-11-19, the backup job's internet access is open) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 
@@ -638,14 +638,14 @@ retention, and a compromised parser unable to read the worker's secrets.
 
 ## Task L33: Per-account bounds on uploads and queued work (L22, LR-10)
 
-**Description:** One account must not keep the single worker busy for everyone or fill the storage. The fair-use allowance (T8 to T12) counts comparisons, not uploads or waiting jobs. Built 2026-11-21, not yet released to the server; the limits are settings with defaults, so the server's env file needs no change. Not covered: how long one upload may take (a slow upload holds its slot), and the app shows its general "not accepted" message for the new refusal.
+**Description:** One account must not keep the single worker busy for everyone or fill the storage. The fair-use allowance (T8 to T12) counts comparisons, not uploads or waiting jobs. Built 2026-11-21, on the server since the release of the same day; the limits are settings with defaults, so the server's env file needs no change. Not covered: how long one upload may take (a slow upload holds its slot), and the app shows its general "not accepted" message for the new refusal.
 
 **Acceptance criteria:**
 - [x] An upload or comparison is refused with 429 when the account already has N unparsed versions or N unfinished comparisons (numbers: owner, with L5) (built 2026-11-21: `429 account_limit_reached` with the bound's name, checked in the transaction that would add the rows, both upload routes; a replay of an accepted request is still answered; defaults 8 unparsed versions and 3 unfinished comparisons; the owner kept all four defaults on 2026-11-21)
 - [x] Stored bytes per account have a ceiling (built 2026-11-21: default 1 GiB, counted over every original the account still has a row for, deleted projects included)
 - [x] Concurrent uploads are bounded so the api stays within its memory limit (built 2026-11-21: 4 upload requests at once per api process, 2 of them for one account, taken after sign-in is checked and before the body is read; over that `429 rate_limited` with `Retry-After`. Sizing estimated, not measured: a request with two 10 MB PDFs peaks near 60 MB, and the api has 1 GB)
 
-**Verification:** backend unit and integration tests pass in CI. (2026-11-21 locally: 921 unit tests, 20 new in `tests/unit/test_account_bounds.py`, 8 of which fail with the check switched off; 181 integration tests against Postgres and MinIO in Docker, 5 new in `tests/integration/test_account_bounds_db.py`, the 4 Linux-only tests skipped.)
+**Verification:** backend unit and integration tests pass in CI. (2026-11-21 locally: 921 unit tests, 20 new in `tests/unit/test_account_bounds.py`, 8 of which fail with the check switched off; 181 integration tests against Postgres and MinIO in Docker, 5 new in `tests/integration/test_account_bounds_db.py`, the 4 Linux-only tests skipped. In CI the same day: the pull request's checks and the three workflows on `main` passed. Released on the server 2026-11-21 with the app release command (runbook F): the api, the worker, retention and Caddy were recreated and every service is up; the running api reads the four limits as 8, 3, 1073741824 and 4; afterwards the api log shows a comparison from the app accepted (`POST /projects/{project_id}/comparisons 202`) and opened three seconds later. Not checked on the server: the refusal itself.)
 
 **Dependencies:** L5 for the numbers · **Files likely touched:** `backend/changelens/api/routes.py`, `backend/changelens/api/comparisons.py`, `backend/changelens/api/app.py`, `backend/changelens/config.py` · **Estimated scope:** M
 

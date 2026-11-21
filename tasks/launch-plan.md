@@ -112,10 +112,10 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
-- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, 3 medium open: L33, L34 and the backup job's internet access (LR-13); runbook drafted)
+- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, a fifth with L33 on 2026-11-21; 2 medium open: L34 and the backup job's internet access (LR-13); runbook drafted)
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18; on the server since the release of 2026-11-19, not checked there)
 - [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, `deploy/ionos/one-off-releases.md`; the base backup and a comparison from the iPhone ran on 2026-11-20)
-- [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10) (built 2026-11-21 with the limits the owner kept; open: the release to the server)
+- [x] L33 Per-account bounds on uploads and queued work (L22, LR-10) (built 2026-11-21 with the limits the owner kept; on the server since the release of the same day; the refusal itself was not triggered there)
 - [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision; Fairphone check of 2026-11-20 before any change: Chrome asked for the address and the code again; stays open by the owner's decision of that day)
 - [x] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20; built the same day; build 6: 12 of 12 sign-ins, one sheet each)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
