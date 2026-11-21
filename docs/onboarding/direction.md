@@ -81,6 +81,9 @@ Hard-coding "15,000 / 20 / 10" in the copy would drift silently when the config 
 - **Calm Bold exception:** the provider buttons replace the black main pill on this screen. The Apple button
   in its black style looks like the main action, but the three are deliberately equal. This is the only
   screen without a single main action, and it should be recorded as such in DESIGN.md.
+  *Superseded 2026-11-20 (owner):* the black Apple style did read as the main action on the iPhone. All three
+  methods are now one white pill with ink content (ink outline on the light theme only), Apple with its logo;
+  see DESIGN.md, "Recorded exceptions". The logo on this screen is Logo D, not Logo A (O-29, 2026-11-16).
 - **Android and Apple:** native Sign in with Apple doesn't exist on Android, so it needs a web flow
   (Logto social connector or the backend code exchange). It's still required, because an account created
   on iOS with Apple must be able to sign in on Android. This needs confirming against I-8.

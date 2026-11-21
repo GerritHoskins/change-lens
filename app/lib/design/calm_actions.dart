@@ -20,9 +20,23 @@ ButtonStyle calmOutlinedPill(BuildContext context) {
 
 enum CalmProvider { apple, google, email }
 
-/// One sign-in method. Apple uses Apple's own button (logo and black or white style, per Apple's
-/// guidelines); Google and email are outlined ink pills until Google's official "G" asset is bundled.
-/// All three share the main-button height, so none reads as the main action.
+/// The sign-in method pill, in the two styles Apple allows for its button: white with an outline on the
+/// light theme, plain white on the dark one, black content on both. Google and email use the same pill,
+/// so the three stay equal (App Review 4.8). Unlike [calmOutlinedPill] it is filled, and it does not
+/// flip with the theme: the label is always ink on white.
+ButtonStyle calmProviderPill(BuildContext context) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return OutlinedButton.styleFrom(
+    minimumSize: const Size(CalmSize.targetMin, CalmSize.buttonMain),
+    backgroundColor: Colors.white, disabledBackgroundColor: Colors.white,
+    foregroundColor: CalmColors.ink, disabledForegroundColor: CalmColors.ink.withValues(alpha: .38),
+    side: dark ? BorderSide.none : const BorderSide(color: CalmColors.ink, width: CalmSize.dash),
+  );
+}
+
+/// One sign-in method: [calmProviderPill] at main-button height with the same label style for all
+/// three, so none reads as the main action. Apple adds Apple's logo before the label, in the label's
+/// colour; Google stays without its "G" until the official asset is bundled.
 class CalmProviderButton extends StatelessWidget {
   const CalmProviderButton({super.key, required this.provider, required this.label,
     required this.onPressed, this.working = false, this.workingLabel});
@@ -36,31 +50,32 @@ class CalmProviderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final progress = Row(mainAxisSize: MainAxisSize.min, children: [
-      const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+      // Ink, not the theme's primary: on the dark theme that is near-white, on a white pill.
+      const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: CalmColors.ink)),
       const SizedBox(width: 12),
       Flexible(child: Text(workingLabel ?? label)),
     ]);
-    if (provider == CalmProvider.apple) {
-      if (working) {
-        return FilledButton(onPressed: null, style: FilledButton.styleFrom(
-          disabledBackgroundColor: dark ? Colors.white : Colors.black,
-          disabledForegroundColor: dark ? Colors.black : Colors.white), child: progress);
-      }
-      final enabled = onPressed != null;
-      return Semantics(button: true, enabled: enabled, label: label, excludeSemantics: true,
-        onTap: onPressed,
-        child: IgnorePointer(ignoring: !enabled, child: Opacity(opacity: enabled ? 1 : .4,
-          child: SignInWithAppleButton(
-            onPressed: onPressed ?? () {},
-            text: label,
-            height: CalmSize.buttonMain,
-            borderRadius: const BorderRadius.all(Radius.circular(CalmSize.buttonMain / 2)),
-            style: dark ? SignInWithAppleButtonStyle.white : SignInWithAppleButtonStyle.black))));
-    }
-    return OutlinedButton(onPressed: working ? null : onPressed, style: calmOutlinedPill(context),
-      child: working ? progress : Text(label, textAlign: TextAlign.center));
+    final text = Text(label, textAlign: TextAlign.center);
+    return OutlinedButton(onPressed: working ? null : onPressed, style: calmProviderPill(context),
+      child: working ? progress : provider != CalmProvider.apple ? text
+        : Row(mainAxisSize: MainAxisSize.min, children: [const _AppleLogo(), const SizedBox(width: 8), Flexible(child: text)]));
+  }
+}
+
+/// Apple's logo at the label's size and in the button's current foreground colour (ink, or dimmed
+/// ink while disabled), so it dims with the label. Decorative: the label already names Apple.
+class _AppleLogo extends StatelessWidget {
+  const _AppleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = DefaultTextStyle.of(context).style;
+    final height = MediaQuery.textScalerOf(context).scale(style.fontSize ?? 17) * 1.15;
+    // Sits a little above the centre line, where it balances against the label's x-height.
+    return Padding(padding: EdgeInsets.only(bottom: height * .12), child: SizedBox(
+      width: height * 25 / 31, height: height,
+      child: CustomPaint(painter: AppleLogoPainter(color: style.color ?? CalmColors.ink))));
   }
 }
 

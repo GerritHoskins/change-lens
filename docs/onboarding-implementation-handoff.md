@@ -206,8 +206,8 @@ and edge-swipe on hardware as not done unless you ran them.
 | Showing onboarding once on first launch, and resuming at the same step | Account fields for "onboarding seen" and the saved step (owner decision: server-side; AC-25 forbids a local flag), and sign-in (I-8) |
 | Analytics consent screen, Settings switch | Server-side consent storage, the D-18 tier B event pipeline, legal review (I-20) |
 | Settings: Delete account | The account-deletion backend (I-18, 03a P8) |
-| Sign-in, email code, MFA, `link_required`, expired session | I-8 and I-18. The MFA prompt being native or Logto-hosted is undecided, and Sign in with Apple on Android needs a web flow. Provider buttons, for later: Apple via `sign_in_with_apple`'s `SignInWithAppleButton` (it draws Apple's logo, so there's no asset to bundle). Google needs the official "G" from Google's sign-in branding zip, which isn't in the repo yet. The owner skipped it for now, so the canvas keeps dashed logo slots |
-| App icon / Logo A | No logo chosen yet (the canvas has drafts) |
+| Sign-in, email code, MFA, `link_required`, expired session | I-8 and I-18. The MFA prompt being native or Logto-hosted is undecided, and Sign in with Apple on Android needs a web flow. Provider buttons, for later: Apple via `sign_in_with_apple`'s `SignInWithAppleButton` (it draws Apple's logo, so there's no asset to bundle). Google needs the official "G" from Google's sign-in branding zip, which isn't in the repo yet. The owner skipped it for now, so the canvas keeps dashed logo slots. *Since resolved:* MFA is Logto-hosted and Apple on Android is a backend code exchange (`logto-branding-plan.md` §1a); the three methods are one white pill, Apple's logo drawn with `AppleLogoPainter`, not `SignInWithAppleButton` (DESIGN.md, 2026-11-20). The Google "G" is still missing |
+| App icon / Logo A | No logo chosen yet (the canvas has drafts). *Since resolved:* Logo D (Aperture), O-29, 2026-11-16; assets in `docs/brand/` |
 
 ## 8. Acceptance checklist
 
