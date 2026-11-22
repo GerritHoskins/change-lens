@@ -39,7 +39,7 @@ TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
 TABLES = ("client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects, "
           "object_write_intents, object_purge_intents, comparison_cost_tombstones, project_deletions, "
           "account_onboarding, consent_events, account_deletions, memberships, users, rate_limit_counters, pending_links, "
-          "apple_token_parks")
+          "apple_token_parks, early_bird_signups")
 
 
 def pytest_collection_modifyitems(items):

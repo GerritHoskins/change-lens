@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChangeLens</title>
+<meta name="description" content="What changed since the last version of the brief, and which changes matter?">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://changelens.pixeltronic.dev/">
+<link rel="alternate" hreflang="en" href="https://changelens.pixeltronic.dev/">
+<link rel="alternate" hreflang="de" href="https://changelens.pixeltronic.dev/de/">
+<link rel="alternate" hreflang="x-default" href="https://changelens.pixeltronic.dev/">
+<link rel="preload" href="assets/fonts/roboto-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" type="image/svg+xml" href="assets/changelens-favicon-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="assets/changelens-favicon-dark.svg" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="site.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <picture class="logo">
+      <source srcset="assets/changelens-logo-dark.svg" media="(prefers-color-scheme: dark)">
+      <img src="assets/changelens-logo-light.svg" width="179" height="40" alt="ChangeLens">
+    </picture>
+    <nav class="topnav" aria-label="Page">
+      <span class="lang">
+        <a class="tap" href="./" lang="en" hreflang="en" aria-current="page" data-lang-switch>EN</a>
+        <span aria-hidden="true">/</span>
+        <a class="tap" href="de/" lang="de" hreflang="de" data-lang-switch data-umami-event="lang-switch" data-umami-event-to="de">DE</a>
+      </span>
+      <a class="tap" href="#early-bird" data-umami-event="list-cta" data-umami-event-place="top">Early-bird list</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Confirmation states. The link in the confirmation mail (GET /early-bird/confirm on the API)
+       redirects to #confirmed or #confirm-failed; CSS :target shows the one that is addressed.
+       These are divs, not sections: site.js reads `main section[id]` for the language switch. -->
+  <div class="notice" id="confirmed">
+    <div class="wrap">
+      <p class="msg msg-info msg-banner"><span><strong>Your address is confirmed.</strong> You are on the early-bird list.</span></p>
+    </div>
+  </div>
+  <div class="notice" id="confirm-failed">
+    <div class="wrap">
+      <p class="msg msg-warning msg-banner"><span><strong>This link didn’t work.</strong> It may have been used already, or it has expired. If you are not on the list yet, enter your address again. <a href="#early-bird">Go to the form</a></span></p>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="wrap">
+      <h1>What changed since the last version of the brief, and which changes matter?</h1>
+
+      <div class="briefs">
+        <article class="brief" aria-label="Earlier version, Brief v2">
+          <div class="brief-head">
+            <h2>Earlier version</h2>
+            <span class="label">Example · Brief v2</span>
+          </div>
+          <div class="brief-lines">
+            <p>The project budget is €4,800 excluding VAT.</p>
+            <p>Final files are due on 20 November 2026.</p>
+            <p>The website includes five pages.</p>
+            <p>Hosting is provided by the client.</p>
+          </div>
+        </article>
+        <article class="brief brief-new fixed-ink" aria-label="Newer version, Brief v3">
+          <div class="brief-head">
+            <h2>Newer version</h2>
+            <span class="label">Example · Brief v3</span>
+          </div>
+          <div class="brief-lines">
+            <p>The project budget is €6,200 excluding VAT.</p>
+            <p>Final files are due on 27 November 2026.</p>
+            <p>The website includes seven pages.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="scope-block">
+        <fieldset class="scope">
+          <legend class="h3">What is the newer version?</legend>
+          <div class="scope-rows">
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-complete" value="complete" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="complete">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Complete replacement"><span>Complete replacement</span></span>
+                <span class="meta">A full brief that replaces the earlier one.</span>
+              </span>
+            </label>
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-partial" value="partial" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="partial">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Partial update"><span>Partial update</span></span>
+                <span class="meta">Unmentioned items are not addressed. This does not confirm whether they still apply.</span>
+              </span>
+            </label>
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-unknown" value="unknown" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="unknown">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Not sure"><span>Not sure</span></span>
+                <span class="meta">It is unclear whether the rest still stands.</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+        <!-- The count line for the chosen answer. site.js repeats it once in the live region below. -->
+        <p class="count h3 for-review enter" data-count="complete unknown">4 things moved <span>· 1 needs a second look</span></p>
+        <p class="count h3 for-partial enter" data-count="partial">3 things moved</p>
+        <p class="sr-only" id="scope-live" aria-live="polite"></p>
+      </div>
+
+      <div class="cta">
+        <a class="pill" href="#early-bird" data-umami-event="list-cta" data-umami-event-place="hero">Join the list</a>
+        <p class="meta">The full version is coming soon. People on the early-bird list get a discount on it.</p>
+      </div>
+
+      <section class="findings" aria-labelledby="findings-title">
+        <h2 class="h3" id="findings-title">Findings for the example</h2>
+        <p class="findings-none for-none">Choose an answer above. The findings shown here depend on it.</p>
+
+        <div class="tiles for-any enter">
+          <article class="tile tile-budget fixed-ink">
+            <h3>Changed · Budget</h3>
+            <p class="quote"><span class="label">Earlier · Brief v2</span>The project budget is €4,800 excluding VAT.</p>
+            <p class="quote"><span class="label">Newer · Brief v3</span>The project budget is €6,200 excluding VAT.</p>
+            <p class="explain">Project budget increased.</p>
+          </article>
+          <article class="tile tile-deadlines fixed-ink">
+            <h3>Changed · Deadlines</h3>
+            <p class="quote"><span class="label">Earlier · Brief v2</span>Final files are due on 20 November 2026.</p>
+            <p class="quote"><span class="label">Newer · Brief v3</span>Final files are due on 27 November 2026.</p>
+            <p class="explain">Final delivery moved.</p>
+          </article>
+          <article class="tile tile-deliverables fixed-ink">
+            <h3>Changed · Deliverables</h3>
+            <p class="quote"><span class="label">Earlier · Brief v2</span>The website includes five pages.</p>
+            <p class="quote"><span class="label">Newer · Brief v3</span>The website includes seven pages.</p>
+            <p class="explain">Page count increased.</p>
+          </article>
+        </div>
+
+        <div class="review-group for-complete enter">
+          <h3>Needs your review</h3>
+          <article class="result result-review">
+            <span class="disc" aria-hidden="true">?</span>
+            <h4>Not in the replacement · Responsibilities</h4>
+            <p class="quote"><span class="label">Earlier · Brief v2</span>Hosting is provided by the client.</p>
+            <p class="result-body">Missing from a complete replacement. This doesn’t mean it is cancelled.</p>
+          </article>
+        </div>
+
+        <article class="result for-partial enter">
+          <h3>Not addressed · Responsibilities</h3>
+          <p class="quote"><span class="label">Earlier · Brief v2</span>Hosting is provided by the client.</p>
+          <p class="result-body">A partial update didn’t mention it. It is neither removed nor reconfirmed.</p>
+        </article>
+
+        <div class="review-group for-unknown enter">
+          <h3>Needs your review</h3>
+          <article class="result result-review">
+            <span class="disc" aria-hidden="true">?</span>
+            <h4>Uncertain · Responsibilities</h4>
+            <p class="quote"><span class="label">Earlier · Brief v2</span>Hosting is provided by the client.</p>
+            <p class="result-body">ChangeLens can’t tell. Check it yourself.</p>
+          </article>
+        </div>
+
+        <p class="meta">The Cedar website brief is a synthetic example. Nothing you choose here is sent anywhere.</p>
+      </section>
+    </div>
+  </section>
+
+  <section class="section" id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <h2 class="h2" id="how-title">How it works</h2>
+      <ol class="cards steps">
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">1</span>
+          <h3>You set the context.</h3>
+          <p>Pick the earlier and the newer version yourself and say whether the newer one is a complete replacement, a partial update, or unknown. Nothing is preselected, and the order never comes from upload time or file names.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">2</span>
+          <h3>The backend compares facts.</h3>
+          <p>It parses both inputs, extracts facts, aligns and compares them, and verifies every quotation against its source before reporting.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">3</span>
+          <h3>You review the evidence.</h3>
+          <p>Findings are grouped by topic. Uncertain ones stay in their own Needs your review group, whatever topic filter is on. Every finding opens on its quoted passages; a PDF opens with the passage highlighted, or falls back to the parsed text with a visible warning.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">4</span>
+          <h3>Review is not approval.</h3>
+          <p>Confirming, correcting or dismissing a finding is your own review. A correction is saved as a new revision and the original is kept. A client’s approval is a separate record labelled Client approval recorded (not verified by ChangeLens).</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="not" aria-labelledby="not-title">
+    <div class="wrap">
+      <h2 class="h2" id="not-title">What ChangeLens deliberately does not do</h2>
+      <ul class="cards limits">
+        <li class="card">It does not treat silence as a change. Something a partial update does not mention is neither removed nor reconfirmed.</li>
+        <li class="card">It does not invent quotes, scores or an “all clear”. A selected summary always links to every other difference, including text no finding explains.</li>
+        <li class="card">It keeps no document content on the device and none in logs or analytics.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="app" aria-labelledby="app-title">
+    <div class="wrap">
+      <h2 class="h2" id="app-title">The app</h2>
+      <div class="shots">
+        <figure>
+          <img src="assets/screenshots/projects.png" width="780" height="1688" loading="lazy" decoding="async" alt="Projects screen: a Compare two briefs button and one project, Cedar website, by Northstar Studio">
+          <figcaption class="meta">Projects</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/screenshots/compare.png" width="780" height="1688" loading="lazy" decoding="async" alt="Compare: the newer version slot set to Brief v3, the scope question with Partial update selected, and the Start comparison button">
+          <figcaption class="meta">Compare</figcaption>
+        </figure>
+        <figure>
+          <picture>
+            <source srcset="assets/screenshots/report-dark.png" media="(prefers-color-scheme: dark)">
+            <img src="assets/screenshots/report.png" width="780" height="1688" loading="lazy" decoding="async" alt="Report titled What changed: source pair, partial-processing warning, topic filters, a needs-review count and a deadline finding">
+          </picture>
+          <figcaption class="meta">Report</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/screenshots/finding.png" width="780" height="1688" loading="lazy" decoding="async" alt="Budget finding with the earlier and newer quoted passages, a text-fallback warning and a Confirm and next button">
+          <figcaption class="meta">Finding</figcaption>
+        </figure>
+      </div>
+      <p class="meta shots-note">For iOS and Android, in English and German. The screens show the same synthetic Cedar brief. So far, comparisons have been tested on English briefs only.</p>
+    </div>
+  </section>
+
+  <section class="section" id="demo" aria-labelledby="demo-title">
+    <div class="wrap">
+      <div class="demo">
+        <div class="demo-text">
+          <h2 class="h2" id="demo-title">Demo period and early bird</h2>
+          <ul class="demo-points">
+            <li>The demo allows three comparisons per account.</li>
+            <li>The full version is coming soon.</li>
+            <li>People on the early-bird list get a discount on the full version.</li>
+            <li>One discount per person.</li>
+          </ul>
+        </div>
+
+        <!-- Without scripting the button stays disabled and the "not open yet" message shows.
+             site.js enables the button and shows the message again on submit (EARLY_BIRD_OPEN). -->
+        <form class="form" id="early-bird" method="post" action="#early-bird" data-locale="en" aria-labelledby="form-title">
+          <h3 class="h3" id="form-title">Join the early-bird list</h3>
+          <div class="field">
+            <label for="eb-email">Email address</label>
+            <input id="eb-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com" aria-describedby="eb-error eb-note">
+            <p class="msg msg-error msg-field" id="eb-error" hidden>Enter a valid email address, for example you@example.com.</p>
+          </div>
+          <button class="pill" type="submit" disabled data-umami-event="list-cta" data-umami-event-place="form">Join the list</button>
+          <div class="form-status" id="eb-status" role="status"><p class="msg msg-info msg-banner">The list is not open yet. Your address was not saved.</p></div>
+          <p class="meta" id="eb-note">We send one email with a link to confirm your address. [Wording of this line is under legal review.]</p>
+          <template id="eb-msg-sent"><p class="msg msg-info msg-banner">Check your inbox. We sent you a link to confirm your address.</p></template>
+          <template id="eb-msg-failed"><p class="msg msg-error msg-banner">That didn’t work. Check your connection and try again.</p></template>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <nav class="footer-nav no-hyphens" aria-label="Legal">
+        <a class="tap" href="imprint.html">Imprint</a>
+        <a class="tap" href="privacy.html">Privacy policy</a>
+        <a class="tap" href="terms.html">Terms</a>
+        <span class="lang">
+          <a class="tap" href="./" lang="en" hreflang="en" aria-current="page" data-lang-switch>EN</a>
+          <span aria-hidden="true">/</span>
+          <a class="tap" href="de/" lang="de" hreflang="de" data-lang-switch data-umami-event="lang-switch" data-umami-event-to="de">DE</a>
+        </span>
+      </nav>
+      <p class="meta">The Cedar website brief on this page is a synthetic example.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,284 @@
+{
+ "_note": "Copy for the landing page, direction A (docs/landing-page-handoff.md and the direction A handoff). Brief quotes stay English in both languages. German strings not taken from app/lib/l10n are unreviewed translations. form_note is a placeholder until the legal review. count is the partial-update line; count_review is the line for complete replacement and not sure, shown with second. Held back from demo_points until the legal review clears a discount for feedback for TestFlight testers: \"Giving feedback in the app also qualifies.\" / \"Feedback in der App zählt ebenfalls.\"",
+ "example": {
+  "earlier": [
+   "The project budget is €4,800 excluding VAT.",
+   "Final files are due on 20 November 2026.",
+   "The website includes five pages.",
+   "Hosting is provided by the client."
+  ],
+  "newer": [
+   "The project budget is €6,200 excluding VAT.",
+   "Final files are due on 27 November 2026.",
+   "The website includes seven pages."
+  ]
+ },
+ "en": {
+  "lang": "en",
+  "nav_list": "Early-bird list",
+  "h1": "What changed since the last version of the brief, and which changes matter?",
+  "earlier_v": "Earlier version",
+  "newer_v": "Newer version",
+  "example": "Example",
+  "aria_e": "Earlier version, Brief v2",
+  "aria_n": "Newer version, Brief v3",
+  "scope_q": "What is the newer version?",
+  "scopes": [
+   {
+    "id": "complete",
+    "label": "Complete replacement",
+    "hint": "A full brief that replaces the earlier one."
+   },
+   {
+    "id": "partial",
+    "label": "Partial update",
+    "hint": "Unmentioned items are not addressed. This does not confirm whether they still apply."
+   },
+   {
+    "id": "unknown",
+    "label": "Not sure",
+    "hint": "It is unclear whether the rest still stands."
+   }
+  ],
+  "changed": "Changed",
+  "topics": {
+   "budget": "Budget",
+   "deadlines": "Deadlines",
+   "deliverables": "Deliverables",
+   "responsibilities": "Responsibilities"
+  },
+  "earlier": "Earlier",
+  "newer": "Newer",
+  "was": "was ",
+  "count": "3 things moved",
+  "count_review": "4 things moved",
+  "explain_note": "Tile explanations are report text: English on both pages, lang=en on the German one.",
+  "explain": {"budget": "Project budget increased.", "deadlines": "Final delivery moved.", "deliverables": "Page count increased."},
+  "second": "1 needs a second look",
+  "removed": "Not in the replacement",
+  "removed_body": "Missing from a complete replacement. This doesn’t mean it is cancelled.",
+  "notaddr": "Not addressed",
+  "notaddr_body": "A partial update didn’t mention it. It is neither removed nor reconfirmed.",
+  "uncertain": "Uncertain",
+  "uncertain_body": "ChangeLens can’t tell. Check it yourself.",
+  "needs_review": "Needs your review",
+  "none": "Choose an answer above. The findings shown here depend on it.",
+  "synthetic": "The Cedar website brief is a synthetic example. Nothing you choose here is sent anywhere.",
+  "findings_aria": "Findings for the example",
+  "join": "Join the list",
+  "cta_sub": "The full version is coming soon. People on the early-bird list get a discount on it.",
+  "how": "How it works",
+  "steps": [
+   {
+    "lead": "You set the context.",
+    "body": "Pick the earlier and the newer version yourself and say whether the newer one is a complete replacement, a partial update, or unknown. Nothing is preselected, and the order never comes from upload time or file names."
+   },
+   {
+    "lead": "The backend compares facts.",
+    "body": "It parses both inputs, extracts facts, aligns and compares them, and verifies every quotation against its source before reporting."
+   },
+   {
+    "lead": "You review the evidence.",
+    "body": "Findings are grouped by topic. Uncertain ones stay in their own Needs your review group, whatever topic filter is on. Every finding opens on its quoted passages; a PDF opens with the passage highlighted, or falls back to the parsed text with a visible warning."
+   },
+   {
+    "lead": "Review is not approval.",
+    "body": "Confirming, correcting or dismissing a finding is your own review. A correction is saved as a new revision and the original is kept. A client’s approval is a separate record labelled Client approval recorded (not verified by ChangeLens)."
+   }
+  ],
+  "not": "What ChangeLens deliberately does not do",
+  "nots": [
+   "It does not treat silence as a change. Something a partial update does not mention is neither removed nor reconfirmed.",
+   "It does not invent quotes, scores or an “all clear”. A selected summary always links to every other difference, including text no finding explains.",
+   "It keeps no document content on the device and none in logs or analytics."
+  ],
+  "app": "The app",
+  "shots": [
+   {
+    "file": "docs/screenshots/projects.png",
+    "alt": "Projects screen: a Compare two briefs button and one project, Cedar website, by Northstar Studio",
+    "caption": "Projects"
+   },
+   {
+    "file": "docs/screenshots/compare.png",
+    "alt": "Compare: the newer version slot set to Brief v3, the scope question with Partial update selected, and the Start comparison button",
+    "caption": "Compare"
+   },
+   {
+    "file": "docs/screenshots/report.png",
+    "alt": "Report titled What changed: source pair, partial-processing warning, topic filters, a needs-review count and a deadline finding",
+    "caption": "Report"
+   },
+   {
+    "file": "docs/screenshots/finding.png",
+    "alt": "Budget finding with the earlier and newer quoted passages, a text-fallback warning and a Confirm and next button",
+    "caption": "Finding"
+   }
+  ],
+  "app_sub": "For iOS and Android, in English and German. The screens show the same synthetic Cedar brief. So far, comparisons have been tested on English briefs only.",
+  "demo": "Demo period and early bird",
+  "demo_points": [
+   "The demo allows three comparisons per account.",
+   "The full version is coming soon.",
+   "People on the early-bird list get a discount on the full version.",
+   "One discount per person."
+  ],
+  "form_h": "Join the early-bird list",
+  "email": "Email address",
+  "ph": "you@example.com",
+  "form_note": "We send one email with a link to confirm your address. [Wording of this line is under legal review.]",
+  "form_states_note": "form_invalid, form_closed, form_sent and form_failed were added when the page was built (2026-11-22). New and unreviewed, in both languages.",
+  "form_invalid": "Enter a valid email address, for example you@example.com.",
+  "form_closed": "The list is not open yet. Your address was not saved.",
+  "form_sent": "Check your inbox. We sent you a link to confirm your address.",
+  "form_failed": "That didn’t work. Check your connection and try again.",
+  "confirm_states_note": "confirmed_h, confirmed, confirm_failed_h, confirm_failed and confirm_failed_link are the two states the confirmation link lands on (#confirmed, #confirm-failed). Added with the early-bird endpoint (2026-11-22). New and unreviewed, in both languages.",
+  "confirmed_h": "Your address is confirmed.",
+  "confirmed": "You are on the early-bird list.",
+  "confirm_failed_h": "This link didn’t work.",
+  "confirm_failed": "It may have been used already, or it has expired. If you are not on the list yet, enter your address again.",
+  "confirm_failed_link": "Go to the form",
+  "legal": [
+   "Imprint",
+   "Privacy policy",
+   "Terms"
+  ],
+  "foot": "The Cedar website brief on this page is a synthetic example.",
+  "nav_page": "Page",
+  "nav_legal": "Legal"
+ },
+ "de": {
+  "lang": "de",
+  "nav_list": "Early-Bird-Liste",
+  "h1": "Was hat sich seit der letzten Version des Briefings geändert, und welche Änderungen sind wichtig?",
+  "earlier_v": "Frühere Version",
+  "newer_v": "Neuere Version",
+  "example": "Beispiel",
+  "aria_e": "Frühere Version, Brief v2",
+  "aria_n": "Neuere Version, Brief v3",
+  "scope_q": "Was ist die neuere Version?",
+  "scopes": [
+   {
+    "id": "complete",
+    "label": "Vollständiger Ersatz",
+    "hint": "Ein vollständiges Briefing, das die frühere Version ersetzt."
+   },
+   {
+    "id": "partial",
+    "label": "Teilweise Aktualisierung",
+    "hint": "Nicht erwähnte Punkte werden nicht behandelt. Das bestätigt nicht, ob sie weiterhin gelten."
+   },
+   {
+    "id": "unknown",
+    "label": "Nicht sicher",
+    "hint": "Es ist unklar, ob die übrigen Punkte weiterhin gelten."
+   }
+  ],
+  "changed": "Geändert",
+  "topics": {
+   "budget": "Budget",
+   "deadlines": "Fristen",
+   "deliverables": "Leistungen",
+   "responsibilities": "Zuständigkeiten"
+  },
+  "earlier": "Früher",
+  "newer": "Neuer",
+  "was": "vorher ",
+  "count": "3 Änderungen",
+  "count_review": "4 Änderungen",
+  "explain_note": "Tile explanations are report text: English on both pages, lang=en on the German one.",
+  "explain": {"budget": "Project budget increased.", "deadlines": "Final delivery moved.", "deliverables": "Page count increased."},
+  "second": "1 braucht einen zweiten Blick",
+  "removed": "In der Ersatzversion nicht enthalten",
+  "removed_body": "Fehlt in einem vollständigen Ersatz. Das heißt nicht, dass es gestrichen ist.",
+  "notaddr": "Nicht angesprochen",
+  "notaddr_body": "Eine teilweise Aktualisierung erwähnt es nicht. Es ist weder entfernt noch bestätigt.",
+  "uncertain": "Unklar",
+  "uncertain_body": "ChangeLens kann es nicht sicher erkennen. Prüfe es selbst.",
+  "needs_review": "Von dir zu prüfen",
+  "none": "Wähle oben eine Antwort. Welche Befunde hier stehen, hängt davon ab.",
+  "synthetic": "Das Briefing „Cedar website“ ist ein erfundenes Beispiel. Deine Auswahl wird nirgendwohin gesendet.",
+  "findings_aria": "Befunde zum Beispiel",
+  "join": "Eintragen",
+  "cta_sub": "Die Vollversion kommt bald. Wer auf der Early-Bird-Liste steht, bekommt einen Rabatt darauf.",
+  "how": "So funktioniert es",
+  "steps": [
+   {
+    "lead": "Du legst den Rahmen fest.",
+    "body": "Du wählst selbst die frühere und die neuere Version und gibst an, ob die neuere ein vollständiger Ersatz ist, eine teilweise Aktualisierung oder ob das unklar ist. Nichts ist vorausgewählt, und die Reihenfolge ergibt sich nie aus Upload-Zeit oder Dateinamen."
+   },
+   {
+    "lead": "Das Backend vergleicht Fakten.",
+    "body": "Es liest beide Eingaben ein, extrahiert Fakten, ordnet sie einander zu, vergleicht sie und prüft jedes Zitat gegen seine Quelle, bevor es etwas meldet."
+   },
+   {
+    "lead": "Du prüfst die Belege.",
+    "body": "Befunde sind nach Thema gruppiert. Unklare bleiben in der eigenen Gruppe „Von dir zu prüfen“, egal welcher Themenfilter aktiv ist. Jeder Befund öffnet sich mit seinen zitierten Textstellen; ein PDF öffnet sich mit markierter Stelle oder zeigt ersatzweise den ausgelesenen Text mit einem sichtbaren Hinweis."
+   },
+   {
+    "lead": "Prüfen ist keine Freigabe.",
+    "body": "Wenn du einen Befund bestätigst, korrigierst oder verwirfst, ist das deine eigene Prüfung. Eine Korrektur wird als neue Fassung gespeichert, das Original bleibt erhalten. Die Freigabe eines Kunden ist ein eigener Eintrag mit der Bezeichnung „Kundenfreigabe dokumentiert (von ChangeLens nicht überprüft)“."
+   }
+  ],
+  "not": "Was ChangeLens bewusst nicht tut",
+  "nots": [
+   "Es behandelt Schweigen nicht als Änderung. Was eine teilweise Aktualisierung nicht erwähnt, ist weder entfernt noch bestätigt.",
+   "Es erfindet keine Zitate, keine Bewertungen und kein „alles in Ordnung“. Eine ausgewählte Zusammenfassung verweist immer auf alle übrigen Unterschiede, auch auf Text, den kein Befund erklärt.",
+   "Es speichert keine Dokumentinhalte auf dem Gerät und keine in Logs oder Analysedaten."
+  ],
+  "app": "Die App",
+  "shots": [
+   {
+    "file": "docs/screenshots/projects.png",
+    "alt": "Projekte: eine Schaltfläche „Zwei Briefings vergleichen“ und ein Projekt, Cedar website, von Northstar Studio",
+    "caption": "Projekte"
+   },
+   {
+    "file": "docs/screenshots/compare.png",
+    "alt": "Vergleichen: als neuere Version ist Brief v3 gewählt, bei der Frage nach dem Umfang ist „Teilweise Aktualisierung“ ausgewählt, darunter die Schaltfläche zum Starten",
+    "caption": "Vergleichen"
+   },
+   {
+    "file": "docs/screenshots/report.png",
+    "alt": "Bericht „Was sich geändert hat“: Quellenpaar, Hinweis auf unvollständige Verarbeitung, Themenfilter, Anzahl der zu prüfenden Befunde und ein Befund zu einer Frist",
+    "caption": "Bericht"
+   },
+   {
+    "file": "docs/screenshots/finding-de.png",
+    "alt": "Befund zum Budget mit der früheren und der neueren zitierten Textstelle, einem Hinweis auf die Textansicht und der Schaltfläche „Bestätigen und weiter“",
+    "caption": "Befund"
+   }
+  ],
+  "app_sub": "Für iOS und Android, auf Englisch und Deutsch. Die Bildschirme zeigen dasselbe erfundene Cedar-Briefing. Vergleiche wurden bisher nur mit englischen Briefings getestet.",
+  "demo": "Demo-Phase und Early Bird",
+  "demo_points": [
+   "Die Demo erlaubt drei Vergleiche pro Konto.",
+   "Die Vollversion kommt bald.",
+   "Wer auf der Early-Bird-Liste steht, bekommt einen Rabatt auf die Vollversion.",
+   "Ein Rabatt pro Person."
+  ],
+  "form_h": "Auf die Early-Bird-Liste",
+  "email": "E-Mail-Adresse",
+  "ph": "du@example.com",
+  "form_note": "Wir senden dir eine E-Mail mit einem Link, um deine Adresse zu bestätigen. [Der Wortlaut dieser Zeile wird noch rechtlich geprüft.]",
+  "form_states_note": "form_invalid, form_closed, form_sent and form_failed were added when the page was built (2026-11-22). New and unreviewed, in both languages.",
+  "form_invalid": "Gib eine gültige E-Mail-Adresse ein, zum Beispiel du@example.com.",
+  "form_closed": "Die Liste ist noch nicht geöffnet. Deine Adresse wurde nicht gespeichert.",
+  "form_sent": "Sieh in dein Postfach. Wir haben dir einen Link geschickt, um deine Adresse zu bestätigen.",
+  "form_failed": "Das hat nicht geklappt. Prüfe deine Verbindung und versuche es noch einmal.",
+  "confirm_states_note": "confirmed_h, confirmed, confirm_failed_h, confirm_failed and confirm_failed_link are the two states the confirmation link lands on (#confirmed, #confirm-failed). Added with the early-bird endpoint (2026-11-22). New and unreviewed, in both languages.",
+  "confirmed_h": "Deine Adresse ist bestätigt.",
+  "confirmed": "Du stehst auf der Early-Bird-Liste.",
+  "confirm_failed_h": "Dieser Link hat nicht funktioniert.",
+  "confirm_failed": "Er wurde vielleicht schon benutzt oder ist abgelaufen. Wenn du noch nicht auf der Liste stehst, trag deine Adresse noch einmal ein.",
+  "confirm_failed_link": "Zum Formular",
+  "legal": [
+   "Impressum",
+   "Datenschutzerklärung",
+   "Nutzungsbedingungen"
+  ],
+  "foot": "Das Cedar-Briefing auf dieser Seite ist ein erfundenes Beispiel.",
+  "nav_page": "Seite",
+  "nav_legal": "Rechtliches"
+ }
+}

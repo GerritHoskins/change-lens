@@ -1,8 +1,9 @@
 """SQLAlchemy models for the I-22 subset of 03 §5. Every table has `tenant_id` (AC-19), except `users`
 (the one pre-tenant table, read only through `domain.identity`; I-8 overview, decision 4),
-`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6), and `apple_token_parks`
+`rate_limit_counters` (hashed keys, reached only through its functions; I-8 S6), `apple_token_parks`
 and `pending_links` (sign-in state before a user row or session exists, reached only through the
-functions of migration 0006; I-8 S4).
+functions of migration 0006; I-8 S4), and `early_bird_signups` (the landing page's list, which belongs to
+no account; reached only through the functions of migration 0009).
 
 The schema is owned by Alembic (`backend/migrations/`); a model change needs a revision.
 """
@@ -336,6 +337,28 @@ class RateLimitCounter(Base):
     key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     hits: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class EarlyBirdSignup(Base):
+    """An address on the landing page's early-bird list (docs/landing-page-handoff.md). Double opt-in: a row
+    is `pending` until the link in the confirmation mail is opened. `token_hash` is the SHA-256 of that
+    single-use link token, never the token, and is cleared on confirmation. No `tenant_id` and no account:
+    reached only through the `early_bird_*` functions. Pending rows are deleted after the pending period."""
+    __tablename__ = "early_bird_signups"
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_early_bird_signups_email"),
+        CheckConstraint("locale IN ('en', 'de')", name="ck_early_bird_signups_locale"),
+        CheckConstraint("status IN ('pending', 'confirmed')", name="ck_early_bird_signups_status"),
+        Index("ix_early_bird_signups_token_hash", "token_hash", unique=True),
+    )
+    id: Mapped[uuid.UUID] = _id()
+    email: Mapped[str] = mapped_column(String(254), nullable=False)  # trimmed and lower-cased
+    locale: Mapped[str] = mapped_column(String(2), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False)
+    token_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    created_at: Mapped[datetime] = _now()
+    confirmation_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class AppleTokenPark(Base):

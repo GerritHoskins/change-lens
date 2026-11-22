@@ -1,8 +1,10 @@
-# TLS for the API and Logto's sign-in endpoints (I-8 S7). Certificates come from Let's Encrypt automatically.
-# No per-site `log` directive: Caddy writes no access log. Its error log (a failed or 502 request) would still
-# carry the client address, full URI and headers, so the default logger drops those fields: an error entry
-# keeps host, method, status, duration and the error only (03a P9). The api logs method, route template and
-# status. The filter covers every site this Caddy serves, including ones imported next to this file.
+# TLS for the API, Logto's sign-in endpoints (I-8 S7) and the landing page. Certificates come from Let's
+# Encrypt automatically.
+# The API and Logto sites have no `log` directive: Caddy writes no access log for them. Its error log (a failed
+# or 502 request) would still carry the client address, full URI and headers, so the default logger drops those
+# fields: an error entry keeps host, method, status, duration and the error only (03a P9). The api logs method,
+# route template and status. The filter covers every site this Caddy serves, including ones imported next to
+# this file. The landing page alone has an access log, without the client address (see its site block).
 # Caddy replaces any client-supplied X-Forwarded-For with the real client address, and the api trusts that
 # header only from Caddy's fixed address (CHANGELENS_TRUSTED_PROXIES=172.30.0.2).
 {
@@ -50,5 +52,66 @@ auth.pixeltronic.dev {
 	}
 	handle {
 		reverse_proxy logto:3001
+	}
+}
+
+# The landing page (docs/landing-page-handoff.md): static files from the repository's web/ folder.
+# Access log, this site only (owner's decision 2026-11-22): one JSON line per request for one of the two pages
+# (not for assets, Umami or anything else) with the time, the path without its query string, the status, and
+# fields added below: the referrer's host name, the
+# utm_source, utm_medium and utm_campaign parameters, and `bot` for a request whose User-Agent is missing or
+# names a crawler. Never written: the client address and port, every request and response header (so no
+# User-Agent, Referer path, Accept-Language or cookie), the rest of the query string, and TLS details.
+# deploy/ionos/landing-stats.py turns the lines into daily totals and keeps no raw line longer than 30 days.
+# /umami/script.js and /umami/api/send go to Umami (compose profile `stats`), so the page talks to its own
+# host only; nothing else of Umami is public. While the profile is off they answer 502 and the page's tracker
+# switch stays off.
+changelens.pixeltronic.dev {
+	import common
+
+	@umami path /umami/script.js /umami/api/send
+	@notpage not path / /index.html /de/ /de/index.html
+	@ref header_regexp ref Referer ^https?://([A-Za-z0-9.-]+)
+	@bot header_regexp User-Agent (?i)(bot|crawl|spider|slurp|monitor|uptime|curl|wget|python|headless|preview|scan)
+	@noagent not header User-Agent *
+
+	log landing {
+		output file /var/log/caddy/landing-access.log {
+			mode 600
+			roll_size 10MiB
+			roll_keep 20
+			roll_keep_for 720h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers delete
+				request>tls delete
+				request>uri regexp \?.*$ ""
+				resp_headers delete
+				user_id delete
+			}
+		}
+	}
+	log_skip @notpage
+	log_append @ref ref_host {re.ref.1}
+	log_append utm_source {query.utm_source}
+	log_append utm_medium {query.utm_medium}
+	log_append utm_campaign {query.utm_campaign}
+	log_append @bot bot 1
+	log_append @noagent bot 1
+
+	header /assets/* Cache-Control "public, max-age=86400"
+
+	handle @umami {
+		uri strip_prefix /umami
+		reverse_proxy umami:3000
+	}
+	handle {
+		root * /srv/changelens-web
+		file_server
 	}
 }

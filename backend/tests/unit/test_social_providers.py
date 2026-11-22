@@ -12,6 +12,7 @@ from changelens.auth.logto_management import IdentityInUse, IdpUnavailable, Logt
 from changelens.auth.social import (AppleRevokeFailed, ProviderRejected, ProviderUnavailable, providers_for,
                                     token_cipher_from_file)
 from changelens.config import Settings
+from helpers import EARLY_BIRD_ENV
 from social_fixture import APPLE_CLIENT, OTHER_KEY, Fakes, apple_nonce, keyring_json
 
 EMAIL = "person@example.test"
@@ -205,7 +206,8 @@ def test_social_settings_come_from_the_environment(monkeypatch):
            "CHANGELENS_DATABASE_URL": "postgresql+psycopg://changelens_app:pw@postgres:5432/changelens",
            "CHANGELENS_S3_ENDPOINT": "https://s3.example.test", "CHANGELENS_S3_ACCESS_KEY": "a",
            "CHANGELENS_S3_SECRET_KEY": "s", "CHANGELENS_S3_BUCKET": "b", "CHANGELENS_LLM": "ionos",
-           "CHANGELENS_GOOGLE_CLIENT_ID": "g", "CHANGELENS_GOOGLE_CLIENT_SECRET_FILE": "/run/secrets/google"}
+           "CHANGELENS_GOOGLE_CLIENT_ID": "g", "CHANGELENS_GOOGLE_CLIENT_SECRET_FILE": "/run/secrets/google",
+           **EARLY_BIRD_ENV}
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     settings = Settings.from_env()

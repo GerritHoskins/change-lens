@@ -39,7 +39,7 @@ def main(argv=None):
         while True:
             try:
                 summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp,
-                                          apple=apple)
+                                          apple=apple, early_bird_pending_days=settings.early_bird_pending_days)
                 print(json.dumps(summary, sort_keys=True), flush=True)
                 if args.once:
                     return 0

@@ -123,6 +123,28 @@ class Database:
         with self._pre_tenant() as s:
             return s.execute(text("SELECT rate_limit_prune()")).scalar_one()
 
+    def early_bird_request(self, email: str, locale: str, token_hash: str, pending_days: int) -> bool:
+        """Record a sign-up for the early-bird list: a new pending row, or a new link token for a pending
+        one. True when a confirmation mail is due; a confirmed address changes nothing and gives False."""
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT early_bird_request(:e, :l, :h, :d)"),
+                             {"e": email, "l": locale, "h": token_hash, "d": pending_days}).scalar_one()
+
+    def early_bird_mark_sent(self, token_hash: str) -> None:
+        with self._pre_tenant() as s:
+            s.execute(text("SELECT early_bird_mark_sent(:h)"), {"h": token_hash})
+
+    def early_bird_confirm(self, token_hash: str, pending_days: int) -> Optional[str]:
+        """Confirm once by the link token's hash; the sign-up's locale, or None for an unknown, used or
+        expired token."""
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT early_bird_confirm(:h, :d)"),
+                             {"h": token_hash, "d": pending_days}).scalar_one()
+
+    def early_bird_prune(self, pending_days: int) -> int:
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT early_bird_prune(:d)"), {"d": pending_days}).scalar_one()
+
     def assert_app_role(self) -> None:
         """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
         with self.engine.connect() as conn:

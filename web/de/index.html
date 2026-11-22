@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChangeLens</title>
+<meta name="description" content="Was hat sich seit der letzten Version des Briefings geändert, und welche Änderungen sind wichtig?">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://changelens.pixeltronic.dev/de/">
+<link rel="alternate" hreflang="en" href="https://changelens.pixeltronic.dev/">
+<link rel="alternate" hreflang="de" href="https://changelens.pixeltronic.dev/de/">
+<link rel="alternate" hreflang="x-default" href="https://changelens.pixeltronic.dev/">
+<link rel="preload" href="../assets/fonts/roboto-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" type="image/svg+xml" href="../assets/changelens-favicon-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="../assets/changelens-favicon-dark.svg" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="../site.css">
+<script src="../site.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <picture class="logo">
+      <source srcset="../assets/changelens-logo-dark.svg" media="(prefers-color-scheme: dark)">
+      <img src="../assets/changelens-logo-light.svg" width="179" height="40" alt="ChangeLens">
+    </picture>
+    <nav class="topnav" aria-label="Seite">
+      <span class="lang">
+        <a class="tap" href="../" lang="en" hreflang="en" data-lang-switch data-umami-event="lang-switch" data-umami-event-to="en">EN</a>
+        <span aria-hidden="true">/</span>
+        <a class="tap" href="./" lang="de" hreflang="de" aria-current="page" data-lang-switch>DE</a>
+      </span>
+      <a class="tap" href="#early-bird" data-umami-event="list-cta" data-umami-event-place="top">Early-Bird-Liste</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Confirmation states. The link in the confirmation mail (GET /early-bird/confirm on the API)
+       redirects to #confirmed or #confirm-failed; CSS :target shows the one that is addressed.
+       These are divs, not sections: site.js reads `main section[id]` for the language switch. -->
+  <div class="notice" id="confirmed">
+    <div class="wrap">
+      <p class="msg msg-info msg-banner"><span><strong>Deine Adresse ist bestätigt.</strong> Du stehst auf der Early-Bird-Liste.</span></p>
+    </div>
+  </div>
+  <div class="notice" id="confirm-failed">
+    <div class="wrap">
+      <p class="msg msg-warning msg-banner"><span><strong>Dieser Link hat nicht funktioniert.</strong> Er wurde vielleicht schon benutzt oder ist abgelaufen. Wenn du noch nicht auf der Liste stehst, trag deine Adresse noch einmal ein. <a href="#early-bird">Zum Formular</a></span></p>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="wrap">
+      <h1>Was hat sich seit der letzten Version des Briefings geändert, und welche Änderungen sind wichtig?</h1>
+
+      <div class="briefs">
+        <article class="brief" aria-label="Frühere Version, Brief v2">
+          <div class="brief-head">
+            <h2>Frühere Version</h2>
+            <span class="label">Beispiel · Brief v2</span>
+          </div>
+          <div class="brief-lines">
+            <p lang="en">The project budget is €4,800 excluding VAT.</p>
+            <p lang="en">Final files are due on 20 November 2026.</p>
+            <p lang="en">The website includes five pages.</p>
+            <p lang="en">Hosting is provided by the client.</p>
+          </div>
+        </article>
+        <article class="brief brief-new fixed-ink" aria-label="Neuere Version, Brief v3">
+          <div class="brief-head">
+            <h2>Neuere Version</h2>
+            <span class="label">Beispiel · Brief v3</span>
+          </div>
+          <div class="brief-lines">
+            <p lang="en">The project budget is €6,200 excluding VAT.</p>
+            <p lang="en">Final files are due on 27 November 2026.</p>
+            <p lang="en">The website includes seven pages.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="scope-block">
+        <fieldset class="scope">
+          <legend class="h3">Was ist die neuere Version?</legend>
+          <div class="scope-rows">
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-complete" value="complete" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="complete">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Vollständiger Ersatz"><span>Vollständiger Ersatz</span></span>
+                <span class="meta">Ein vollständiges Briefing, das die frühere Version ersetzt.</span>
+              </span>
+            </label>
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-partial" value="partial" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="partial">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Teilweise Aktualisierung"><span>Teilweise Aktualisierung</span></span>
+                <span class="meta">Nicht erwähnte Punkte werden nicht behandelt. Das bestätigt nicht, ob sie weiterhin gelten.</span>
+              </span>
+            </label>
+            <label class="scope-row">
+              <input type="radio" name="scope" id="scope-unknown" value="unknown" autocomplete="off" data-umami-event="scope-answer" data-umami-event-answer="unknown">
+              <span class="scope-text">
+                <span class="scope-label" data-text="Nicht sicher"><span>Nicht sicher</span></span>
+                <span class="meta">Es ist unklar, ob die übrigen Punkte weiterhin gelten.</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+        <!-- The count line for the chosen answer. site.js repeats it once in the live region below. -->
+        <p class="count h3 for-review enter" data-count="complete unknown">4 Änderungen <span>· 1 braucht einen zweiten Blick</span></p>
+        <p class="count h3 for-partial enter" data-count="partial">3 Änderungen</p>
+        <p class="sr-only" id="scope-live" aria-live="polite"></p>
+      </div>
+
+      <div class="cta">
+        <a class="pill" href="#early-bird" data-umami-event="list-cta" data-umami-event-place="hero">Eintragen</a>
+        <p class="meta">Die Vollversion kommt bald. Wer auf der Early-Bird-Liste steht, bekommt einen Rabatt darauf.</p>
+      </div>
+
+      <section class="findings" aria-labelledby="findings-title">
+        <h2 class="h3" id="findings-title">Befunde zum Beispiel</h2>
+        <p class="findings-none for-none">Wähle oben eine Antwort. Welche Befunde hier stehen, hängt davon ab.</p>
+
+        <div class="tiles for-any enter">
+          <article class="tile tile-budget fixed-ink">
+            <h3>Geändert · Budget</h3>
+            <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">The project budget is €4,800 excluding VAT.</span></p>
+            <p class="quote"><span class="label">Neuer · Brief v3</span><span lang="en">The project budget is €6,200 excluding VAT.</span></p>
+            <p class="explain" lang="en">Project budget increased.</p>
+          </article>
+          <article class="tile tile-deadlines fixed-ink">
+            <h3>Geändert · Fristen</h3>
+            <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">Final files are due on 20 November 2026.</span></p>
+            <p class="quote"><span class="label">Neuer · Brief v3</span><span lang="en">Final files are due on 27 November 2026.</span></p>
+            <p class="explain" lang="en">Final delivery moved.</p>
+          </article>
+          <article class="tile tile-deliverables fixed-ink">
+            <h3>Geändert · Leistungen</h3>
+            <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">The website includes five pages.</span></p>
+            <p class="quote"><span class="label">Neuer · Brief v3</span><span lang="en">The website includes seven pages.</span></p>
+            <p class="explain" lang="en">Page count increased.</p>
+          </article>
+        </div>
+
+        <div class="review-group for-complete enter">
+          <h3>Von dir zu prüfen</h3>
+          <article class="result result-review">
+            <span class="disc" aria-hidden="true">?</span>
+            <h4>In der Ersatzversion nicht enthalten · Zuständigkeiten</h4>
+            <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">Hosting is provided by the client.</span></p>
+            <p class="result-body">Fehlt in einem vollständigen Ersatz. Das heißt nicht, dass es gestrichen ist.</p>
+          </article>
+        </div>
+
+        <article class="result for-partial enter">
+          <h3>Nicht angesprochen · Zuständigkeiten</h3>
+          <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">Hosting is provided by the client.</span></p>
+          <p class="result-body">Eine teilweise Aktualisierung erwähnt es nicht. Es ist weder entfernt noch bestätigt.</p>
+        </article>
+
+        <div class="review-group for-unknown enter">
+          <h3>Von dir zu prüfen</h3>
+          <article class="result result-review">
+            <span class="disc" aria-hidden="true">?</span>
+            <h4>Unklar · Zuständigkeiten</h4>
+            <p class="quote"><span class="label">Früher · Brief v2</span><span lang="en">Hosting is provided by the client.</span></p>
+            <p class="result-body">ChangeLens kann es nicht sicher erkennen. Prüfe es selbst.</p>
+          </article>
+        </div>
+
+        <p class="meta">Das Briefing „Cedar website“ ist ein erfundenes Beispiel. Deine Auswahl wird nirgendwohin gesendet.</p>
+      </section>
+    </div>
+  </section>
+
+  <section class="section" id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <h2 class="h2" id="how-title">So funktioniert es</h2>
+      <ol class="cards steps">
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">1</span>
+          <h3>Du legst den Rahmen fest.</h3>
+          <p>Du wählst selbst die frühere und die neuere Version und gibst an, ob die neuere ein vollständiger Ersatz ist, eine teilweise Aktualisierung oder ob das unklar ist. Nichts ist vorausgewählt, und die Reihenfolge ergibt sich nie aus Upload-Zeit oder Dateinamen.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">2</span>
+          <h3>Das Backend vergleicht Fakten.</h3>
+          <p>Es liest beide Eingaben ein, extrahiert Fakten, ordnet sie einander zu, vergleicht sie und prüft jedes Zitat gegen seine Quelle, bevor es etwas meldet.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">3</span>
+          <h3>Du prüfst die Belege.</h3>
+          <p>Befunde sind nach Thema gruppiert. Unklare bleiben in der eigenen Gruppe „Von dir zu prüfen“, egal welcher Themenfilter aktiv ist. Jeder Befund öffnet sich mit seinen zitierten Textstellen; ein PDF öffnet sich mit markierter Stelle oder zeigt ersatzweise den ausgelesenen Text mit einem sichtbaren Hinweis.</p>
+        </li>
+        <li class="card step">
+          <span class="step-number" aria-hidden="true">4</span>
+          <h3>Prüfen ist keine Freigabe.</h3>
+          <p>Wenn du einen Befund bestätigst, korrigierst oder verwirfst, ist das deine eigene Prüfung. Eine Korrektur wird als neue Fassung gespeichert, das Original bleibt erhalten. Die Freigabe eines Kunden ist ein eigener Eintrag mit der Bezeichnung „Kundenfreigabe dokumentiert (von ChangeLens nicht überprüft)“.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="not" aria-labelledby="not-title">
+    <div class="wrap">
+      <h2 class="h2" id="not-title">Was ChangeLens bewusst nicht tut</h2>
+      <ul class="cards limits">
+        <li class="card">Es behandelt Schweigen nicht als Änderung. Was eine teilweise Aktualisierung nicht erwähnt, ist weder entfernt noch bestätigt.</li>
+        <li class="card">Es erfindet keine Zitate, keine Bewertungen und kein „alles in Ordnung“. Eine ausgewählte Zusammenfassung verweist immer auf alle übrigen Unterschiede, auch auf Text, den kein Befund erklärt.</li>
+        <li class="card">Es speichert keine Dokumentinhalte auf dem Gerät und keine in Logs oder Analysedaten.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="app" aria-labelledby="app-title">
+    <div class="wrap">
+      <h2 class="h2" id="app-title">Die App</h2>
+      <div class="shots">
+        <figure>
+          <img src="../assets/screenshots/projects.png" width="780" height="1688" loading="lazy" decoding="async" alt="Projekte: eine Schaltfläche „Zwei Briefings vergleichen“ und ein Projekt, Cedar website, von Northstar Studio">
+          <figcaption class="meta">Projekte</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/screenshots/compare.png" width="780" height="1688" loading="lazy" decoding="async" alt="Vergleichen: als neuere Version ist Brief v3 gewählt, bei der Frage nach dem Umfang ist „Teilweise Aktualisierung“ ausgewählt, darunter die Schaltfläche zum Starten">
+          <figcaption class="meta">Vergleichen</figcaption>
+        </figure>
+        <figure>
+          <picture>
+            <source srcset="../assets/screenshots/report-dark.png" media="(prefers-color-scheme: dark)">
+            <img src="../assets/screenshots/report.png" width="780" height="1688" loading="lazy" decoding="async" alt="Bericht „Was sich geändert hat“: Quellenpaar, Hinweis auf unvollständige Verarbeitung, Themenfilter, Anzahl der zu prüfenden Befunde und ein Befund zu einer Frist">
+          </picture>
+          <figcaption class="meta">Bericht</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/screenshots/finding-de.png" width="780" height="1688" loading="lazy" decoding="async" alt="Befund zum Budget mit der früheren und der neueren zitierten Textstelle, einem Hinweis auf die Textansicht und der Schaltfläche „Bestätigen und weiter“">
+          <figcaption class="meta">Befund</figcaption>
+        </figure>
+      </div>
+      <p class="meta shots-note">Für iOS und Android, auf Englisch und Deutsch. Die Bildschirme zeigen dasselbe erfundene Cedar-Briefing. Vergleiche wurden bisher nur mit englischen Briefings getestet.</p>
+    </div>
+  </section>
+
+  <section class="section" id="demo" aria-labelledby="demo-title">
+    <div class="wrap">
+      <div class="demo">
+        <div class="demo-text">
+          <h2 class="h2" id="demo-title">Demo-Phase und Early Bird</h2>
+          <ul class="demo-points">
+            <li>Die Demo erlaubt drei Vergleiche pro Konto.</li>
+            <li>Die Vollversion kommt bald.</li>
+            <li>Wer auf der Early-Bird-Liste steht, bekommt einen Rabatt auf die Vollversion.</li>
+            <li>Ein Rabatt pro Person.</li>
+          </ul>
+        </div>
+
+        <!-- Without scripting the button stays disabled and the "not open yet" message shows.
+             site.js enables the button and shows the message again on submit (EARLY_BIRD_OPEN). -->
+        <form class="form" id="early-bird" method="post" action="#early-bird" data-locale="de" aria-labelledby="form-title">
+          <h3 class="h3" id="form-title">Auf die Early-Bird-Liste</h3>
+          <div class="field">
+            <label for="eb-email">E-Mail-Adresse</label>
+            <input id="eb-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="du@example.com" aria-describedby="eb-error eb-note">
+            <p class="msg msg-error msg-field" id="eb-error" hidden>Gib eine gültige E-Mail-Adresse ein, zum Beispiel du@example.com.</p>
+          </div>
+          <button class="pill" type="submit" disabled data-umami-event="list-cta" data-umami-event-place="form">Eintragen</button>
+          <div class="form-status" id="eb-status" role="status"><p class="msg msg-info msg-banner">Die Liste ist noch nicht geöffnet. Deine Adresse wurde nicht gespeichert.</p></div>
+          <p class="meta" id="eb-note">Wir senden dir eine E-Mail mit einem Link, um deine Adresse zu bestätigen. [Der Wortlaut dieser Zeile wird noch rechtlich geprüft.]</p>
+          <template id="eb-msg-sent"><p class="msg msg-info msg-banner">Sieh in dein Postfach. Wir haben dir einen Link geschickt, um deine Adresse zu bestätigen.</p></template>
+          <template id="eb-msg-failed"><p class="msg msg-error msg-banner">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es noch einmal.</p></template>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <nav class="footer-nav no-hyphens" aria-label="Rechtliches">
+        <a class="tap" href="imprint.html">Impressum</a>
+        <a class="tap" href="privacy.html">Datenschutzerklärung</a>
+        <a class="tap" href="terms.html">Nutzungsbedingungen</a>
+        <span class="lang">
+          <a class="tap" href="../" lang="en" hreflang="en" data-lang-switch data-umami-event="lang-switch" data-umami-event-to="en">EN</a>
+          <span aria-hidden="true">/</span>
+          <a class="tap" href="./" lang="de" hreflang="de" aria-current="page" data-lang-switch>DE</a>
+        </span>
+      </nav>
+      <p class="meta">Das Cedar-Briefing auf dieser Seite ist ein erfundenes Beispiel.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

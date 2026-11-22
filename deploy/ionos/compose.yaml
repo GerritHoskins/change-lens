@@ -10,6 +10,8 @@
 #   authdb   internal, no internet: Postgres and Logto only. Logto is not on `data`, so the worker has no
 #            route to Logto (03 §6, LR-4); the api and retention reach it through Caddy on `edge`.
 #   outbound the egress proxy and the backup job: the only way out for the worker is the proxy's allow-list.
+#   statsdb  internal, no internet: Postgres and Umami only (profile `stats`).
+#   stats    Caddy and Umami only; not internal, so Umami's dashboard port can be bound to the host's loopback.
 name: changelens
 
 x-app: &app
@@ -42,6 +44,9 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./brand:/srv/changelens-brand:ro
+      - ../../web:/srv/changelens-web:ro  # the landing page
+      # The landing page's access log, on the host so root's cron can total it (landing-stats.py).
+      - /var/log/changelens-caddy:/var/log/caddy
       - caddy-data:/data
       - caddy-config:/config
     networks:
@@ -50,6 +55,8 @@ services:
         aliases:
           - auth.pixeltronic.dev
           - api.pixeltronic.dev
+      stats:
+        ipv4_address: 172.30.6.2  # = Umami's TRUSTED_PROXIES
     restart: unless-stopped
     logging: *logging
 
@@ -79,7 +86,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - wal-archive:/wal-archive
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
-    networks: [data, authdb]
+    networks: [data, authdb, statsdb]
     shm_size: 256m
     mem_limit: 2g
     healthcheck:
@@ -188,6 +195,38 @@ services:
     restart: unless-stopped
     logging: *logging
 
+  # Umami: visits and click events for the landing page (docs/landing-page-handoff.md, Measurement). Off
+  # unless the `stats` profile is named: docker compose --profile stats up -d umami. It stays off until the
+  # legal review has answered whether the tracker may run without consent.
+  # Caddy passes on /umami/script.js and /umami/api/send only; the dashboard is on the host's loopback
+  # (SSH tunnel), like Logto's admin console.
+  umami:
+    image: ghcr.io/umami-software/umami:3.5.0@sha256:b64f40400d77bcadd39cf5c62a1e368c99524ca442024f96e1133355a19a5dbc
+    profiles: [stats]
+    env_file: /etc/changelens/umami.env  # DATABASE_URL and APP_SECRET; Umami stops at start without them
+    environment:
+      # Set here, not in the env file: any value of SALT_ROTATION that Umami doesn't know becomes a salt that
+      # never rotates, so a typo would silently turn the daily rotation off.
+      SALT_ROTATION: day
+      TRUSTED_PROXIES: 172.30.6.2  # Caddy on `stats`: the visitor's address is taken from its header only
+      PRIVATE_MODE: "1"  # no outside calls at all (telemetry, version check, site icons)
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+    ports:
+      - "127.0.0.1:3003:3000"  # dashboard: SSH tunnel only
+    networks: [stats, statsdb]
+    mem_limit: 1g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/heartbeat >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    logging: *logging
+
   # One-off tools: docker compose --profile tools run --rm <name>
   bootstrap-roles:
     <<: *app
@@ -219,6 +258,13 @@ services:
 networks:
   authdb:
     internal: true
+  statsdb:
+    internal: true
+  stats:
+    ipam:
+      config:
+        - subnet: 172.30.6.0/24
+          ip_range: 172.30.6.128/25  # as on `edge`: dynamic addresses can't take Caddy's fixed one
   edge:
     ipam:
       config:

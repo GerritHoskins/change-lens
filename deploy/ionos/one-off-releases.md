@@ -147,3 +147,102 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
     ```bash
     cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
     ```
+
+## The release with the landing page (once)
+
+**Not done.** Written 2026-11-22; tested on the PC only (the Caddyfile and the Umami service in the pinned
+images, the database script on a test Postgres). Nothing here has run on the server.
+
+It brings the site `changelens.pixeltronic.dev` (static files from `web/`), an access log for that site
+without client addresses, the early-bird list (migration `0009_early_bird`, six new settings) and the
+networks for Umami. The release recreates Caddy and Postgres (each gets a new network): sign-in, the api and
+TLS pause for about a minute.
+
+1. **DNS first** (IONOS control panel, by hand): an A record `changelens.pixeltronic.dev` to the cube's
+   address, and an AAAA record if the cube has IPv6. Without it Caddy can't get the certificate. Check, local,
+   PowerShell:
+   ```powershell
+   Resolve-DnsName changelens.pixeltronic.dev
+   ```
+2. **The code.** Server, Bash, as root (all following steps too, unless marked local):
+   ```bash
+   cd /opt/changelens && git pull
+   ```
+3. **The six settings for the confirmation mail.** Copy the block from `env/changelens.env.example` and fill
+   it in: `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`,
+   `CHANGELENS_PUBLIC_API_URL=https://api.pixeltronic.dev`, `CHANGELENS_LANDING_URL=https://changelens.pixeltronic.dev`.
+   Without them the api and retention don't start.
+   ```bash
+   nano /etc/changelens/changelens.env
+   ```
+   ```bash
+   grep -c -E '^CHANGELENS_(SMTP_HOST|SMTP_USER|SMTP_PASSWORD|MAIL_FROM|PUBLIC_API_URL|LANDING_URL)=.+' /etc/changelens/changelens.env
+   ```
+   Expected: `6`.
+4. **Folders for the access log and its totals:**
+   ```bash
+   install -d -m 700 /var/log/changelens-caddy /var/lib/changelens
+   ```
+5. **The release** (the app release command of the runbook's section F):
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose build && docker compose --profile tools run --rm migrate && docker compose up -d && sleep 40 && docker compose ps
+   ```
+   Expected: every service `running`, and `healthy` where it has a health check.
+6. **Checks.**
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' https://changelens.pixeltronic.dev/ && curl -s -o /dev/null -w '%{http_code}\n' https://changelens.pixeltronic.dev/de/
+   ```
+   Expected: `200` twice.
+   ```bash
+   curl -s -o /dev/null -A 'Mozilla/5.0 check' 'https://changelens.pixeltronic.dev/?utm_source=check' && tail -n 1 /var/log/changelens-caddy/landing-access.log
+   ```
+   Expected: one line with `"uri":"/"` and `"utm_source":"check"`, and no `remote_ip`, `client_ip` or
+   `headers` in it.
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' https://api.pixeltronic.dev/projects
+   ```
+   Expected: `401` (the api started with the new settings).
+7. **Daily totals.** Once a day at 00:15 UTC as root; the second command shows what it would write:
+   ```bash
+   (crontab -l 2>/dev/null; echo '15 0 * * * python3 /opt/changelens/deploy/ionos/landing-stats.py >> /var/log/changelens-landing-stats.log 2>&1') | crontab -
+   ```
+   ```bash
+   python3 /opt/changelens/deploy/ionos/landing-stats.py --dry-run --through-today
+   ```
+   Expected: a line like `2026-…,en,,check,1`.
+8. **Not part of this release:** the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
+   mail wording and the privacy text are reviewed and a test mail has arrived. The footer's legal pages
+   don't exist yet (L23).
+
+## Starting Umami (once, only after the legal answer)
+
+**Not done, and not to be done yet:** the tracker stays off until the legal review has answered whether it
+may run without consent (`docs/landing-page-handoff.md`, Measurement).
+
+1. **Umami's database password**, generated into `postgres.env` without showing it; Postgres must be
+   recreated to see it (a pause of about a minute):
+   ```bash
+   P=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32) && echo "UMAMI_DB_PASSWORD=$P" >> /etc/changelens/postgres.env && install -m 600 /opt/changelens/deploy/ionos/env/umami.env.example /etc/changelens/umami.env && sed -i -e "s/<umami>/$P/" -e "s/^APP_SECRET=.*/APP_SECRET=$(openssl rand -hex 32)/" /etc/changelens/umami.env; unset P
+   ```
+   ```bash
+   cd /opt/changelens/deploy/ionos && docker compose up -d postgres && sleep 20 && docker compose exec -u postgres postgres /docker-entrypoint-initdb.d/30-umami-database.sh
+   ```
+   Expected: `ALTER ROLE` and `REVOKE` among the output, no error.
+2. **Start it:**
+   ```bash
+   docker compose --profile stats up -d umami && sleep 60 && docker compose --profile stats ps umami
+   ```
+   Expected: `running`, `healthy`.
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' https://changelens.pixeltronic.dev/umami/script.js && curl -s -o /dev/null -w '%{http_code}\n' https://changelens.pixeltronic.dev/umami/login
+   ```
+   Expected: `200`, then `404` (only the script and the collect endpoint are public).
+3. **The dashboard**, through an SSH tunnel. Local, PowerShell; then open `http://localhost:3003`:
+   ```powershell
+   ssh -L 3003:127.0.0.1:3003 root@<cube-ip>
+   ```
+   Sign in as `admin` / `umami`; Umami makes you change the password at once. Add the website
+   `changelens.pixeltronic.dev` and copy its website ID.
+4. **Switch the tracker on** in the repository (local): in `web/site.js` set `TRACKER_WEBSITE_ID` to that ID
+   and `TRACKER_ENABLED = true`, update both privacy texts, commit, push, and run the app release command
+   with `--profile stats` on its `docker compose up -d`.

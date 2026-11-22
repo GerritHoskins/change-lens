@@ -6,3 +6,4 @@ Caddyfile text eol=lf
 Dockerfile text eol=lf
 *.Dockerfile text eol=lf
 compose.yaml text eol=lf
+*.py text eol=lf

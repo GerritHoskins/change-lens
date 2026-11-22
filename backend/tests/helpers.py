@@ -12,6 +12,11 @@ TOKEN_B = "dev-token-tenant-b-0123456789"
 SUBJECT_A = "dev:tenant-a"
 SUBJECT_B = "dev:tenant-b"
 DEV_TOKENS = {TOKEN_A: SUBJECT_A, TOKEN_B: SUBJECT_B}
+# What a deployment (logto mode) must set for the early-bird list's confirmation mail; synthetic values.
+EARLY_BIRD_ENV = {"CHANGELENS_SMTP_HOST": "smtp.example.test", "CHANGELENS_SMTP_USER": "noreply@example.test",
+                  "CHANGELENS_SMTP_PASSWORD": "smtp-password-0123456789", "CHANGELENS_MAIL_FROM": "noreply@example.test",
+                  "CHANGELENS_PUBLIC_API_URL": "https://api.example.test",
+                  "CHANGELENS_LANDING_URL": "https://landing.example.test"}
 
 EARLIER_LINES = [
     "Project brief: website relaunch",

@@ -20,8 +20,9 @@ from helpers import SUBJECT_A, TOKEN_A, TOKEN_B, auth
 from helpers import EARLIER_LINES, LATER_LINES
 from test_reviews import _compared, _findings, _post
 
-# No tenant_id: only through the functions. The last two are I-8 S4's sign-in state.
-EXCEPTIONS = {"users", "alembic_version", "rate_limit_counters", "apple_token_parks", "pending_links"}
+# No tenant_id: only through the functions. Two are I-8 S4's sign-in state; the last is the early-bird list.
+EXCEPTIONS = {"users", "alembic_version", "rate_limit_counters", "apple_token_parks", "pending_links",
+              "early_bird_signups"}
 FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "session_lookup": ["user_id", "tenant_id", "member_role"],
     "session_bootstrap": ["outcome", "user_id", "tenant_id", "member_role"],
@@ -49,6 +50,10 @@ FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "account_apple_token": ["account_apple_token"],
     "account_apple_token_clear": ["account_apple_token_clear"],
     "account_social_cleanup": ["account_social_cleanup"],
+    "early_bird_request": ["early_bird_request"],  # the landing page's list (migration 0009)
+    "early_bird_mark_sent": ["early_bird_mark_sent"],
+    "early_bird_confirm": ["early_bird_confirm"],
+    "early_bird_prune": ["early_bird_prune"],
 }
 
 
@@ -81,7 +86,8 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
         using, check = policies[(name, "ALL")]
         expected = "(tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)"
         assert using == expected and check == expected, name
-    for name in ("users", "rate_limit_counters", "apple_token_parks", "pending_links"):  # RLS on, no policy
+    for name in ("users", "rate_limit_counters", "apple_token_parks", "pending_links",
+                 "early_bird_signups"):  # RLS on, no policy
         assert tables[name][:2] == (True, True), name
     assert not [p for p in policies if p[0] in EXCEPTIONS]
 
@@ -187,7 +193,9 @@ def test_an_unfiltered_orm_query_in_tenant_scope_returns_only_that_tenant(env):
 # 4. Every route ------------------------------------------------------------------------------------
 NO_RESOURCE_ID = {("POST", "/session"), ("DELETE", "/me"), ("GET", "/projects"), ("POST", "/projects"),
                   ("GET", "/me/onboarding"), ("PUT", "/me/onboarding"), ("GET", "/me/consent"),
-                  ("PUT", "/me/consent")}
+                  ("PUT", "/me/consent"),
+                  # Public, with no tenant and no resource ID (the early-bird list).
+                  ("POST", "/early-bird"), ("GET", "/early-bird/confirm")}
 
 
 def _requests(a, b, cid, finding):
@@ -326,7 +334,11 @@ def test_each_function_returns_only_its_listed_columns(env):
              "pending_links_prune": ("pending_links_prune(:n)", {"n": now}),
              "account_apple_token": ("account_apple_token(:u)", {"u": uuid.uuid4()}),
              "account_apple_token_clear": ("account_apple_token_clear(:u, 'x')", {"u": uuid.uuid4()}),
-             "account_social_cleanup": ("account_social_cleanup(:u)", {"u": uuid.uuid4()})}
+             "account_social_cleanup": ("account_social_cleanup(:u)", {"u": uuid.uuid4()}),
+             "early_bird_request": ("early_bird_request('columns@example.test', 'en', :h, 7)", {"h": "0" * 64}),
+             "early_bird_mark_sent": ("early_bird_mark_sent(:h)", {"h": "0" * 64}),
+             "early_bird_confirm": ("early_bird_confirm(:h, 7)", {"h": "1" * 64}),
+             "early_bird_prune": ("early_bird_prune(7)", {})}
     for name, (call, params) in calls.items():
         columns, _ = _call(env, "SELECT * FROM " + call, **params)
         assert columns == FUNCTIONS[name], name
@@ -352,6 +364,20 @@ def test_each_function_returns_only_its_listed_columns(env):
     "pending_link_put(gen_random_uuid(), 'google', 'x', 't', NULL, now() + interval '3 hours')",
     "pending_link_put(gen_random_uuid(), 'google', '', 't', NULL, now() + interval '1 hour')",
     "pending_links_prune(NULL)",
+    "early_bird_request('Upper@example.test', 'en', repeat('a', 64), 7)",
+    "early_bird_request(' a@example.test', 'en', repeat('a', 64), 7)",
+    "early_bird_request('a b@example.test', 'en', repeat('a', 64), 7)",
+    "early_bird_request('a@b@example.test', 'en', repeat('a', 64), 7)",
+    "early_bird_request('no-at-sign', 'en', repeat('a', 64), 7)",
+    "early_bird_request(repeat('a', 250) || '@b.co', 'en', repeat('a', 64), 7)",
+    "early_bird_request(NULL, 'en', repeat('a', 64), 7)",
+    "early_bird_request('a@example.test', 'fr', repeat('a', 64), 7)",
+    "early_bird_request('a@example.test', 'en', 'not-a-hash', 7)",
+    "early_bird_request('a@example.test', 'en', repeat('a', 64), 0)",
+    "early_bird_request('a@example.test', 'en', repeat('a', 64), NULL)",
+    "early_bird_mark_sent('not-a-hash')", "early_bird_mark_sent(NULL)",
+    "early_bird_confirm('not-a-hash', 7)", "early_bird_confirm(NULL, 7)", "early_bird_confirm(repeat('a', 64), 366)",
+    "early_bird_prune(0)", "early_bird_prune(366)", "early_bird_prune(NULL)",
 ])
 def test_functions_reject_invalid_arguments(env, call):
     with pytest.raises(DBAPIError) as error:

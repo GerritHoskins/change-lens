@@ -75,14 +75,28 @@ Wenn Sie uns Feedback senden oder eine freiwillige Frage in der App beantworten 
 
 **Daten:** Zeitpunkt, aufgerufener Pfad, Statuscode, Fehlerart, IP-Adresse der Anfrage und interne Kennungen. Protokolle enthalten nie Dokumentinhalte.
 
+**Website (changelens.pixeltronic.dev):** Für jeden Seitenaufruf protokollieren wir den Zeitpunkt, die Seite, die Website, die auf uns verlinkt hat (nur der Hostname), Kampagnen-Parameter (`utm_…`) und ob die Anfrage von einem Crawler kam. Wir protokollieren weder deine IP-Adresse noch deinen Browser noch Cookies, und wir zählen keine eindeutigen Besucher. Protokollzeilen werden nach 30 Tagen gelöscht; Tagessummen ohne Personenbezug bleiben erhalten. [ENTWURF 2026-11-22: Eine optionale Besuchsstatistik mit einem selbst betriebenen Werkzeug (Umami) ist nicht aktiv; sie ist hier zu beschreiben, bevor sie eingeschaltet wird.]
+
 **Zweck:** sicherer Betrieb und Fehlersuche. **Rechtsgrundlage:** berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO).
+
+### 3.8 Early-Bird-Liste (Website)
+
+> **Entwurfsabsatz vom 2026-11-22, ergänzt mit dem Early-Bird-Endpunkt; wie der übrige Entwurf nicht rechtlich geprüft. Die Liste ist noch nicht geöffnet.**
+
+Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eintragen, speichern wir die Adresse, die Sprache der Seite und den Zeitpunkt. Wir senden dann eine E-Mail mit einem Bestätigungslink an diese Adresse (Double-Opt-in). Erst wenn Sie den Link öffnen, steht Ihre Adresse auf der Liste; den Zeitpunkt der Bestätigung speichern wir als Nachweis Ihrer Einwilligung. Um Missbrauch des Formulars zu begrenzen, führen wir außerdem bis zu 3 Tage lang Zähler, die mit einem nicht umkehrbaren, schlüsselabhängigen Hashwert der IP-Adresse und der E-Mail-Adresse gebildet werden.
+
+**Zweck:** Sie zu informieren, wenn die Vollversion von ChangeLens verfügbar ist, und Ihnen den Early-Bird-Rabatt zu gewähren. Eine Adresse auf der Liste ist kein Konto und für die Nutzung der App nicht erforderlich.
+
+**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO; für die E-Mails auch § 7 Abs. 2 UWG). Sie können sie jederzeit widerrufen, indem Sie an [KONTAKT-E-MAIL] schreiben [und über den Abmeldelink in jeder E-Mail an die Liste: NOCH NICHT GEBAUT]; wir löschen Ihre Adresse dann. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.
+
+**Speicherdauer:** Eine nicht bestätigte Adresse wird nach 7 Tagen gelöscht. Eine bestätigte Adresse bleibt gespeichert, bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen.
 
 ## 4. Empfänger und Auftragsverarbeiter
 
 | Empfänger | Rolle | Daten | Ort |
 |---|---|---|---|
 | IONOS SE, Elgendorfer Str. 57, 56410 Montabaur | Auftragsverarbeiter (Art. 28 DSGVO): Server, Datenbank, Dateispeicher, AI Model Hub | Alle Daten aus Abschnitt 3.1 bis 3.7 | Deutschland |
-| [E-MAIL-DIENSTLEISTER] | Auftragsverarbeiter: Versand von Anmeldecodes | E-Mail-Adresse, Code | [ORT] |
+| [E-MAIL-DIENSTLEISTER] | Auftragsverarbeiter: Versand von Anmeldecodes und der Bestätigungs-E-Mail der Early-Bird-Liste (3.8) | E-Mail-Adresse, Code oder Bestätigungslink | [ORT] |
 | Apple Inc. / Apple Distribution International | Eigener Verantwortlicher, nur bei Anmeldung mit Apple | Siehe Datenschutzerklärung von Apple | Irland / USA |
 | Google Ireland Ltd. / Google LLC | Eigener Verantwortlicher, nur bei Anmeldung mit Google | Siehe Datenschutzerklärung von Google | Irland / USA |
 
@@ -103,6 +117,7 @@ Wir speichern und verarbeiten Ihre Daten in Deutschland. Wenn Sie sich mit Apple
 | Server-Protokolle | [14] Tage |
 | Serverseitige Nutzungsereignisse (3.4) | 12 Monate, danach nur noch als anonyme Summen |
 | Freiwillige Nutzungsstatistiken (3.5), Feedback und Antworten (3.6) | 12 Monate, oder bis zum Widerruf oder zur Kontolöschung |
+| Early-Bird-Liste (3.8) | Nicht bestätigte Adresse: 7 Tage. Bestätigte Adresse: bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen |
 | Minimale Lösch- und Kostennachweise (Kennungen, Zeitpunkte und Beträge, keine Inhalte) | Solange zum Abschluss der Löschung und zum Kostenabgleich nötig, höchstens [90] Tage nach Kontolöschung |
 
 ## 7. Konto löschen
