@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  /* ---- Switches (both off) ------------------------------------------------------- */
+  /* ---- Switches (list off, tracker on) ------------------------------------------- */
 
   // Early-bird list. The endpoint does not exist yet. While this is false the form sends
   // nothing and says that the list is not open. Set it to true only once the endpoint
@@ -12,12 +12,13 @@
   var EARLY_BIRD_OPEN = false;
   var EARLY_BIRD_URL = 'https://api.pixeltronic.dev/early-bird';
 
-  // Umami tracker tag. Off until the legal review answers the consent question
-  // (docs/landing-page-handoff.md, "Measurement"). While this is false no tracker script
-  // is loaded and no tracker request is made; the data-umami-event attributes do nothing.
-  var TRACKER_ENABLED = false;
+  // Umami tracker tag. On since 2026-11-22 by the owner's decision; the legal review's answer
+  // to the consent question is still open (docs/landing-page-handoff.md, "Measurement").
+  // While this is false no tracker script is loaded and no tracker request is made; the
+  // data-umami-event attributes do nothing. A browser that sends Do Not Track is not recorded.
+  var TRACKER_ENABLED = true;
   var TRACKER_SRC = '/umami/script.js'; // same host; Caddy passes it on to Umami (deploy/ionos/Caddyfile)
-  var TRACKER_WEBSITE_ID = '';
+  var TRACKER_WEBSITE_ID = '2bafac1d-346c-48e2-8b34-c8a77e0e5d0f';
 
   document.documentElement.classList.add('js');
 

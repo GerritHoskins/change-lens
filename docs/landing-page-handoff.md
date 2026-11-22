@@ -112,7 +112,7 @@ Until the endpoint is deployed, the form's script shows a plain message that the
 
 Decided by the owner on 2026-11-22: **Umami**, self-hosted, for visits and click events. Researched the same day; nothing is installed. Umami's facts below are from its documentation and release notes as read that day; check them against the pinned version when you build.
 
-**Open before the tracker may run: consent.** Umami's tracker is a script that sends requests. The EDPB (Guidelines 2/2023) treats that as device access, the DSK guidance (v1.2, November 2024) does not say reach measurement is consent-free, and [`docs/legal/README.md`](legal/README.md) says to follow the EDPB where the two differ. Whether the tracker may run without consent goes to the legal review (L4). Until it is answered, the tracker stays off behind a build flag, and only the server-side counts below run.
+**Open before the tracker may run: consent.** Umami's tracker is a script that sends requests. The EDPB (Guidelines 2/2023) treats that as device access, the DSK guidance (v1.2, November 2024) does not say reach measurement is consent-free, and [`docs/legal/README.md`](legal/README.md) says to follow the EDPB where the two differ. Whether the tracker may run without consent goes to the legal review (L4). Until it is answered, the tracker stays off behind a build flag, and only the server-side counts below run. **Owner's decision, 2026-11-22: the tracker is switched on now; the legal answer follows later and is still open.**
 
 **Server-side counts (no tracker, always on).** These count requests the page and the form make anyway, the project's tier A.
 
