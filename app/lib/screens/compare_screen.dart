@@ -44,6 +44,14 @@ class _CompareScreenState extends State<CompareScreen> {
       earlier!.versionId != later!.versionId;
   bool get complete => project != null && earlier != null && later != null && scope != null && distinct;
 
+  /// What Start still waits for, first thing first; null once nothing is missing. The same version on
+  /// both sides is not listed: it has its own warning above the button.
+  String? _missing(AppLocalizations l) =>
+      project == null ? l.compareNeedsProject
+      : earlier == null ? l.compareNeedsEarlier
+      : later == null ? l.compareNeedsNewer
+      : scope == null ? l.compareNeedsScope : null;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -189,13 +197,18 @@ class _CompareScreenState extends State<CompareScreen> {
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (error != null) Semantics(liveRegion: true, child: Padding(
                 padding: const EdgeInsets.only(bottom: 12), child: CalmWarning(text: error!))),
+            // A choice that can't proceed sits directly above Start, where it can't scroll out of view.
+            if (!distinct) Semantics(liveRegion: true, child: Padding(padding: const EdgeInsets.only(bottom: 12),
+              child: CalmWarning(key: const Key('same-version'), kind: CalmMessageKind.warning, text: l.sameVersion))),
             if (error == l.compareLoadFailed) TextButton(onPressed: loading ? null : _load, child: Text(l.retry)),
             if (submission != null && !busy && error == null) Padding(
                 padding: const EdgeInsets.only(bottom: 12), child: Text(l.compareRetrySame)),
             FilledButton(key: const Key('start'), onPressed: complete && !busy ? _start : null,
                 child: Text(busy ? l.submittingComparison : submission != null ? l.retry : l.startComparison)),
             const SizedBox(height: 8),
-            Text(l.compareSubmitHint, style: text.bodySmall?.copyWith(color: colors.muted)),
+            // Disabled: the line says what is missing. Ready: what Start does.
+            if (_missing(l) != null || distinct) Text(_missing(l) ?? l.compareSubmitHint,
+              key: const Key('start-hint'), style: text.bodySmall?.copyWith(color: colors.muted)),
           ])))),
       body: SafeArea(top: false, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -227,7 +240,6 @@ class _CompareScreenState extends State<CompareScreen> {
             }),
             icon: const Icon(CalmIcons.swap), label: Text(l.swapVersions)))),
         _slot(false),
-        if (!distinct) Padding(padding: const EdgeInsets.only(top: 12), child: CalmWarning(kind: CalmMessageKind.warning, text: l.sameVersion)),
         const SizedBox(height: 28),
         Row(children: [
           Expanded(child: Semantics(header: true, child: Text(l.scopeQuestion, style: text.titleLarge))),

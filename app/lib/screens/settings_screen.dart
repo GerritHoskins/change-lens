@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/session.dart';
 import '../design/calm_controls.dart';
+import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
@@ -82,59 +83,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final email = state is SignedIn ? state.email : null;
     final method = widget.session.lastMethod;
     final consent = widget.consent;
+    final hairline = Divider(color: colors.line, height: 1);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(top: false, child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
         CalmPageHeader(title: l.settingsTitle),
-        Semantics(header: true, child: Text(l.settingsAccount, style: text.titleMedium)),
-        const SizedBox(height: 8),
-        Text(email == null ? l.accountSignedIn : l.accountSignedInAs(email), key: const Key('account-identity'),
-          style: text.bodyLarge),
-        if (method != null) Padding(padding: const EdgeInsets.only(top: 4),
-          child: Text(l.settingsSignedInWith(methodName(l, method)), key: const Key('account-method'),
-            style: text.bodyMedium?.copyWith(color: colors.muted))),
-        FutureBuilder(future: protection, builder: (context, snapshot) {
-          final found = snapshot.data;
-          if (found == null) return const SizedBox.shrink();
-          return Padding(padding: const EdgeInsets.only(top: 4), child: Text(
-            found.asIntended ? l.settingsKeychainOk : l.settingsKeychainDiffers(found.found),
-            key: const Key('keychain-protection'), style: text.bodyMedium?.copyWith(color: colors.muted)));
-        }),
-        const SizedBox(height: 16),
-        Align(alignment: AlignmentDirectional.centerStart,
-          child: OutlinedButton(key: const Key('sign-out'), onPressed: deleting ? null : widget.session.signOut,
-            child: Text(l.signOut))),
-        // Debug and profile builds only: the access token's lifetime for deploy/ionos E (never the token).
-        if (!kReleaseMode && widget.session.accessTokenLifetime != null) Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Text('Access token lifetime: ${widget.session.accessTokenLifetime} s',
-            key: const Key('token-lifetime'), style: text.bodySmall?.copyWith(color: colors.muted))),
-        Padding(padding: const EdgeInsets.symmetric(vertical: 28), child: Divider(color: colors.line, height: 1)),
-        Semantics(header: true, child: Text(l.deleteAccount, style: text.titleMedium)),
-        const SizedBox(height: 8),
-        Text(l.deleteAccountIntro, style: text.bodyMedium),
-        const SizedBox(height: 16),
-        if (deleteFailed) Padding(padding: const EdgeInsets.only(bottom: 16),
+        _SectionLabel(l.settingsAccount),
+        // One grouped card per section (artboard "Settings"): who is signed in, then what they can do.
+        CalmCard(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+                ExcludeSemantics(child: Icon(CalmIcons.account, size: 22, color: colors.muted)),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(email == null ? l.accountSignedIn : l.accountSignedInAs(email),
+                    key: const Key('account-identity'), style: text.bodyLarge),
+                  if (method != null) Padding(padding: const EdgeInsets.only(top: 2),
+                    child: Text(l.settingsSignedInWith(methodName(l, method)), key: const Key('account-method'),
+                      style: text.bodySmall)),
+                  FutureBuilder(future: protection, builder: (context, snapshot) {
+                    final found = snapshot.data;
+                    if (found == null) return const SizedBox.shrink();
+                    return Padding(padding: const EdgeInsets.only(top: 6), child: Text(
+                      found.asIntended ? l.settingsKeychainOk : l.settingsKeychainDiffers(found.found),
+                      key: const Key('keychain-protection'), style: text.bodySmall));
+                  }),
+                ])),
+              ])),
+            hairline,
+            _SettingsRow(key: const Key('sign-out'), icon: CalmIcons.signOut, label: l.signOut,
+              onPressed: deleting ? null : widget.session.signOut),
+            hairline,
+            _SettingsRow(key: const Key('delete-account'), icon: CalmIcons.delete,
+              label: deleting ? l.deletingAccount : l.deleteAccount, liveRegion: true,
+              color: Theme.of(context).colorScheme.error, onPressed: deleting ? null : _confirmDelete),
+          ])),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: Text(l.deleteAccountIntro, style: text.bodySmall)),
+        if (deleteFailed) Padding(padding: const EdgeInsets.only(top: 16),
           child: Semantics(liveRegion: true,
             child: CalmWarning(key: const Key('delete-account-error'), text: l.deleteAccountFailed))),
-        Align(alignment: AlignmentDirectional.centerStart, child: TextButton(
-          key: const Key('delete-account'),
-          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-          onPressed: deleting ? null : _confirmDelete,
-          child: Semantics(liveRegion: true, child: Text(deleting ? l.deletingAccount : l.deleteAccount)))),
+        // Debug and profile builds only: the access token's lifetime for deploy/ionos E (never the token).
+        if (!kReleaseMode && widget.session.accessTokenLifetime != null) Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: Text('Access token lifetime: ${widget.session.accessTokenLifetime} s',
+            key: const Key('token-lifetime'), style: text.bodySmall)),
         if (consent != null) ...[
-          Padding(padding: const EdgeInsets.symmetric(vertical: 28), child: Divider(color: colors.line, height: 1)),
-          Semantics(header: true, child: Text(l.settingsPrivacy, style: text.titleMedium)),
-          const SizedBox(height: 8),
-          ListenableBuilder(listenable: consent, builder: (context, _) => SwitchListTile.adaptive(
-            key: const Key('usage-events'), contentPadding: EdgeInsets.zero,
-            title: Text(l.settingsUsageEvents), subtitle: Text(l.settingsUsageEventsHint),
-            value: consent.allowed ?? false,
-            onChanged: consentSaving ? null : _setConsent)),
-          if (consentFailed) Semantics(liveRegion: true,
-            child: CalmWarning(key: const Key('usage-events-error'), text: l.consentSaveFailed)),
+          const SizedBox(height: 28),
+          _SectionLabel(l.settingsPrivacy),
+          // A Material, not a CalmCard: the switch row paints its ink on the nearest Material.
+          Material(color: Theme.of(context).cardTheme.color, borderRadius: BorderRadius.circular(CalmRadius.lg),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), child: ListenableBuilder(listenable: consent, builder: (context, _) => SwitchListTile.adaptive(
+              key: const Key('usage-events'), contentPadding: EdgeInsets.zero,
+              title: Text(l.settingsUsageEvents), subtitle: Text(l.settingsUsageEventsHint),
+              value: consent.allowed ?? false,
+              // Named here as well as in the theme: the iOS switch does not read `switchTheme`.
+              trackColor: Theme.of(context).switchTheme.trackColor,
+              thumbColor: Theme.of(context).switchTheme.thumbColor,
+              onChanged: consentSaving ? null : _setConsent)))),
+          if (consentFailed) Padding(padding: const EdgeInsets.only(top: 16), child: Semantics(liveRegion: true,
+            child: CalmWarning(key: const Key('usage-events-error'), text: l.consentSaveFailed))),
         ],
       ])),
     );
   }
+}
+
+/// A section's name above its card: `eyebrow` in `muted`, aligned with the card's text edge.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+    child: Semantics(header: true, child: Text(text,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: CalmColors.of(context).muted))));
+}
+
+/// One action in a settings card: icon and label; the whole row is the button (52px or taller).
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({super.key, required this.icon, required this.label, required this.onPressed,
+    this.color, this.liveRegion = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final Color? color;
+  final bool liveRegion;
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(foregroundColor: color, iconColor: color,
+      minimumSize: const Size.fromHeight(52), padding: const EdgeInsets.symmetric(vertical: 12),
+      alignment: AlignmentDirectional.centerStart, textStyle: Theme.of(context).textTheme.titleSmall,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
+    child: Row(children: [
+      ExcludeSemantics(child: Icon(icon, size: 22)),
+      const SizedBox(width: 14),
+      Expanded(child: Semantics(liveRegion: liveRegion, child: Text(label))),
+    ]));
 }

@@ -54,7 +54,8 @@ class _DismissSheetState extends State<DismissSheet> {
       lead: l.dismissLead,
       action: widget.hasNext ? l.dismissAndNext : l.actionDismiss,
       actionKey: const Key('dismiss-confirm'),
-      // Disabled until a reason is chosen: there is no default.
+      // Disabled until a reason is chosen: there is no default, and the line under the button says so.
+      actionHint: l.dismissNeedsReason,
       onAction: picked == null ? null : () {
         final text = note.text.trim();
         Navigator.pop(context, (picked, text.isEmpty ? null : text));

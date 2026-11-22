@@ -117,7 +117,7 @@ void main() {
       final hero = find.byKey(const Key('home-hero-spring'));
       Finder inHero(String text) => find.descendant(of: hero, matching: find.text(text));
       for (final text in ['Spring campaign 2027', '6', 'things moved', '1 deadline', '2 deliverables',
-          '+3', '2 need a second look']) {
+          '+3', '2 need your review']) {
         expect(inHero(text), findsOneWidget, reason: text);
       }
       // The arrow is a drawn icon (a placeholder in the text), not a font glyph the bundled Roboto lacks.
@@ -162,10 +162,10 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpHome(tester, artboard());
     expect(find.bySemanticsLabel('Spring campaign 2027, v1 compared with the newer v2, 6 things moved, 1 deadline, '
-      '2 deliverables, 2 budget, 1 other, 2 need a second look, 6 to check, Open the report'), findsOneWidget);
+      '2 deliverables, 2 budget, 1 other, 2 need your review, 6 to check, Open the report'), findsOneWidget);
     expect(tester.getSemantics(find.byKey(const Key('home-hero-spring'))),
       matchesSemantics(isButton: true, hasTapAction: true, label: 'Spring campaign 2027, v1 compared with the newer v2, '
-        '6 things moved, 1 deadline, 2 deliverables, 2 budget, 1 other, 2 need a second look, 6 to check, Open the report'));
+        '6 things moved, 1 deadline, 2 deliverables, 2 budget, 1 other, 2 need your review, 6 to check, Open the report'));
     expect(find.bySemanticsLabel('Website relaunch, 3 to check'), findsOneWidget);
     expect(find.bySemanticsLabel('Annual report layout, Reading v3…'), findsOneWidget);
     expect(find.bySemanticsLabel('Trade fair stand, All checked'), findsOneWidget);
@@ -219,7 +219,7 @@ void main() {
     final position = tester.state<ScrollableState>(find.byWidgetPredicate((w) =>
       w is Scrollable && w.axisDirection == AxisDirection.down).first).position;
     // The list builds what is near the viewport, so the texts are collected while scrolling.
-    final wanted = {'2 brauchen einen zweiten Blick', '3 zu prüfen', 'v3 wird gelesen …', 'Alles geprüft'};
+    final wanted = {'2 von dir zu prüfen', '3 zu prüfen', 'v3 wird gelesen …', 'Alles geprüft'};
     final seen = <String>{};
     for (var step = 0; step < 40; step++) {
       seen.addAll(wanted.where((text) => find.text(text).evaluate().isNotEmpty));

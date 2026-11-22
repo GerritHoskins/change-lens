@@ -38,6 +38,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Beim Start werden beide Eingaben zusammen gesendet. Sobald die Versionen gelesen werden, kannst du diese Ansicht verlassen.';
 
   @override
+  String get compareNeedsProject => 'Wähle zuerst ein Projekt.';
+
+  @override
+  String get compareNeedsEarlier =>
+      'Wähle die frühere Version oder füge sie hinzu.';
+
+  @override
+  String get compareNeedsNewer =>
+      'Wähle die neuere Version oder füge sie hinzu.';
+
+  @override
+  String get compareNeedsScope => 'Gib an, was die neuere Version ist.';
+
+  @override
+  String get dismissNeedsReason => 'Wähle zuerst einen Grund.';
+
+  @override
   String get comparePickFailed =>
       'Die PDF konnte nicht vorbereitet werden. Wähle sie erneut aus.';
 
@@ -66,7 +83,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get evidenceFallbackReview =>
-      'Die Textstelle konnte in der PDF nicht markiert werden. Prüfe vor dem Bestätigen den zitierten Text.';
+      'Die Stelle ließ sich auf der Seite nicht markieren. Diese Zitate stammen aus dem ausgelesenen Text.';
 
   @override
   String get findingChanged =>
@@ -587,7 +604,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get highlightFallback =>
-      'Die Textstelle konnte in der PDF nicht markiert werden. Deshalb wird der ausgelesene Text angezeigt.';
+      'Die Stelle ließ sich auf der Seite nicht markieren. Dieses Zitat stammt aus dem ausgelesenen Text.';
 
   @override
   String loadFailed(String reason) {
@@ -1288,7 +1305,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String homeReading(String label) {
-    return '$label wird gelesen …';
+    return '$label wird gelesen …';
   }
 
   @override
@@ -1302,8 +1319,8 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count brauchen einen zweiten Blick',
-      one: '1 braucht einen zweiten Blick',
+      other: '$count von dir zu prüfen',
+      one: '1 von dir zu prüfen',
     );
     return '$_temp0';
   }

@@ -104,7 +104,7 @@ partial processing, personal review and client approval always have explicit tex
   to check it says so. A bento follows, `space-3` apart, built only from the list response's
   `latest_comparison` (server counts, never derived): one `marker` hero (radius 28) for the changed project
   compared most recently, with name, "v1 → v2", the count in `figure`, two topic counts as white pills plus
-  "+N", the dashed `review` pill for "need a second look" and an ink arrow disc; it opens the report. Then a
+  "+N", the review pill ("2 need your review": white, 2px dashed `review` border, the "?" disc) and an ink arrow disc; it opens the report. Then a
   pair of `surface` tiles (radius 24, min 148) for the next projects to check or being read, never a lone
   tile and none at large text; then `surface` rows (radius 18, min 56) with the status in words ("All
   checked", "3 to check", a failure in `error`). "Changed" means the latest comparison has findings without
@@ -135,7 +135,10 @@ partial processing, personal review and client approval always have explicit tex
   Pending ambiguous submissions retain their body and idempotency key. The earlier slot is a
   `surface` card; the newer slot is filled with `marker` and keeps ink text and a white field in
   both themes, as on the onboarding slots (2026-11-21; it was a 2-pixel marker outline). Start is
-  pinned at the bottom with its hint, and an error sits directly above it. The pinned bars of
+  pinned at the bottom, and an error or the "Choose two different versions" warning sits directly
+  above it, inside the pinned bar. While Start is disabled the line under it names what is missing,
+  first thing first (project, earlier version, newer version, scope); once it can start, the line says
+  what Start does. The pinned bars of
   Projects, Project and Compare (`CalmPinnedBar`) carry a `line` hairline, so a list scrolling
   under them is not cut mid-word.
 - **Status:** actual reading/queued/running/terminal status; no invented progress
@@ -152,6 +155,11 @@ partial processing, personal review and client approval always have explicit tex
   Confirm in visual and semantic order. It can scroll at large text sizes.
   Confirm and next labels actual progression; uncertain findings stay open.
   The topic is the title; the change label adds the category only when it differs from the topic.
+  The screen opens with a full-width block in the topic's colour (`FindingHeader`, bottom corners
+  `radius-sheet`) holding the position, the topic, the change label, the explanation and, for an
+  uncertain finding, the "?" line; the app bar takes the same colour and all text on both is ink in
+  both themes. The old and new values of the design system's block are still not drawn (no data).
+  The footer is the shared `CalmPinnedBar`: 20-pixel gutter and a hairline.
 - **Recovery:** failed source checks block review. Failed reload after a successful
   save retains visible evidence but disables mutations until Retry succeeds.
   Superseded revisions reload without silently resubmitting the rejected action.
@@ -178,9 +186,11 @@ partial processing, personal review and client approval always have explicit tex
   dragged): 28 pixels above the title, the last-used method as a `title` line, and the two text
   buttons centred under the pill. If a different
   account signs in, the old one is treated as signed out and every screen above Projects closes.
-- **Settings (WP-B):** opened from the Projects menu. Account (identity, signed-in method,
-  Sign out, Delete account with the adaptive destructive dialog, error and retry), then
-  Privacy with the usage-events switch. Privacy and the consent screen read and write the account's
+- **Settings (WP-B):** opened from the Projects menu. One `surface` card per section under a muted
+  `eyebrow` label, as on the artboard: Account (identity with the signed-in method and the Keychain
+  line, then the rows Sign out and Delete account in `error`, each with its icon; the deletion note
+  sits under the card; adaptive destructive dialog, error and retry), then Privacy with the
+  usage-events switch. A switch that is on is `action`, never the platform's green. Privacy and the consent screen read and write the account's
   answer (`/me/consent`, D-18 Task 2) but appear only in builds with `CHANGELENS_CONSENT=true`, off
   until the I-20 legal review. Legal links are not built (I-20).
 - **Dismissal (P5, WP-C):** a sheet with four reason rows (reworded, wrong passage, not
@@ -332,6 +342,18 @@ has its own test. The v1 canvas's Calm Bold P6 matches in structure; its dates, 
 progress bars were left out (no data). A follow-up `/impeccable critique` (27/40) found two P1s and
 three P2s; all five were fixed the same day (the History bullet above describes the result) and
 `flutter test` passed 262.
+
+**Audit fixes (2026-11-22, from the screenshot audit against the first-launch canvas and the design
+system).** Sign-in: the methods sit at the bottom of the screen, the promise is the compact headline
+with a `muted` body, and the email pill carries a mail icon. Consent: "Don't allow" comes first and the
+second paragraph is `muted`. Projects with no project: the empty note is a `surface` card and "New
+project" is the pinned main pill. The uncertain group has one name, "Needs your review", on home too.
+The text-fallback banner uses the design system's sentence ("The passage couldn't be placed on the
+page. These quotes come from the parsed text."; the evidence screen says "This quote comes"). A
+disabled main button always has its reason under it (Compare, the dismissal sheet). German "wird
+gelesen …" keeps its ellipsis on the line. `flutter analyze`: no issues; `flutter test`: all passed;
+the screenshots in `app/build/screenshots` were regenerated. Kept as decided earlier: the failure
+code under a sign-in error (L35) and the "Continue with" labels.
 
 **Not started.** WP-E (allowance) has owner-reviewable drafts but needs the I-14 allowance
 contract. WP-G waits for D-19 and needs a region-evidence design and the share and image packages.

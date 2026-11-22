@@ -141,15 +141,16 @@ class _SignInScreenState extends State<SignInScreen> with _SignInRunner {
     return PopScope(
       canPop: link == null,
       onPopInvokedWithResult: (didPop, _) { if (!didPop) session.cancelLink(); },
-      child: Scaffold(body: SafeArea(child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
-        children: [
-          // Top-aligned, so the heading never moves between states (canvas round 2).
+      // The promise is top-aligned, so the heading never moves between states (canvas round 2); the
+      // methods sit at the bottom, in the thumb zone (artboard "Sign-in"), and scroll with the rest
+      // when large text leaves no room.
+      child: Scaffold(body: SafeArea(child: CustomScrollView(slivers: [
+        SliverPadding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 0), sliver: SliverList.list(children: [
           const Align(alignment: AlignmentDirectional.centerStart, child: CalmLogoLockup()),
           const SizedBox(height: 28),
           if (link == null) ...[
-            CalmPageHeader(title: l.signInPromise),
-            Text(l.signInPromiseBody, style: text.bodyLarge),
+            CalmPageHeader(title: l.signInPromise, style: text.displaySmall),
+            Text(l.signInPromiseBody, style: text.bodyLarge?.copyWith(color: colors.muted)),
             const SizedBox(height: 20),
           ] else ...[
             CalmPageHeader(title: l.linkTitle),
@@ -159,21 +160,26 @@ class _SignInScreenState extends State<SignInScreen> with _SignInRunner {
           if (notice != null && link == null) Padding(padding: const EdgeInsets.only(bottom: 20),
             child: Semantics(liveRegion: true,
               child: CalmWarning(key: const Key('sign-in-notice'), kind: noticeKind, text: notice))),
-          // An error takes the chips' place, so the buttons don't move down.
-          if (error != null) Padding(padding: const EdgeInsets.only(bottom: 20), child: failureBanner(error))
-          else if (link == null) const Padding(padding: EdgeInsets.only(bottom: 28), child: _TopicChips()),
-          for (final method in methods) methodButton(method),
-          if (methods.contains(SignInMethod.email))
-            Text(l.signInEmailHint, style: text.bodySmall?.copyWith(color: colors.muted)),
-          if (link != null && link.methods.contains(SignInMethod.apple) && !session.native.appleAvailable)
-            Padding(padding: const EdgeInsets.only(top: 12),
-              child: Text(l.linkAppleElsewhere, style: text.bodySmall?.copyWith(color: colors.muted))),
-          if (link != null) Padding(padding: const EdgeInsets.only(top: 24),
-            child: Align(alignment: AlignmentDirectional.centerStart,
-              child: TextButton(key: const Key('link-cancel'),
-                onPressed: working == null ? session.cancelLink : null, child: Text(l.linkCancel)))),
-        ],
-      ))),
+          // An error takes the chips' place.
+          if (error != null) failureBanner(error)
+          else if (link == null) const _TopicChips(),
+        ])),
+        SliverFillRemaining(hasScrollBody: false, child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+          child: Column(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final method in methods) methodButton(method),
+              if (methods.contains(SignInMethod.email))
+                Text(l.signInEmailHint, style: text.bodySmall?.copyWith(color: colors.muted)),
+              if (link != null && link.methods.contains(SignInMethod.apple) && !session.native.appleAvailable)
+                Padding(padding: const EdgeInsets.only(top: 12),
+                  child: Text(l.linkAppleElsewhere, style: text.bodySmall?.copyWith(color: colors.muted))),
+              if (link != null) Padding(padding: const EdgeInsets.only(top: 12),
+                child: Align(alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(key: const Key('link-cancel'),
+                    onPressed: working == null ? session.cancelLink : null, child: Text(l.linkCancel)))),
+            ]))),
+      ]))),
     );
   }
 }

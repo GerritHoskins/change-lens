@@ -6,7 +6,6 @@ import '../api.dart';
 import '../auth/account_consent.dart';
 import '../design/calm_controls.dart';
 import '../design/calm_icons.dart';
-import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
@@ -137,10 +136,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final s = ServicesScope.of(context);
-    final colors = CalmColors.of(context);
     final text = Theme.of(context).textTheme;
     // Two tiles side by side need room: at large text every project is a row instead.
     final home = HomeLayout(projects, tiles: MediaQuery.textScalerOf(context).scale(10) <= 13);
+    // Nothing to compare yet: creating the first project is the main action, in the pinned pill.
+    final first = s.configured && !loading && error == null && projects.isEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(l.appTitle), actions: [
         PopupMenuButton<_ProjectsMenu>(
@@ -166,7 +166,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         const SizedBox(width: 8),
       ]),
       // The main action sits in the thumb zone, as on Finding and the review summary.
-      bottomNavigationBar: s.configured && projects.isNotEmpty ? CalmPinnedBar(
+      bottomNavigationBar: first ? CalmPinnedBar(
+        child: FilledButton.icon(key: const Key('new-project'), onPressed: _create,
+          icon: const Icon(CalmIcons.add), label: Text(l.newProject)))
+      : s.configured && projects.isNotEmpty ? CalmPinnedBar(
         child: FilledButton.icon(key: const Key('compare-briefs'),
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
           icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))) : null,
@@ -185,7 +188,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
                 if (!loading && error == null && projects.isEmpty)
-                  CalmCard(color: colors.soft, child: Text(l.projectsEmpty, style: text.bodyLarge)),
+                  CalmCard(child: Text(l.projectsEmpty, style: text.bodyLarge)),
                 // The bento (home artboard): hero, a pair of tiles, rows; `space-3` apart.
                 if (home.hero case final hero?) Padding(padding: const EdgeInsets.only(bottom: 14),
                   child: HomeHero(key: Key('home-hero-${hero.id}'), project: hero,
@@ -200,7 +203,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 for (final p in home.rows) Padding(padding: const EdgeInsets.only(bottom: 14),
                   child: HomeRow(key: Key('home-row-${p.id}'), project: p, onTap: () => _open(p))),
                 const SizedBox(height: 6),
-                Align(alignment: AlignmentDirectional.centerStart,
+                if (!first) Align(alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(key: const Key('new-project'), onPressed: _create,
                     icon: const Icon(CalmIcons.add), label: Text(l.newProject))),
               ]),
@@ -239,7 +242,7 @@ class _DevSettingsScreenState extends State<DevSettingsScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.devSettings)),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+      body: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 24), children: [
         Text(l.devSettingsHint),
         const SizedBox(height: 16),
         const SizedBox(height: 12),

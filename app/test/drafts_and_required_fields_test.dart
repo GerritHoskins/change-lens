@@ -170,7 +170,7 @@ void main() {
     await tapAndSettle(tester, find.text('Cancel'));
 
     await tester.scrollUntilVisible(find.text('Record client approval'), 200,
-      scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)));
+      scrollable: find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)));
     await tapAndSettle(tester, find.text('Record client approval'));
     await tapAndSettle(tester, find.text('Save'));
     expect(find.byKey(const Key('approval-evidence')), findsOneWidget);

@@ -38,6 +38,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Start sends both inputs together. You can leave this screen once the comparison is reading.';
 
   @override
+  String get compareNeedsProject => 'Choose a project first.';
+
+  @override
+  String get compareNeedsEarlier => 'Choose or add the earlier version.';
+
+  @override
+  String get compareNeedsNewer => 'Choose or add the newer version.';
+
+  @override
+  String get compareNeedsScope => 'Say what the newer version is.';
+
+  @override
+  String get dismissNeedsReason => 'Choose a reason first.';
+
+  @override
   String get comparePickFailed =>
       'The PDF could not be prepared. Try picking it again.';
 
@@ -66,7 +81,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get evidenceFallbackReview =>
-      'A PDF highlight could not be placed. Review the quoted text before confirming.';
+      'The passage couldn\'t be placed on the page. These quotes come from the parsed text.';
 
   @override
   String get findingChanged =>
@@ -583,7 +598,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get highlightFallback =>
-      'The highlight could not be placed in the PDF, so the parsed text is shown.';
+      'The passage couldn\'t be placed on the page. This quote comes from the parsed text.';
 
   @override
   String loadFailed(String reason) {
@@ -1293,8 +1308,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count need a second look',
-      one: '1 needs a second look',
+      other: '$count need your review',
+      one: '1 needs your review',
     );
     return '$_temp0';
   }

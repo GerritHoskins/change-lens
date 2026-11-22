@@ -146,6 +146,36 @@ abstract class AppLocalizations {
   /// **'Start sends both inputs together. You can leave this screen once the comparison is reading.'**
   String get compareSubmitHint;
 
+  /// No description provided for @compareNeedsProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a project first.'**
+  String get compareNeedsProject;
+
+  /// No description provided for @compareNeedsEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose or add the earlier version.'**
+  String get compareNeedsEarlier;
+
+  /// No description provided for @compareNeedsNewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose or add the newer version.'**
+  String get compareNeedsNewer;
+
+  /// No description provided for @compareNeedsScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Say what the newer version is.'**
+  String get compareNeedsScope;
+
+  /// No description provided for @dismissNeedsReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a reason first.'**
+  String get dismissNeedsReason;
+
   /// No description provided for @comparePickFailed.
   ///
   /// In en, this message translates to:
@@ -197,7 +227,7 @@ abstract class AppLocalizations {
   /// No description provided for @evidenceFallbackReview.
   ///
   /// In en, this message translates to:
-  /// **'A PDF highlight could not be placed. Review the quoted text before confirming.'**
+  /// **'The passage couldn\'t be placed on the page. These quotes come from the parsed text.'**
   String get evidenceFallbackReview;
 
   /// No description provided for @findingChanged.
@@ -1073,7 +1103,7 @@ abstract class AppLocalizations {
   /// No description provided for @highlightFallback.
   ///
   /// In en, this message translates to:
-  /// **'The highlight could not be placed in the PDF, so the parsed text is shown.'**
+  /// **'The passage couldn\'t be placed on the page. This quote comes from the parsed text.'**
   String get highlightFallback;
 
   /// No description provided for @loadFailed.
@@ -2206,7 +2236,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeSecondLook.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 needs a second look} other{{count} need a second look}}'**
+  /// **'{count, plural, =1{1 needs your review} other{{count} need your review}}'**
   String homeSecondLook(int count);
 
   /// No description provided for @homePairA11y.

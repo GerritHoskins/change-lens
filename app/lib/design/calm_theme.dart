@@ -215,6 +215,14 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
       elevation: 0, shadowColor: Colors.transparent, labelTextStyle: WidgetStatePropertyAll(text.labelLarge),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.md),
         side: BorderSide(color: controlBorder))),
+    // A switch that is on is `action`, never the platform's green; off, it is `control-border` on `disabled`.
+    switchTheme: SwitchThemeData(
+      trackColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? primary : colors.soft),
+      thumbColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? onPrimary : controlBorder),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? Colors.transparent : controlBorder)),
     radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((states) =>
       states.contains(WidgetState.disabled) ? disabledText
         : states.contains(WidgetState.selected) ? ink : controlBorder)),

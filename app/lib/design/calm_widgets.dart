@@ -14,9 +14,11 @@ void calmAnnounce(BuildContext context, String message) =>
 
 /// Opens a definition sheet in context: a 48px info disc labelled "About {term}".
 class CalmInfoButton extends StatelessWidget {
-  const CalmInfoButton({super.key, required this.term, required this.sheet});
+  const CalmInfoButton({super.key, required this.term, required this.sheet, this.onColor = false});
   final String term;
   final WidgetBuilder sheet;
+  /// On a topic or marker block the disc is white with an ink icon in both themes.
+  final bool onColor;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class CalmInfoButton extends StatelessWidget {
     // The label is announced once, as the button's label; the tooltip is visual only.
     return Tooltip(message: label, excludeFromSemantics: true, child: IconButton(
       icon: Icon(CalmIcons.info, semanticLabel: label),
+      style: onColor ? IconButton.styleFrom(backgroundColor: CalmColors.paper, foregroundColor: CalmColors.ink) : null,
       onPressed: () => showCalmSheet<void>(context, builder: sheet),
     ));
   }
@@ -43,7 +46,7 @@ class CalmCard extends StatelessWidget {
   );
 }
 
-/// The main action pinned under a scrolling screen (Projects, Project, Compare). A `line` hairline
+/// The main action pinned under a scrolling screen (Projects, Project, Compare, Finding). A `line` hairline
 /// closes the list above it, so content scrolling underneath is not cut off mid-word.
 class CalmPinnedBar extends StatelessWidget {
   const CalmPinnedBar({super.key, required this.child});
