@@ -18,7 +18,7 @@
   // data-umami-event attributes do nothing. A browser that sends Do Not Track is not recorded.
   var TRACKER_ENABLED = true;
   var TRACKER_SRC = '/umami/script.js'; // same host; Caddy passes it on to Umami (deploy/ionos/Caddyfile)
-  var TRACKER_WEBSITE_ID = '0ab3a2e4-ff80-480e-9020-bab9e75a4f94';
+  var TRACKER_WEBSITE_ID = '2bafac1d-346c-48e2-8b34-c8a77e0e5d0f';
 
   document.documentElement.classList.add('js');
 
