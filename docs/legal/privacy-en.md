@@ -75,14 +75,28 @@ If you send feedback or answer an optional question in the app (for example, wha
 
 **Data:** time, route, status code, error type, the IP address of the request, and internal IDs. Logs never contain document content.
 
+**Website (changelens.pixeltronic.dev):** for each page view we log the time, the page, the website that linked to us (host name only), campaign parameters (`utm_…`) and whether the request came from a crawler. We do not log your IP address, your browser, or any cookie, and we do not count unique visitors. Log lines are deleted after 30 days; daily totals without personal data are kept. [DRAFT 2026-11-22: optional visit statistics with a self-hosted tool (Umami) are not active; describe them here before they are switched on.]
+
 **Purpose:** to run the service securely and find errors. **Legal basis:** legitimate interest (Art. 6(1)(f) GDPR).
+
+### 3.8 Early-bird list (website)
+
+> **Draft paragraph added 2026-11-22 with the early-bird endpoint; not legally reviewed, like the rest of this draft. The list is not open yet.**
+
+If you enter your email address in the early-bird form on our website, we store the address, the language of the page and the time. We then send one email with a confirmation link to that address (double opt-in). Only after you open the link is your address on the list; we store the time of the confirmation as proof of your consent. To limit misuse of the form we also keep, for up to 3 days, counters keyed with a non-reversible keyed hash of the IP address and of the email address.
+
+**Purpose:** to tell you when the full version of ChangeLens is available and to give you the early-bird discount. An address on the list is not an account and is not needed to use the app.
+
+**Legal basis:** your consent (Art. 6(1)(a) GDPR; for the emails also § 7(2) UWG). You can withdraw it at any time by writing to [CONTACT EMAIL] [and through the unsubscribe link in every email to the list: NOT BUILT YET]; we then delete your address. Withdrawal does not affect processing before it.
+
+**Retention:** an address that is not confirmed is deleted after 7 days. A confirmed address is kept until you withdraw your consent or we close the list.
 
 ## 4. Recipients and processors
 
 | Recipient | Role | Data | Location |
 |---|---|---|---|
 | IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Germany | Processor (Art. 28 GDPR): servers, database, file storage, AI Model Hub | All data in sections 3.1 to 3.7 | Germany |
-| [EMAIL PROVIDER] | Processor: sending sign-in codes | Email address, code | [LOCATION] |
+| [EMAIL PROVIDER] | Processor: sending sign-in codes and the early-bird confirmation email (3.8) | Email address, code or confirmation link | [LOCATION] |
 | Apple Inc. / Apple Distribution International | Independent controller, only if you use Sign in with Apple | As described in Apple's privacy policy | Ireland / USA |
 | Google Ireland Ltd. / Google LLC | Independent controller, only if you use Google sign-in | As described in Google's privacy policy | Ireland / USA |
 
@@ -103,6 +117,7 @@ We store and process your data in Germany. If you choose Sign in with Apple or G
 | Server logs | [14] days |
 | Server-side usage events (3.4) | 12 months, then kept only as anonymous totals |
 | Optional usage statistics (3.5), feedback and answers (3.6) | 12 months, or until you withdraw consent or delete your account |
+| Early-bird list (3.8) | Unconfirmed address: 7 days. Confirmed address: until you withdraw consent or we close the list |
 | Minimal deletion and cost records (IDs, times and amounts, no content) | As long as needed to complete deletion and reconcile costs, at most [90] days after account deletion |
 
 ## 7. Deleting your account

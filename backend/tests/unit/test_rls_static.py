@@ -28,7 +28,8 @@ def test_the_migrations_cover_every_model_with_tenant_id():
                | set(_migration("0008_consent_events").TENANT_TABLES))
     assert covered == with_tenant
     assert {t.name for t in Base.metadata.tables.values()} - with_tenant == {
-        "users", "rate_limit_counters", *_migration("0006_social_sign_in").PRE_TENANT_TABLES}
+        "users", "rate_limit_counters", *_migration("0006_social_sign_in").PRE_TENANT_TABLES,
+        *_migration("0009_early_bird").PRE_TENANT_TABLES}
 
 
 def test_the_maintenance_function_uses_the_retention_window():

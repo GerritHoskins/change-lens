@@ -18,6 +18,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1) and its sandbox, `extract` (I-2), `align`, `compare` and `values` (I-3), `verify` and `report` (I-5) |
 | `llm` | `changelens/llm/` | The `llm` port, the fake adapter, the metered wrapper, the IONOS adapter (`ionos.py`) and output schemas (`schemas.py`) |
 | `metering` | `changelens/metering/` | Per-comparison cost meter and ceiling |
+| `mail` | `changelens/mail/` | The `mail` port, the recording sender, the SMTP sender (`smtp.py`) and the early-bird confirmation mail's wording (`confirmation.py`); §14 |
 | logging | `changelens/logs.py` | Log scrubbing (AC-23) |
 
 ## 1. Start Postgres and MinIO
@@ -153,6 +154,10 @@ Optional environment variables. In `logto` mode six of them have no default: `CH
 | `CHANGELENS_MAX_STORED_BYTES` | `1073741824` (1 GiB) of originals per account, deleted projects included until their rows are removed; detail `stored_bytes` |
 | `CHANGELENS_MAX_CONCURRENT_UPLOADS` | `4` upload requests held in memory at once per api process, half of them for one account; over that → `429 rate_limited` |
 | `CHANGELENS_TRUSTED_PROXIES` | empty; comma-separated proxy IPs whose `X-Forwarded-For` is believed (the right-most entry that isn't a trusted proxy is the client) |
+| `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` | `5` requests to `POST /early-bird` per IP per UTC day (§14) |
+| `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` | `3` confirmation mails to one address per UTC day |
+| `CHANGELENS_EARLY_BIRD_PENDING_DAYS` | `7`; an unconfirmed early-bird address is deleted after this many days |
+| `CHANGELENS_SMTP_PORT` | `587` (STARTTLS) |
 
 ## 4. Example curl sequence (Git Bash)
 
@@ -392,6 +397,21 @@ From `backend/`, preview one batch against the deliberately configured database:
 Preview is read-only and creates no schema or bucket. `--apply --once` executes one batch; `--apply --interval-seconds 60` runs continuously. Deploy and supervise this process independently of the comparison worker so a busy queue cannot starve cleanup. No existing user or production data was used for local lifecycle tests. Apple revocation (I-8 S4), backups/PITR/snapshots and native erasure remain acceptance work; see the [data inventory](../docs/data-inventory.md).
 
 `DELETE /me` (I-8 S5) deletes the signed-in account and, in v1, its whole tenant: it freezes the account (the same token is `unauthenticated` from the next request), deletes every project as above, the onboarding row and the Logto user, and leaves a tombstone user row with no subject. It returns `204` when all of that finished and `202` while a step is pending; `--apply` retries pending account deletions too. In `dev` mode there is no Logto user to delete.
+
+## 14. Early-bird list (landing page)
+
+Two public routes without a bearer token, in `changelens/api/early_bird.py`; the list is the table `early_bird_signups` (migration `0009_early_bird`, no tenant, reached only through the `early_bird_*` functions). An address on the list is not an account.
+
+- `POST /early-bird` with `{"email": "…", "locale": "en" | "de"}` as `application/json`, at most 1 KiB, no other field. Answers `202 {"status": "accepted"}` for every valid request, whether the address is new, waiting for confirmation or already confirmed. Other answers: `422 invalid_request` (never echoes the input; an address must be ASCII, at most 254 characters, with one `@` and a dotted host name), `413 limit_exceeded`, and `429 rate_limited` with `Retry-After` after `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` requests from one IP in a UTC day (invalid requests count). A new or pending address gets a confirmation mail with a fresh single-use link, sent after the response, at most `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` per UTC day; beyond that the answer is the same and nothing is sent.
+- `GET /early-bird/confirm?token=…` always answers `303`: to `<landing>/#confirmed` (`<landing>/de/#confirmed` for a German sign-up) when the token confirms, to `<landing>/#confirm-failed` for a missing, unknown, used or expired token and when the per-minute IP limit is reached. A token works once and for `CHANGELENS_EARLY_BIRD_PENDING_DAYS` days; only its SHA-256 is stored.
+- CORS exists for `/early-bird` only: the origin in `CHANGELENS_LANDING_URL` may `POST` with `Content-Type`, without credentials. With no landing URL (dev) no origin is allowed.
+- Mail: `changelens/mail/` holds the port, the recording sender (dev mode and tests; nothing is sent) and the SMTP sender (`smtplib`, STARTTLS, 10 s timeout). The wording in `mail/confirmation.py` is a draft pending legal review, and its imprint line is a placeholder.
+- Logs: event codes and the page language only (`early_bird_accepted`, `early_bird_mail_sent`, `early_bird_mail_failed`, `early_bird_mail_capped`, `early_bird_confirmed`, `early_bird_confirm_failed`). The accepted and confirmed lines are the server-side counts per day and language; nothing aggregates them yet.
+- Maintenance (`python -m changelens.retention --apply`) deletes unconfirmed addresses after the pending period (`pruned_early_bird_pending` in its summary).
+
+In `logto` mode these have no default, and the api and retention stop at start when one is missing: `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM` (the bare address), `CHANGELENS_PUBLIC_API_URL` (this API's origin, for the link) and `CHANGELENS_LANDING_URL` (the landing page's origin). Both URLs are `https` origins without a path. The worker reads none of them and refuses to start with `CHANGELENS_SMTP_PASSWORD`. In `dev` mode all are optional: the recording sender is used whatever is set, and the link falls back to the request's own host.
+
+Not built: removal from the list (unsubscribe), any link between a list address and an account or a discount, and the Umami `list-confirmed` event. Opening the link confirms with a `GET`, so a mail scanner that opens links can confirm an address by itself.
 
 ## What is placeholder or out of scope
 

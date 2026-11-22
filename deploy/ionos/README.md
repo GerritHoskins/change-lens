@@ -352,6 +352,11 @@ The release with task L32, the release with the Logto log filter (LR-12) and the
 [`one-off-releases.md`](one-off-releases.md). The release that puts the backup job behind the egress proxy
 (LR-13) is there too; it ran on the server on 2026-11-21.
 
+**Not done yet:** the release with the landing page (`changelens.pixeltronic.dev`, its access log, the
+early-bird list) and the optional start of Umami. Steps and checks: the last two sections of
+[`one-off-releases.md`](one-off-releases.md). With Umami running, add `--profile stats` to the release
+command's `docker compose up -d`.
+
 ### Logto upgrade
 
 Not part of an app release: change the image tag and digest in `compose.yaml` first, then run
@@ -404,6 +409,12 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
 ```
 
 ## Known gaps
+
+- **The next release needs new settings, or the api and retention will not start:** `CHANGELENS_SMTP_HOST`,
+  `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`, `CHANGELENS_PUBLIC_API_URL` and
+  `CHANGELENS_LANDING_URL` in `/etc/changelens/changelens.env` (the early-bird list's confirmation mail; copy
+  the block from `env/changelens.env.example`). The release also brings migration `0009_early_bird`. Not
+  checked: that the api container can reach the SMTP host on port 587.
 
 - `python -m changelens.api --lan` prints a warning about the dev token at start; it doesn't apply in `logto`
   mode. A `--host` option would remove it.

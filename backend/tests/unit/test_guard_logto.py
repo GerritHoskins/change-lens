@@ -27,6 +27,7 @@ from changelens.config import NOT_FOR_THE_WORKER, Settings
 from changelens.domain import TenantRepo
 from changelens.domain.models import AccountOnboarding, ConsentEvent, Membership, User
 from changelens.storage import MemoryObjectStore
+from helpers import EARLY_BIRD_ENV
 from identity_fixture import SqliteIdentity, sqlite_engine
 
 ISSUER = "https://auth.example.test/oidc"
@@ -262,11 +263,11 @@ DEPLOYED = {"CHANGELENS_DATABASE_URL": "postgresql+psycopg://changelens_app:app-
             "CHANGELENS_LLM": "ionos"}
 ENV = {"CHANGELENS_ENV": None, "CHANGELENS_AUTH_MODE": None, "CHANGELENS_DEV_TOKEN": None,
        "CHANGELENS_LOGTO_ISSUER": None, "CHANGELENS_LOGTO_AUDIENCE": None, "CHANGELENS_LOGTO_JWKS_URL": None,
-       **dict.fromkeys(DEPLOYED)}
+       **dict.fromkeys(DEPLOYED), **dict.fromkeys(EARLY_BIRD_ENV), "CHANGELENS_SMTP_PORT": None}
 LOGTO = {"CHANGELENS_AUTH_MODE": "logto", "CHANGELENS_LOGTO_ISSUER": ISSUER, "CHANGELENS_LOGTO_AUDIENCE": AUDIENCE,
          "CHANGELENS_LOGTO_JWKS_URL": JWKS_URL, "CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT": "https://auth.example.test",
          "CHANGELENS_LOGTO_M2M_APP_ID": "m2m-app", "CHANGELENS_LOGTO_M2M_APP_SECRET": "m2m-secret-0123456789",
-         "CHANGELENS_RATE_LIMIT_KEY": "rate-limit-key-for-tests-0123456789", **DEPLOYED}
+         "CHANGELENS_RATE_LIMIT_KEY": "rate-limit-key-for-tests-0123456789", **DEPLOYED, **EARLY_BIRD_ENV}
 
 
 def _env(monkeypatch, values):

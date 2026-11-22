@@ -18,6 +18,7 @@ from changelens.api.retention import router as retention_router
 from changelens.api.routes import router
 from changelens.api.session import router as session_router
 from changelens.api.account import router as account_router
+from changelens.api.early_bird import EarlyBirdCors, MemoryEarlyBird, router as early_bird_router
 from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.api.limits import MemoryCounters, RateLimiter, UploadSlots
@@ -25,6 +26,7 @@ from changelens.auth.logto_management import idp_for
 from changelens.domain.social import social_for
 from changelens.config import Settings
 from changelens.domain import Database
+from changelens.mail import mailer_for
 from changelens.storage import ObjectStore, S3ObjectStore
 
 _DEFAULT = object()
@@ -108,7 +110,7 @@ class BodyLimitMiddleware:
 
 def create_app(settings: Settings, db: Optional[Database] = None, store: Optional[ObjectStore] = None,
                keys: Optional[JwksKeyHolder] = None, idp=_DEFAULT, limiter: Optional[RateLimiter] = None,
-               providers=_DEFAULT, apple=_DEFAULT) -> FastAPI:
+               providers=_DEFAULT, apple=_DEFAULT, mailer=_DEFAULT, early_bird=None) -> FastAPI:
     max_body = max(settings.limits.max_pdf_bytes, settings.limits.max_text_bytes) + _OVERHEAD
     # Uploads stay in memory: never spool document bytes to a temp file on disk (03 §9.1 `storage`).
     # The parser sees the full multipart stream before per-slot validation. Even a
@@ -144,6 +146,10 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     configured_providers, configured_apple = social_for(settings) if _DEFAULT in (providers, apple) else ({}, None)
     app.state.providers = configured_providers if providers is _DEFAULT else providers
     app.state.apple = configured_apple if apple is _DEFAULT else apple
+    # The early-bird list (public routes): the sender of its confirmation mail, and the list itself, which
+    # lives in Postgres behind functions. Test doubles for the database get the single-process list.
+    app.state.mailer = mailer_for(settings) if mailer is _DEFAULT else mailer
+    app.state.early_bird = early_bird or (app.state.db if isinstance(app.state.db, Database) else MemoryEarlyBird())
     if settings.auth_mode == "logto":
         keys = keys or JwksKeyHolder(JwtPolicy(settings.logto_issuer, settings.logto_audience),
                                      settings.logto_jwks_url)
@@ -158,6 +164,11 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     app.include_router(consent_router)
     app.include_router(session_router)
     app.include_router(account_router)
+    if app.state.mailer is not None:
+        # No sender, no list: without one the routes are absent (`not_found`) instead of accepting
+        # addresses nobody can confirm. CORS exists for this one path only.
+        app.include_router(early_bird_router)
+        app.add_middleware(EarlyBirdCors, origin=settings.landing_url)
     app.add_middleware(BodyLimitMiddleware, max_bytes=max_body)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(NoStoreMiddleware)

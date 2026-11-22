@@ -27,7 +27,13 @@ DEPLOYED_REQUIRED = ("CHANGELENS_DATABASE_URL", "CHANGELENS_S3_ENDPOINT", "CHANG
                      "CHANGELENS_S3_SECRET_KEY", "CHANGELENS_S3_BUCKET", "CHANGELENS_LLM")
 # Only the api and retention may hold these (03 §6). The worker parses uploaded files, so in logto mode it
 # stops at start when it finds one in its environment (LR-4).
-NOT_FOR_THE_WORKER = ("CHANGELENS_LOGTO_M2M_APP_ID", "CHANGELENS_LOGTO_M2M_APP_SECRET", "CHANGELENS_RATE_LIMIT_KEY")
+NOT_FOR_THE_WORKER = ("CHANGELENS_LOGTO_M2M_APP_ID", "CHANGELENS_LOGTO_M2M_APP_SECRET", "CHANGELENS_RATE_LIMIT_KEY",
+                      "CHANGELENS_SMTP_PASSWORD")
+# The early-bird list's confirmation mail (double opt-in): what the api needs in logto mode to send it and
+# to build its links. A missing one stops the api and retention at start (the rule L11 set); the port has
+# a default (587, STARTTLS). The worker reads none of them.
+EARLY_BIRD_REQUIRED = ("CHANGELENS_SMTP_HOST", "CHANGELENS_SMTP_USER", "CHANGELENS_SMTP_PASSWORD",
+                       "CHANGELENS_MAIL_FROM", "CHANGELENS_PUBLIC_API_URL", "CHANGELENS_LANDING_URL")
 
 
 def database_url_from_env() -> str:
@@ -115,6 +121,17 @@ class Settings:
     # The privacy-policy version a usage-events consent answer must name (D-18 tier B). Changing it makes
     # every earlier answer read as unanswered, so the app asks again.
     consent_policy_version: str = "2026-11-13"
+    # The early-bird list (docs/landing-page-handoff.md): `POST /early-bird` and its confirmation mail.
+    early_bird_per_ip_per_day: int = 5  # sign-up requests per IP per UTC day
+    early_bird_mails_per_address_per_day: int = 3  # confirmation mails to one address per UTC day
+    early_bird_pending_days: int = 7  # unconfirmed sign-ups are deleted after this many days
+    smtp_host: Optional[str] = None  # set = the SMTP sender; logto mode requires it (from_env)
+    smtp_port: int = 587  # submission with STARTTLS
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = field(default=None, repr=False)
+    mail_from: Optional[str] = None  # the confirmation mail's sender address
+    public_api_url: str = ""  # this API's public origin, for the confirmation link
+    landing_url: str = ""  # the landing page's origin: redirect target and the one allowed CORS origin
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
     # The worker's settings (LR-4): it checks no token and calls no sign-in service, so it holds none of their
@@ -142,9 +159,25 @@ class Settings:
         for cap in (self.tenant_monthly_spend_cap_eur, self.global_monthly_spend_cap_eur):
             if not isinstance(cap, Decimal) or not cap.is_finite() or cap < 0:
                 raise ValueError("spend caps must be non-negative amounts")
-        for limit in (self.rate_limit_account_per_minute, self.rate_limit_ip_per_minute, self.signups_per_ip_per_day):
-            if not isinstance(limit, int) or limit < 1:
+        for limit in (self.rate_limit_account_per_minute, self.rate_limit_ip_per_minute, self.signups_per_ip_per_day,
+                      self.early_bird_per_ip_per_day, self.early_bird_mails_per_address_per_day):
+            if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
                 raise ValueError("rate limits must be positive integers")
+        days = self.early_bird_pending_days
+        if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
+            raise ValueError("the early-bird pending period must be 1 to 365 days")
+        if not isinstance(self.smtp_port, int) or isinstance(self.smtp_port, bool) or not 1 <= self.smtp_port <= 65535:
+            raise ValueError("the SMTP port must be 1 to 65535")
+        if self.worker and (self.smtp_host or self.smtp_user or self.smtp_password or self.mail_from):
+            raise ValueError("the worker holds no mail settings")
+        if self.smtp_host is not None and not (_plain(self.smtp_host) and _plain(self.smtp_user)
+                                               and self.smtp_password and _mail_address(self.mail_from)):
+            raise ValueError("the SMTP sender needs host, user, password and a from-address")
+        if self.auth_mode == "logto" and self.smtp_host is not None and not (self.public_api_url and self.landing_url):
+            raise ValueError("the confirmation mail needs the public API URL and the landing URL")
+        for url in (self.public_api_url, self.landing_url):
+            if url and not _origin(url, https_only=self.auth_mode == "logto"):
+                raise ValueError("the public API URL and the landing URL must be origins (scheme and host, no path)")
         bounds = (self.max_unparsed_versions, self.max_unfinished_comparisons, self.max_stored_bytes,
                   self.max_concurrent_uploads)
         if any(type(bound) is not int or bound < 1 for bound in bounds) or self.max_unparsed_versions < 2:
@@ -224,6 +257,11 @@ class Settings:
                 max_concurrent_uploads=int(env.get("CHANGELENS_MAX_CONCURRENT_UPLOADS", "4")),
                 consent_policy_version=env.get("CHANGELENS_CONSENT_POLICY_VERSION", "2026-11-13"),
                 trusted_proxies=tuple(p.strip() for p in env.get("CHANGELENS_TRUSTED_PROXIES", "").split(",") if p.strip()),
+                early_bird_per_ip_per_day=int(env.get("CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY", "5")),
+                early_bird_mails_per_address_per_day=int(
+                    env.get("CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY", "3")),
+                early_bird_pending_days=int(env.get("CHANGELENS_EARLY_BIRD_PENDING_DAYS", "7")),
+                **({} if worker else _early_bird_from_env(env, mode)),
                 **auth,
             )
         except (ValueError, ArithmeticError) as exc:
@@ -252,6 +290,42 @@ def _sign_in_from_env(env) -> dict:
     if not auth["logto_management_endpoint"]:
         raise RuntimeError("logto mode needs CHANGELENS_LOGTO_MANAGEMENT_ENDPOINT, _M2M_APP_ID and _M2M_APP_SECRET")
     return auth
+
+
+def _early_bird_from_env(env, mode: str) -> dict:
+    """The early-bird list's mail and link settings, for the api and retention; the worker never reads them.
+    In logto mode a missing one stops the process: a sign-up form that answers 202 and sends no mail would
+    look healthy and confirm nobody. Dev mode sends nothing (the recording sender), so all are optional."""
+    if mode == "logto":
+        # Names only in the message: one of the values is a credential.
+        missing = [name for name in EARLY_BIRD_REQUIRED if not env.get(name, "").strip()]
+        if missing:
+            raise RuntimeError("logto mode needs " + ", ".join(missing))
+    values = {name: env.get("CHANGELENS_" + name.upper(), "").strip()
+              for name in ("smtp_host", "smtp_user", "mail_from", "public_api_url", "landing_url")}
+    mail = {"public_api_url": values.pop("public_api_url").rstrip("/"),
+            "landing_url": values.pop("landing_url").rstrip("/"),
+            "smtp_port": int(env.get("CHANGELENS_SMTP_PORT", "587"))}
+    if values["smtp_host"]:
+        mail.update(values, smtp_password=env.get("CHANGELENS_SMTP_PASSWORD", ""))
+    return mail
+
+
+def _plain(value) -> bool:
+    """A non-empty setting with no whitespace or control character (a host or user name)."""
+    return isinstance(value, str) and bool(value) and all(33 <= ord(c) < 127 for c in value)
+
+
+def _mail_address(value) -> bool:
+    return _plain(value) and value.count("@") == 1 and "" not in value.split("@") and not set(value) & set("<>,;\"")
+
+
+def _origin(url: str, https_only: bool) -> bool:
+    """`scheme://host[:port]` and nothing else. Plain string checks: config imports no URL module."""
+    scheme, sep, authority = url.partition("://")
+    if not sep or scheme not in (("https",) if https_only else ("https", "http")):
+        return False
+    return _plain(authority) and not set(authority) & set("/@?#\\") and not authority.startswith((".", ":"))
 
 
 def _ip(value) -> str:
