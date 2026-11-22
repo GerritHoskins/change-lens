@@ -8,6 +8,11 @@
   "readyToSubmit": "Bereit zum Senden",
   "submittingComparison": "Vergleich wird gesendet…",
   "compareSubmitHint": "Beim Start werden beide Eingaben zusammen gesendet. Sobald die Versionen gelesen werden, kannst du diese Ansicht verlassen.",
+  "compareNeedsProject": "Wähle zuerst ein Projekt.",
+  "compareNeedsEarlier": "Wähle die frühere Version oder füge sie hinzu.",
+  "compareNeedsNewer": "Wähle die neuere Version oder füge sie hinzu.",
+  "compareNeedsScope": "Gib an, was die neuere Version ist.",
+  "dismissNeedsReason": "Wähle zuerst einen Grund.",
   "comparePickFailed": "Die PDF konnte nicht vorbereitet werden. Wähle sie erneut aus.",
   "useText": "Diesen Text verwenden",
   "comparisonReading": "Versionen werden gelesen",
@@ -16,7 +21,7 @@
   "settingsSaveFailed": "Die Einstellungen konnten nicht gespeichert werden. Versuche es erneut.",
   "evidenceChecking": "Belegstellen werden geprüft…",
   "evidenceCheckFailed": "Die Belegstellen konnten nicht geprüft werden. Versuche es erneut, bevor du diesen Befund prüfst.",
-  "evidenceFallbackReview": "Die Textstelle konnte in der PDF nicht markiert werden. Prüfe vor dem Bestätigen den zitierten Text.",
+  "evidenceFallbackReview": "Die Stelle ließ sich auf der Seite nicht markieren. Diese Zitate stammen aus dem ausgelesenen Text.",
   "findingChanged": "Dieser Befund wurde geändert. Prüfe die aktuelle Fassung, bevor du es erneut versuchst.",
   "topicDeadlines": "Fristen",
   "topicDeliverables": "Leistungen",
@@ -239,7 +244,7 @@
       }
     }
   },
-  "highlightFallback": "Die Textstelle konnte in der PDF nicht markiert werden. Deshalb wird der ausgelesene Text angezeigt.",
+  "highlightFallback": "Die Stelle ließ sich auf der Seite nicht markieren. Dieses Zitat stammt aus dem ausgelesenen Text.",
   "loadFailed": "Laden fehlgeschlagen: {reason}",
   "@loadFailed": {
     "placeholders": {
@@ -466,10 +471,10 @@
   "homeToCheckUnit": "zu prüfen",
   "homeAllChecked": "Alles geprüft",
   "homeNotCompared": "Noch kein Vergleich",
-  "homeReading": "{label} wird gelesen …",
+  "homeReading": "{label} wird gelesen …",
   "homeComparing": "Wird verglichen …",
   "homeFailed": "Vergleich fehlgeschlagen",
-  "homeSecondLook": "{count, plural, =1{1 braucht einen zweiten Blick} other{{count} brauchen einen zweiten Blick}}",
+  "homeSecondLook": "{count, plural, =1{1 von dir zu prüfen} other{{count} von dir zu prüfen}}",
   "homePairA11y": "{earlier} verglichen mit dem neueren {newer}",
   "homeOpenReport": "Bericht öffnen",
   "homeTopicDeadlines": "{count, plural, =1{1 Frist} other{{count} Fristen}}",

@@ -173,30 +173,37 @@ class _Pill extends StatelessWidget {
       child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: CalmColors.ink))));
 }
 
-/// The "needs a second look" count: `review` fill, always inside its 2px dashed ink border.
+/// The "needs your review" count, drawn like every other `review` mark: a white pill inside the 2px
+/// dashed `review` border, led by the "?" disc. White, not `surface`, because the block is `marker`.
 class HomeReviewPill extends StatelessWidget {
   const HomeReviewPill({super.key, required this.text});
   final String text;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    foregroundPainter: _DashedPill(_pillRadius(context, 7)),
+    foregroundPainter: _DashedPill(_pillRadius(context, 7), CalmColors.of(context).review),
     child: DecoratedBox(
-      decoration: BoxDecoration(color: CalmColors.of(context).review,
+      decoration: BoxDecoration(color: CalmColors.paper,
         borderRadius: BorderRadius.circular(_pillRadius(context, 7))),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: CalmColors.ink)))));
+      child: Padding(padding: const EdgeInsetsDirectional.fromSTEB(6, 5, 14, 5),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const CalmReviewDisc(),
+          const SizedBox(width: 8),
+          Flexible(child: Text(text,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: CalmColors.ink))),
+        ]))));
 }
 
 class _DashedPill extends CustomPainter {
-  const _DashedPill(this.radius);
+  const _DashedPill(this.radius, this.color);
   final double radius;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     const inset = CalmSize.dash / 2;
     final rect = (Offset.zero & size).deflate(inset);
-    final paint = Paint()..color = CalmColors.ink..style = PaintingStyle.stroke..strokeWidth = CalmSize.dash;
+    final paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = CalmSize.dash;
     final path = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius - inset)));
     for (final metric in path.computeMetrics()) {
       for (var d = 0.0; d < metric.length; d += 10) {
@@ -206,7 +213,7 @@ class _DashedPill extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DashedPill old) => old.radius != radius;
+  bool shouldRepaint(_DashedPill old) => old.radius != radius || old.color != color;
 }
 
 /// A square `surface` tile: the name on top, then a count "to check" or a status in words.

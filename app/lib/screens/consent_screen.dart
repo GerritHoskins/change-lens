@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/calm_actions.dart';
+import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 
@@ -55,17 +56,18 @@ class _ConsentScreenState extends State<ConsentScreen> {
       body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(20, 32, 20, 24), children: [
         CalmPageHeader(title: l.consentTitle),
         Text(l.consentBody, style: text.bodyLarge),
-        const SizedBox(height: 16),
-        Text(l.consentDefault, style: text.bodyMedium),
+        const SizedBox(height: 20),
+        Text(l.consentDefault, style: text.bodyLarge?.copyWith(color: CalmColors.of(context).muted)),
         if (failed) Padding(padding: const EdgeInsets.only(top: 20),
           child: Semantics(liveRegion: true,
             child: CalmWarning(key: const Key('consent-error'), text: l.consentSaveFailed))),
       ])),
       bottomNavigationBar: SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        // "Don't allow" comes first, as on the artboard: refusing is never the harder answer to reach.
         child: CalmEqualPillPair(
-          first: l.consentAllow, second: l.consentDecline,
-          firstKey: const Key('consent-allow'), secondKey: const Key('consent-decline'),
-          onFirst: saving ? null : () => _answer(true), onSecond: saving ? null : () => _answer(false)))),
+          first: l.consentDecline, second: l.consentAllow,
+          firstKey: const Key('consent-decline'), secondKey: const Key('consent-allow'),
+          onFirst: saving ? null : () => _answer(false), onSecond: saving ? null : () => _answer(true)))),
     ));
   }
 }

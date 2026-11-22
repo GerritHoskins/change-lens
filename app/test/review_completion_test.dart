@@ -39,6 +39,7 @@ void main() {
     }
     expect(find.byWidgetPredicate((w) => w is RadioGroup<String> && w.groupValue == null), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const Key('dismiss-confirm'))).onPressed, isNull);
+    expect(find.text('Choose a reason first.'), findsOneWidget); // the disabled button says why
     expect(find.text('Dismiss and next'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();

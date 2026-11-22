@@ -5,9 +5,9 @@
 import 'dart:convert';
 
 import 'package:changelens/api.dart';
-import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/evidence_screen.dart';
+import 'package:changelens/screens/finding_header.dart';
 import 'package:changelens/screens/finding_screen.dart';
 import 'package:changelens/screens/report_screen.dart';
 import 'package:changelens/services.dart';
@@ -156,7 +156,7 @@ void main() {
     expect(find.text('No client approval recorded.'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Record client approval'), 200,
-      scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)));
+      scrollable: find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)));
     await tester.tap(find.text('Record client approval'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('approval-evidence')), 'Mail: fine by us.');
@@ -187,7 +187,7 @@ void main() {
       'evidence_mode': {'before': 'text_only', 'after': 'text_only'}, 'page_opened': false});
     expect(b.requests.last.url.path, '/findings/f1r2'); // reloaded the new revision
     // The new revision's topic is the title; the label doesn't repeat it.
-    expect(find.widgetWithText(CalmPageHeader, 'Other'), findsOneWidget);
+    expect(find.widgetWithText(FindingHeader, 'Other'), findsOneWidget);
     expect(find.text('Changed'), findsOneWidget);
   });
 

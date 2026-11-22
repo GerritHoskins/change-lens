@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:changelens/api.dart';
+import 'package:changelens/design/calm_widgets.dart';
 import 'package:changelens/design/calm_controls.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/compare_screen.dart';
@@ -118,6 +119,8 @@ void main() {
     final (_, backend, _) = await pumpApp(tester, () => CompareScreen(project: project, versions: ready));
     expect(find.text('Choose a version'), findsNWidgets(2));
     expect(startEnabled(tester), isFalse);
+    // The line under the disabled button names what is missing, first thing first.
+    expect(tester.widget<Text>(find.byKey(const Key('start-hint'))).data, 'Choose or add the earlier version.');
 
     await choose(tester, 'earlier', 'Brief v2');
     await choose(tester, 'newer', 'Brief v2');
@@ -126,9 +129,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Choose two different versions.'), findsOneWidget);
     expect(startEnabled(tester), isFalse);
+    // The warning is pinned with Start, not in the scrolling form, so it can't be below the fold.
+    expect(find.descendant(of: find.byType(CalmPinnedBar), matching: find.byKey(const Key('same-version'))),
+      findsOneWidget);
+    expect(find.byKey(const Key('start-hint')), findsNothing);
 
     await choose(tester, 'newer', 'Brief v1');
     expect(startEnabled(tester), isTrue);
+    expect(find.byKey(const Key('same-version')), findsNothing);
     expect(backend.requests.where((r) => r.method == 'POST'), isEmpty);
 
     await tester.ensureVisible(find.byKey(const Key('start')));

@@ -234,8 +234,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
           CalmPageHeader(title: widget.project.name, subtitle: widget.project.clientLabel),
           if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
           if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
-            child: CalmWarning(text: error!, child: TextButton(onPressed: _load, child: Text(l.retry)))),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+            child: CalmWarning(text: error!,
+              child: CalmTextEdge(child: TextButton(onPressed: _load, child: Text(l.retry))))),
+          CalmTextEdge(child: Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton.icon(
                 key: const Key('paste'),
                 onPressed: importing ? null : () => _import(paste: true),
@@ -246,7 +247,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                 onPressed: importing ? null : () => _import(paste: false),
                 icon: const Icon(CalmIcons.pickPdf),
                 label: Text(l.importPdf)),
-          ]),
+          ])),
           if (importing) Padding(padding: const EdgeInsets.only(top: 12),
             child: Semantics(liveRegion: true, child: Text(l.uploading))),
           const SizedBox(height: 32),

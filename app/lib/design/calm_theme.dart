@@ -185,8 +185,13 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
     fontFamily: 'Roboto', textTheme: text, scaffoldBackgroundColor: background,
     extensions: [colors], materialTapTargetSize: MaterialTapTargetSize.padded,
     focusColor: colors.link.withValues(alpha: .24),
-    appBarTheme: AppBarTheme(backgroundColor: background, foregroundColor: ink,
-      elevation: 0, scrolledUnderElevation: 0, centerTitle: false, titleTextStyle: text.titleMedium),
+    // Flat, no shadow. With content scrolled under it the bar takes the scheme's raised tone
+    // (`disabled`, as `surfaceContainerHigh`), so a line of text is not cut off at an edge nobody can see.
+    appBarTheme: AppBarTheme(
+      backgroundColor: WidgetStateColor.resolveWith((states) =>
+        states.contains(WidgetState.scrolledUnder) ? colors.soft : background),
+      foregroundColor: ink, elevation: 0, scrolledUnderElevation: 0, surfaceTintColor: Colors.transparent,
+      centerTitle: false, titleTextStyle: text.titleMedium),
     cardTheme: CardThemeData(color: surface, elevation: 0, margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.lg))),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
@@ -215,6 +220,14 @@ ThemeData calmTheme(Brightness brightness, {TargetPlatform? platform}) {
       elevation: 0, shadowColor: Colors.transparent, labelTextStyle: WidgetStatePropertyAll(text.labelLarge),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CalmRadius.md),
         side: BorderSide(color: controlBorder))),
+    // A switch that is on is `action`, never the platform's green; off, it is `control-border` on `disabled`.
+    switchTheme: SwitchThemeData(
+      trackColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? primary : colors.soft),
+      thumbColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? onPrimary : controlBorder),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? Colors.transparent : controlBorder)),
     radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((states) =>
       states.contains(WidgetState.disabled) ? disabledText
         : states.contains(WidgetState.selected) ? ink : controlBorder)),

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'calm_icons.dart';
 import 'calm_theme.dart';
 
 /// An outlined ink pill at main-button height: the email sign-in method and the consent answers.
@@ -57,9 +58,15 @@ class CalmProviderButton extends StatelessWidget {
       Flexible(child: Text(workingLabel ?? label)),
     ]);
     final text = Text(label, textAlign: TextAlign.center);
+    // Apple's logo or the mail icon before the label; Google waits for its official "G".
+    final Widget? mark = switch (provider) {
+      CalmProvider.apple => const _AppleLogo(),
+      CalmProvider.email => const ExcludeSemantics(child: Icon(CalmIcons.mail, size: 20)),
+      CalmProvider.google => null,
+    };
     return OutlinedButton(onPressed: working ? null : onPressed, style: calmProviderPill(context),
-      child: working ? progress : provider != CalmProvider.apple ? text
-        : Row(mainAxisSize: MainAxisSize.min, children: [const _AppleLogo(), const SizedBox(width: 8), Flexible(child: text)]));
+      child: working ? progress : mark == null ? text
+        : Row(mainAxisSize: MainAxisSize.min, children: [mark, const SizedBox(width: 8), Flexible(child: text)]));
   }
 }
 

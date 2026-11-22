@@ -7,17 +7,20 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDatePickerMode, showCupertinoModalPopup;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:intl/intl.dart';
 
 import '../api.dart';
 import '../design/calm_controls.dart';
 import '../design/calm_icons.dart';
+import '../design/calm_theme.dart';
 import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'definition_sheets.dart';
 import 'evidence_screen.dart';
 import 'evidence_resolution.dart';
+import 'finding_header.dart';
 import 'report_widgets.dart';
 import 'review_completion.dart';
 
@@ -245,20 +248,23 @@ class _FindingScreenState extends State<FindingScreen> {
     final f = d.finding;
     final reviewed = reviewLabel(l, f.review);
     return Scaffold(
-      appBar: AppBar(title: Text(l.findingTitle)),
-      bottomNavigationBar: SafeArea(
+      // The app bar continues the topic block: its colour, with `on-topic` ink in both themes.
+      appBar: AppBar(title: Text(l.findingTitle), backgroundColor: CalmColors.of(context).topicSurface(f.topic),
+        foregroundColor: CalmColors.ink, systemOverlayStyle: SystemUiOverlayStyle.dark,
+        titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(color: CalmColors.ink)),
+      // The same pinned bar as every other screen: the 20px gutter and a hairline over the content.
+      bottomNavigationBar: CalmPinnedBar(
         child: ConstrainedBox(constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
           child: SingleChildScrollView(primary: false,
-          child: Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (busy) Semantics(liveRegion: true, child: Text(l.saving)),
             if (error != null) CalmWarning(text: l.contentLoadFailed,
-              child: TextButton(onPressed: busy || loading ? null : _load, child: Text(l.retry))),
+              child: CalmTextEdge(child: TextButton(onPressed: busy || loading ? null : _load, child: Text(l.retry)))),
             if (checking) Semantics(liveRegion: true, child: Text(l.evidenceChecking)),
             if (evidenceError != null) ...[
               Text(l.evidenceCheckFailed),
               Align(alignment: AlignmentDirectional.centerStart,
-                child: TextButton(onPressed: checking ? null : _checkEvidence, child: Text(l.retry))),
+                child: CalmTextEdge(child: TextButton(onPressed: checking ? null : _checkEvidence, child: Text(l.retry)))),
             ],
             if (evidenceModes(presentations).containsValue('text_fallback'))
               Semantics(sortKey: const OrdinalSortKey(0), liveRegion: true,
@@ -268,29 +274,15 @@ class _FindingScreenState extends State<FindingScreen> {
               SizedBox(width: double.infinity, child:
                 FilledButton(key: const Key('review-confirm'), onPressed: canReview ? () => _review('confirmed') : null,
                   child: Text(nextPendingIndex == reportIndex ? l.actionConfirm : l.confirmAndNext)))),
-          ])))),
+          ]))),
       ),
       body: AbsorbPointer(
         absorbing: busy,
-        child: ListView(key: ValueKey(id), padding: const EdgeInsets.fromLTRB(20, 8, 20, 28), children: [
-          CalmPageHeader(title: topicLabel(l, f.topic), subtitle: reportIndex < 0 ? null :
-            l.findingPosition(reportIndex + 1, widget.report.findings.length)),
-          Row(children: [
-            // The title already names the topic; repeat the category only when it says more.
-            Expanded(child: Text(categoryLabel(l, f.category) == topicLabel(l, f.topic) ? typeLabel(l, f.changeType)
-                : '${typeLabel(l, f.changeType)} · ${categoryLabel(l, f.category)}',
-              style: Theme.of(context).textTheme.titleMedium)),
-            CalmInfoButton(key: const Key('info-change-types'), term: l.defChangeTypesTitle,
-              sheet: (_) => const ChangeTypeDefinitionSheet()),
-          ]),
-          if (f.explanation != null) Padding(padding: const EdgeInsets.only(top: 12),
-            child: Text(f.explanation!, style: Theme.of(context).textTheme.titleLarge)),
-          if (f.group == 'needs_review') Padding(padding: const EdgeInsets.only(top: 16),
-            child: Row(children: [
-              const CalmReviewDisc(),
-              const SizedBox(width: 10),
-              Expanded(child: Text(l.groupNeedsReview, style: Theme.of(context).textTheme.titleSmall)),
-            ])),
+        // The topic block runs edge to edge; everything after it keeps the 20px gutter.
+        child: CustomScrollView(key: ValueKey(id), slivers: [
+          SliverToBoxAdapter(child: FindingHeader(finding: f, position: reportIndex < 0 ? null :
+            l.findingPosition(reportIndex + 1, widget.report.findings.length))),
+          SliverPadding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 28), sliver: SliverList.list(children: [
           SectionHeader(l.evidenceTitle),
           for (final e in f.evidence)
             CalmArrival(key: ValueKey('$id-${e.side}-${e.charStart}'), child: QuoteCard(
@@ -313,10 +305,11 @@ class _FindingScreenState extends State<FindingScreen> {
                         }))),
             )),
           SectionHeader(l.yourReview),
+          // One text edge for the section: the mark and the buttons move out by their own padding.
           Align(alignment: AlignmentDirectional.centerStart,
-            child: CalmReviewMark(key: ValueKey('$id-${f.review?.at}'),
-              text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved)),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+            child: CalmTextEdge(inset: 4, child: CalmReviewMark(key: ValueKey('$id-${f.review?.at}'),
+              text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved))),
+          CalmTextEdge(child: Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton(onPressed: canReview ? () => _correct(f) : null, child: Text(l.actionCorrect)),
             TextButton(key: const Key('review-dismiss'), onPressed: canReview ? _dismiss : null,
               child: Text(l.actionDismiss)),
@@ -324,7 +317,7 @@ class _FindingScreenState extends State<FindingScreen> {
               final note = await _askNote(required: true);
               if (note != null && note.isNotEmpty) await _review('note', note: note);
             } : null, child: Text(l.actionNote)),
-          ]),
+          ])),
           if (d.reviews.isNotEmpty || d.revisions.length > 1) ...[
             SectionHeader(l.historyTitle),
             for (final r in d.revisions.length > 1 ? d.revisions : <Finding>[])
@@ -352,9 +345,10 @@ class _FindingScreenState extends State<FindingScreen> {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval, icon: const Icon(CalmIcons.add),
-                label: Text(l.recordApproval)),
+            child: CalmTextEdge(child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval,
+                icon: const Icon(CalmIcons.add), label: Text(l.recordApproval))),
           ),
+          ])),
         ]),
       ),
     );

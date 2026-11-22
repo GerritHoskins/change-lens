@@ -8,6 +8,11 @@
   "readyToSubmit": "Ready to send",
   "submittingComparison": "Sending comparison…",
   "compareSubmitHint": "Start sends both inputs together. You can leave this screen once the comparison is reading.",
+  "compareNeedsProject": "Choose a project first.",
+  "compareNeedsEarlier": "Choose or add the earlier version.",
+  "compareNeedsNewer": "Choose or add the newer version.",
+  "compareNeedsScope": "Say what the newer version is.",
+  "dismissNeedsReason": "Choose a reason first.",
   "comparePickFailed": "The PDF could not be prepared. Try picking it again.",
   "useText": "Use this text",
   "comparisonReading": "Reading versions",
@@ -16,7 +21,7 @@
   "settingsSaveFailed": "Settings could not be saved. Please try again.",
   "evidenceChecking": "Checking the source passages…",
   "evidenceCheckFailed": "The source passages could not be checked. Retry before reviewing this finding.",
-  "evidenceFallbackReview": "A PDF highlight could not be placed. Review the quoted text before confirming.",
+  "evidenceFallbackReview": "The passage couldn't be placed on the page. These quotes come from the parsed text.",
   "findingChanged": "This finding changed. Review the current revision before trying again.",
   "topicDeadlines": "Deadlines",
   "topicDeliverables": "Deliverables",
@@ -239,7 +244,7 @@
       }
     }
   },
-  "highlightFallback": "The highlight could not be placed in the PDF, so the parsed text is shown.",
+  "highlightFallback": "The passage couldn't be placed on the page. This quote comes from the parsed text.",
   "loadFailed": "Could not load: {reason}",
   "@loadFailed": {
     "placeholders": {
@@ -494,7 +499,7 @@
   "homeReading": "Reading {label}…",
   "homeComparing": "Comparing…",
   "homeFailed": "Comparison failed",
-  "homeSecondLook": "{count, plural, =1{1 needs a second look} other{{count} need a second look}}",
+  "homeSecondLook": "{count, plural, =1{1 needs your review} other{{count} need your review}}",
   "homePairA11y": "{earlier} compared with the newer {newer}",
   "homeOpenReport": "Open the report",
   "homeTopicDeadlines": "{count, plural, =1{1 deadline} other{{count} deadlines}}",

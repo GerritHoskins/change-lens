@@ -88,7 +88,7 @@ void main() {
                 expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
               }
               // Check content beyond the initial viewport as well as its first paint.
-              final scroll = find.descendant(of: find.byType(ListView), matching:
+              final scroll = find.descendant(of: find.byWidgetPredicate((widget) => widget is ListView || widget is CustomScrollView), matching:
                 find.byWidgetPredicate((widget) => widget is Scrollable && widget.axisDirection == AxisDirection.down));
               if (scroll.evaluate().isNotEmpty) {
                 final position = tester.state<ScrollableState>(scroll.first).position;
