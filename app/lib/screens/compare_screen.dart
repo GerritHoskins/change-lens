@@ -10,6 +10,18 @@ import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'comparison_screen.dart';
 import 'definition_sheets.dart';
+import 'demo_wall.dart';
+
+/// Opens Compare, or the demo wall when the account has no comparison left (docs/demo-wall-handoff.md).
+/// A submission that was sent and not confirmed still opens Compare: retrying it creates nothing new.
+Future<void> openCompare(BuildContext context, {Project? project, List<Version> versions = const [],
+    String? earlierId, String? laterId}) {
+  final services = ServicesScope.of(context);
+  final wall = services.demo.atLimit && services.pendingComparison == null;
+  return Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => wall
+    ? DemoWallScreen(demo: services.demo)
+    : CompareScreen(project: project, versions: versions, earlierId: earlierId, laterId: laterId)));
+}
 
 class CompareScreen extends StatefulWidget {
   const CompareScreen({super.key, this.project, this.versions = const [], this.earlierId, this.laterId});
@@ -95,8 +107,15 @@ class _CompareScreenState extends State<CompareScreen> {
     setState(() { if (before) { earlier = input; } else { later = input; } error = null; });
   }
 
+  /// The wall over this screen: Back returns here with the draft as it was, still in memory only.
+  Future<void> _wall() => Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => DemoWallScreen(demo: services!.demo)));
+
   Future<void> _start() async {
     if (!complete || busy) return;
+    // No demo comparison left: the wall, without asking the server. An unconfirmed submission is still
+    // retried, because it may already exist.
+    if (submission == null && services!.demo.atLimit) return _wall();
     final s = submission ?? ComparisonSubmission(project!, earlier!, later!, scope!);
     submission = s;
     services!.pendingComparison = s; // transport retry survives navigation, never written to disk
@@ -105,6 +124,7 @@ class _CompareScreenState extends State<CompareScreen> {
       final c = await services!.api.createComparison(s.project.id, s.earlier, s.later, s.scope,
           idempotencyKey: s.key);
       if (identical(services!.pendingComparison, s)) services!.pendingComparison = null;
+      services!.demo.refresh(); // one place fewer; best effort
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(MaterialPageRoute(
           builder: (_) => ComparisonScreen(comparisonId: c.id, versions: versions)));
@@ -118,11 +138,15 @@ class _CompareScreenState extends State<CompareScreen> {
         submission = null;
       }
       if (!mounted) return;
+      // The demo limit was reached elsewhere (the state here was out of date): the wall, and the draft stays.
+      final demoLimit = e is ApiException && e.code == 'demo_limit_reached';
+      if (demoLimit) services!.demo.limitReached();
       setState(() {
         busy = false;
-        error = rejected ? AppLocalizations.of(context).compareRejected :
+        error = demoLimit ? null : rejected ? AppLocalizations.of(context).compareRejected :
             AppLocalizations.of(context).compareRetrySame;
       });
+      if (demoLimit) await _wall();
     }
   }
 
@@ -225,6 +249,7 @@ class _CompareScreenState extends State<CompareScreen> {
           const SizedBox(height: 16),
         ],
         Text(l.confirmIntro, style: text.bodyMedium?.copyWith(color: colors.muted)),
+        DemoLine(demo: services!.demo, padding: const EdgeInsets.only(top: 8)),
         if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
         const SizedBox(height: 20),
         _slot(true),

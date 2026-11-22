@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api.dart';
 import 'auth/session.dart';
+import 'demo.dart';
 
 /// False while the app is in the background or covered by the system. The screens that poll skip
 /// their timer ticks then and catch up on the first tick after the app is back (audit A6).
@@ -119,6 +120,7 @@ class Services extends ChangeNotifier {
   Services(this.store, this.picker, {this.apiFactory = Api.new, this.auth,
       this.consentFlow = const bool.fromEnvironment('CHANGELENS_CONSENT')}) {
     auth?.addListener(_authChanged);
+    auth?.onDemo = demo.adopt;
   }
 
   static const _baseKey = 'api_base_url', _tokenKey = 'dev_token';
@@ -136,6 +138,9 @@ class Services extends ChangeNotifier {
   String baseUrl = '';
   String token = '';
   Api? _api;
+
+  /// The account's demo limit and feedback (docs/demo-wall-handoff.md); empty when the server has none.
+  late final DemoController demo = DemoController(() => api);
   ComparisonSubmission? pendingComparison;
 
   /// Signed in, or signing in again over the current screen (the screens and drafts stay).
@@ -149,7 +154,10 @@ class Services extends ChangeNotifier {
     final state = auth!.state;
     // Nothing of one account survives sign-out; an expired session keeps the in-memory draft until
     // the same account signs in again (a different account passes through SignedOut first).
-    if (state is! SignedIn && state is! ReauthRequired) pendingComparison = null;
+    if (state is! SignedIn && state is! ReauthRequired) {
+      pendingComparison = null;
+      demo.clear();
+    }
     notifyListeners();
   }
 
@@ -162,7 +170,10 @@ class Services extends ChangeNotifier {
   Future<void> load() async {
     final newBase = await store.read(_baseKey) ?? '';
     final newToken = await store.read(_tokenKey) ?? '';
-    if (newBase != baseUrl || newToken != token) pendingComparison = null;
+    if (newBase != baseUrl || newToken != token) {
+      pendingComparison = null;
+      demo.clear();
+    }
     baseUrl = newBase;
     token = newToken;
     _api = null;

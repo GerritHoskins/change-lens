@@ -188,8 +188,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
   }
 
   Future<void> _compare({String? earlierId, String? laterId}) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
-        CompareScreen(project: widget.project, versions: versions, earlierId: earlierId, laterId: laterId)));
+    await openCompare(context, project: widget.project, versions: versions, earlierId: earlierId, laterId: laterId);
     if (mounted) await _load();
   }
 

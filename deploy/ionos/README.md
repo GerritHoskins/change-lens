@@ -409,11 +409,19 @@ docker compose stop caddy && docker network disconnect deploy_avatar changelens-
 
 ## Known gaps
 
-- **The next release needs new settings, or the api and retention will not start:** `CHANGELENS_SMTP_HOST`,
-  `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`, `CHANGELENS_PUBLIC_API_URL` and
-  `CHANGELENS_LANDING_URL` in `/etc/changelens/changelens.env` (the early-bird list's confirmation mail; copy
-  the block from `env/changelens.env.example`). The release also brings migration `0009_early_bird`. Not
-  checked: that the api container can reach the SMTP host on port 587.
+- **The next release needs new settings, or the api will not start** (retention starts without them):
+  `CHANGELENS_SMTP_HOST`,
+  `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`, `CHANGELENS_PUBLIC_API_URL`,
+  `CHANGELENS_LANDING_URL` and `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` (32+ characters, `openssl rand -hex 32`)
+  in `/etc/changelens/changelens.env` (the early-bird list's confirmation mail and removal links; copy the
+  block from `env/changelens.env.example`). The release also brings migrations `0009_early_bird`,
+  `0010_early_bird_unsubscribe` and `0011_early_bird_hardening`, and a Content-Security-Policy for the landing
+  site (checked in a browser against the pinned Caddy image, not on the server). Not checked: that the api
+  container can reach the SMTP host on port 587, and whether IPv6 visitors reach Caddy with their own address
+  (`one-off-releases.md`, landing-page release, step 7).
+- The list's addresses leave the database only through the one-off tool `early-bird-export`
+  (`docker compose --profile tools run --rm -T early-bird-export > /root/early-bird-list.csv`, as root;
+  `backend/README.md` §14). It has not been run on the server. Nothing sends a mail to the list yet.
 
 - `python -m changelens.api --lan` prints a warning about the dev token at start; it doesn't apply in `logto`
   mode. A `--host` option would remove it.

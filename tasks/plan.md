@@ -3,8 +3,7 @@
 Source spec: [`docs/api-contracts-draft.md`](../docs/api-contracts-draft.md) (owner-approved direction,
 O-25 to O-28, 2026-11-16). Task list: [`tasks/todo.md`](todo.md).
 
-**Gate 0: implementation is not authorised yet.** The draft says "Implementation is not authorised
-by this update". This plan orders the work for when it is. Nothing here starts before the owner says go.
+**Gate 0: implementation is authorised.**
 
 ## Overview
 

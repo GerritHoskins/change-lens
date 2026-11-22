@@ -154,7 +154,8 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
 images, the database script on a test Postgres). Nothing here has run on the server.
 
 It brings the site `changelens.pixeltronic.dev` (static files from `web/`), an access log for that site
-without client addresses, the early-bird list (migration `0009_early_bird`, six new settings) and the
+without client addresses, the early-bird list (migrations `0009_early_bird`, `0010_early_bird_unsubscribe` and
+`0011_early_bird_hardening`, seven new settings), a Content-Security-Policy for the site and the
 networks for Umami. The release recreates Caddy and Postgres (each gets a new network): sign-in, the api and
 TLS pause for about a minute.
 
@@ -168,17 +169,22 @@ TLS pause for about a minute.
    ```bash
    cd /opt/changelens && git pull
    ```
-3. **The six settings for the confirmation mail.** Copy the block from `env/changelens.env.example` and fill
-   it in: `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`,
-   `CHANGELENS_PUBLIC_API_URL=https://api.pixeltronic.dev`, `CHANGELENS_LANDING_URL=https://changelens.pixeltronic.dev`.
-   Without them the api and retention don't start.
+3. **The seven settings for the confirmation mail and the removal links.** Copy the block from
+   `env/changelens.env.example` and fill it in: `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`,
+   `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM`, `CHANGELENS_PUBLIC_API_URL=https://api.pixeltronic.dev`,
+   `CHANGELENS_LANDING_URL=https://changelens.pixeltronic.dev`; leave `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY=`
+   empty, the second command fills it. Without them the api doesn't start (retention reads none of them).
    ```bash
    nano /etc/changelens/changelens.env
    ```
    ```bash
-   grep -c -E '^CHANGELENS_(SMTP_HOST|SMTP_USER|SMTP_PASSWORD|MAIL_FROM|PUBLIC_API_URL|LANDING_URL)=.+' /etc/changelens/changelens.env
+   sed -i "s/^CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY=$/CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY=$(openssl rand -hex 32)/" /etc/changelens/changelens.env
    ```
-   Expected: `6`.
+   ```bash
+   grep -c -E '^CHANGELENS_(SMTP_HOST|SMTP_USER|SMTP_PASSWORD|MAIL_FROM|PUBLIC_API_URL|LANDING_URL|EARLY_BIRD_UNSUBSCRIBE_KEY)=.+' /etc/changelens/changelens.env
+   ```
+   Expected: `7`. The `sed` line only fills an empty value, so running it again doesn't replace the key (a
+   replaced key ends every removal link already mailed).
 4. **Folders for the access log and its totals:**
    ```bash
    install -d -m 700 /var/log/changelens-caddy /var/lib/changelens
@@ -202,7 +208,28 @@ TLS pause for about a minute.
    curl -s -o /dev/null -w '%{http_code}\n' https://api.pixeltronic.dev/projects
    ```
    Expected: `401` (the api started with the new settings).
-7. **Daily totals.** Once a day at 00:15 UTC as root; the second command shows what it would write:
+   ```bash
+   curl -sI https://changelens.pixeltronic.dev/ | grep -i -c -E '^(content-security-policy|referrer-policy|x-frame-options):'
+   ```
+   Expected: `3`. Then open both pages in a browser with its console open: no Content-Security-Policy message.
+7. **IPv6 clients (not checked; nothing in a log can show it).** The early-bird limits count a client by its
+   address as Caddy sees it. If Docker hands IPv6 connections to Caddy through its own proxy, Caddy sees one
+   internal address for every IPv6 visitor, and all of them share one limit (5 requests a day together).
+   First, local, PowerShell: does the site have an IPv6 address at all?
+   ```powershell
+   Resolve-DnsName changelens.pixeltronic.dev -Type AAAA
+   ```
+   No AAAA record: no visitor arrives over IPv6, nothing to check. With one, it needs requests from two
+   different IPv6 networks (for example the PC, then a phone on mobile data). On the first, local, PowerShell,
+   six times (each is an empty request the api refuses; it counts against that client's daily limit only):
+   ```powershell
+   curl.exe -6 -s -o NUL -w "%{http_code}`n" -X POST https://api.pixeltronic.dev/early-bird
+   ```
+   Expected: `422` five times, then `429`. Then the same request once from the second network: `422` means
+   IPv6 clients are told apart; `429` means they share one address, and IPv6 has to be enabled on the `edge`
+   network before the form opens. The check says nothing about clients inside one /64, which share a limit on
+   purpose.
+8. **Daily totals.** Once a day at 00:15 UTC as root; the second command shows what it would write:
    ```bash
    (crontab -l 2>/dev/null; echo '15 0 * * * python3 /opt/changelens/deploy/ionos/landing-stats.py >> /var/log/changelens-landing-stats.log 2>&1') | crontab -
    ```
@@ -210,7 +237,7 @@ TLS pause for about a minute.
    python3 /opt/changelens/deploy/ionos/landing-stats.py --dry-run --through-today
    ```
    Expected: a line like `2026-…,en,,check,1`.
-8. **Not part of this release:** the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
+9. **Not part of this release:** the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
    mail wording and the privacy text are reviewed and a test mail has arrived. The footer's legal pages
    don't exist yet (L23).
 

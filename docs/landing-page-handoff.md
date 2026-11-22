@@ -19,7 +19,7 @@ Nothing is built. This handoff records the owner's decisions of 2026-11-22 for t
 | Demo limit | Three comparisons per account for its **lifetime**. Failed runs do not count |
 | Wall | After the third comparison, new comparisons are blocked. Existing reports stay readable |
 | Discount | One **early-bird discount**, no percentage or price stated. Signing up for the list and giving feedback each qualify; they **do not stack** |
-| Feedback content | **Open.** What feedback to collect is decided in a separate interview with the owner. Don't design the feedback form before it |
+| Feedback content | Decided in the interview of 2026-11-22: one form per account with a choice of what is missing ("Other" with text), an optional "Anything else?" field and a monthly price choice. All required parts filled in earn the discount. The form is specified in [`demo-wall-handoff.md`](demo-wall-handoff.md) |
 | Demo distribution | **Test channels:** TestFlight and a Play closed test for the demo period; the store release follows with the full version. Whether a discount for feedback is allowed on TestFlight (its rule against distributing to testers "in exchange for compensation of any kind") goes to the legal review before the wall is built |
 | Landing page host | `changelens.pixeltronic.dev` |
 | Page structure | "Answer the scope question" (see The design) |
@@ -98,12 +98,12 @@ The chosen layout, measures, wording and results are in [`landing-page-direction
 The page ships with the form; the form posts to an endpoint that does not exist yet.
 
 - `POST https://api.pixeltronic.dev/early-bird`, unauthenticated, JSON `{"email": "…", "locale": "en" | "de"}`, `extra="forbid"`. Always answers `202` with the same body, whether or not the address is already known, so the endpoint can't be used to test for addresses.
-- Rate-limited per IP with the existing limiter (`limit_ip` in `backend/changelens/api/limits.py`). Add a stricter per-day scope for this route, like `limit_signup`.
+- Rate-limited per IP with the existing limiter (`limit_ip` in `backend/changelens/api/limits.py`). Add a stricter per-day scope for this route, like `limit_signup`. Since the security review of 2026-11-22 (`docs/security-review.md`, EB-1 to EB-13) there are also caps on mails per hour and day overall, per address and per pending row, and IPv6 clients are counted by network.
 - CORS: allow `POST` from `https://changelens.pixeltronic.dev` only. The API has no CORS configuration today; check `backend/changelens/api/app.py` before adding it.
-- Double opt-in: store the address as pending with a hashed single-use token, send one confirmation mail, and confirm through `GET /early-bird/confirm?token=…`, which redirects to a confirmation section of the landing page. Unconfirmed rows are deleted after a short period; state the period in the privacy text.
+- Double opt-in: store the address as pending with a hashed single-use token, send one confirmation mail. Its link opens a small page with one button (`GET /early-bird/confirm?token=…` changes nothing, so a mail scanner can't confirm); pressing it (`POST`) confirms once and redirects to a confirmation section of the landing page. Unconfirmed rows are deleted after a short period; state the period in the privacy text.
 - **Mail:** the API has no SMTP configuration. Logto sends the sign-in mails and the host monitor has its own (`deploy/ionos/env/monitor.env.example`). The API needs its own SMTP settings, and in `logto` mode a missing one must stop the process at start (the rule L11 set).
 - Storage: a new table with a migration after `0008_consent_events`. It has no tenant: follow `rate_limit_counters` in `0005_limits.py` (RLS forced, no policy, access through functions only) and make `test_rls_static.py` pass.
-- An address on the list is not an account. Matching a confirmed address to an account's discount, the "does not stack" rule and unsubscribing belong to the demo-wall work; unsubscribing must exist before the first mail to the list is sent.
+- An address on the list is not an account. Matching a confirmed address to an account's discount and the "does not stack" rule belong to the demo-wall work. Unsubscribing exists (2026-11-22): every mail to the list must carry the removal link from `python -m changelens.early_bird_export` (`backend/README.md` §14).
 - Add the record to `docs/data-inventory.md` and both privacy texts in the same change.
 
 Until the endpoint is deployed, the form's script shows a plain message that the list is not open yet. It must not pretend the address was saved.
@@ -163,7 +163,6 @@ Decided by the owner on 2026-11-22: **Umami**, self-hosted, for visits and click
 
 - **Legal review:** whether a discount for in-app feedback is allowed for TestFlight testers. The page mentions the feedback route to the discount only once this is answered.
 - **Test invitation links** (TestFlight, Play closed test), if the page should offer them.
-- **Feedback interview:** what feedback matters, and whether free text is allowed.
 - **Imprint details and a contact address** for the footer and the confirmation mail's sender.
 - **Sample brief:** whether the Cedar scenario is the right public example for freelancers and studios.
 - **Tracker consent:** the legal answer on whether the Umami tracker may run without consent, or whether it needs an opt-in.

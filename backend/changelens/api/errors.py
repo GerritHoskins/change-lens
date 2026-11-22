@@ -20,6 +20,8 @@ TITLES = {
     "rate_limited": "Too many requests",
     "provider_unavailable": "Sign-in provider unavailable",  # I-8 S4: Google, Apple or Logto failed; retry
     "policy_version_stale": "Privacy policy version is not current",  # D-18 consent: re-read and ask again
+    "demo_limit_reached": "Demo comparisons used",  # docs/demo-wall-handoff.md: final, waiting does not help
+    "already_answered": "Feedback already sent",  # the demo feedback form, once per account
     # Codes added by I-22 for cases 03 §9.4 does not list (see 06, I-22 row):
     "invalid_request": "Request is malformed",
     "method_not_allowed": "Method not allowed",
@@ -28,16 +30,19 @@ TITLES = {
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, detail: str = "", headers=None):
+    def __init__(self, status: int, code: str, detail: str = "", headers=None, extra=None):
+        """`extra`: further members of the problem body, server-made values only (never request input)."""
         super().__init__(code)
-        self.status, self.code, self.detail, self.headers = status, code, detail, headers
+        self.status, self.code, self.detail, self.headers, self.extra = status, code, detail, headers, extra
 
 
-def problem(status: int, code: str, detail: str = "", headers=None) -> JSONResponse:
+def problem(status: int, code: str, detail: str = "", headers=None, extra=None) -> JSONResponse:
     body = {"type": "urn:changelens:problem:" + code, "title": TITLES.get(code, code),
             "status": status, "code": code}
     if detail:
         body["detail"] = detail
+    if extra:
+        body.update({k: v for k, v in extra.items() if k not in body})
     response = JSONResponse(body, status_code=status, media_type="application/problem+json", headers=headers)
     # Unhandled errors are rendered by Starlette's outer error middleware, outside the
     # ordinary response middleware. Apply the same cache policy at that boundary too.
@@ -55,7 +60,7 @@ def install(app: FastAPI) -> None:
         headers = dict(exc.headers or {})
         if exc.code == "unauthenticated":
             headers["WWW-Authenticate"] = "Bearer"
-        return problem(exc.status, exc.code, exc.detail, headers or None)
+        return problem(exc.status, exc.code, exc.detail, headers or None, exc.extra)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError):

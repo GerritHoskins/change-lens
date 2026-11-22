@@ -244,6 +244,23 @@ services:
     networks: [data]
     restart: "no"
 
+  # The early-bird list as CSV on stdout, for a mail to it (backend/README.md §14):
+  #   docker compose --profile tools run --rm -T early-bird-export > /root/early-bird-list.csv
+  # The only reader of the list's addresses. It connects as the owner role (admin.env); the public API URL and
+  # the unsubscribe key for the removal links come from changelens.env, the one place the api reads them from,
+  # so an exported link can't be signed with another key than the api checks.
+  early-bird-export:
+    <<: *app
+    profiles: [tools]
+    env_file:
+      - /etc/changelens/admin.env
+      - /etc/changelens/changelens.env
+    command: ["python", "-m", "changelens.early_bird_export"]
+    networks: [data]
+    restart: "no"
+    logging:
+      driver: none  # its output is the address list: never into Docker's log files
+
   restore-test:
     image: changelens-backup:local
     profiles: [tools]

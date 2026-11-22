@@ -69,7 +69,9 @@ Nur wenn Sie zustimmen: Die App sendet uns Ereignisse dazu, wie Sie sie nutzen, 
 
 Wenn Sie uns Feedback senden oder eine freiwillige Frage in der App beantworten (zum Beispiel, was Ihnen die App wert ist), speichern wir Ihre Antwort mit Ihrer Kontonummer.
 
-**Rechtsgrundlage:** Ihre Einwilligung, die Sie mit der Antwort erteilen (Art. 6 Abs. 1 lit. a DSGVO). Eine Antwort ist nie erforderlich.
+**Demo-Feedbackformular (Entwurf, ergänzt am 22.11.2026, nicht rechtlich geprüft):** In der Demo-Phase bietet die App ein Feedbackformular pro Konto an. Wenn Sie es absenden, speichern wir mit Ihrer Kontonummer: welche vorgegebene Antwort Sie auf die Frage gewählt haben, was fehlt, welchen monatlichen Betrag Sie gewählt haben, die Tarifbeschreibung, auf die sich diese Frage bezog, den Zeitpunkt und was Sie in die beiden Textfelder („Etwas anderes“ und „Noch etwas?“) eingegeben haben. Die Textfelder werden so gespeichert, wie Sie sie geschrieben haben. Bitte geben Sie dort keinen Text aus Ihren Dokumenten und keine personenbezogenen Daten anderer Personen ein. Die Preisfrage dient der Marktforschung; es wird nichts angeboten oder berechnet. Das Absenden des Formulars ändert nichts daran, was Sie in der App nutzen können.
+
+**Rechtsgrundlage:** Ihre Einwilligung, die Sie mit der Antwort erteilen (Art. 6 Abs. 1 lit. a DSGVO). Eine Antwort ist nie erforderlich. [RECHTLICHE PRÜFUNG: Einwilligung als Grundlage für das Demo-Feedbackformular bestätigen, ebenso den Widerruf einer einzelnen Antwort; derzeit wird sie mit dem Konto oder auf Anfrage an [KONTAKT-E-MAIL] gelöscht.]
 
 ### 3.7 Server-Protokolle
 
@@ -83,13 +85,13 @@ Wenn Sie uns Feedback senden oder eine freiwillige Frage in der App beantworten 
 
 > **Entwurfsabsatz vom 2026-11-22, ergänzt mit dem Early-Bird-Endpunkt; wie der übrige Entwurf nicht rechtlich geprüft. Die Liste ist noch nicht geöffnet.**
 
-Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eintragen, speichern wir die Adresse, die Sprache der Seite und den Zeitpunkt. Wir senden dann eine E-Mail mit einem Bestätigungslink an diese Adresse (Double-Opt-in). Erst wenn Sie den Link öffnen, steht Ihre Adresse auf der Liste; den Zeitpunkt der Bestätigung speichern wir als Nachweis Ihrer Einwilligung. Um Missbrauch des Formulars zu begrenzen, führen wir außerdem bis zu 3 Tage lang Zähler, die mit einem nicht umkehrbaren, schlüsselabhängigen Hashwert der IP-Adresse und der E-Mail-Adresse gebildet werden.
+Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eintragen, speichern wir die Adresse, die Sprache der Seite und den Zeitpunkt. Wir senden dann eine E-Mail mit einem Bestätigungslink an diese Adresse (Double-Opt-in). Erst wenn Sie den Link öffnen und auf der Seite den Bestätigungsbutton drücken, steht Ihre Adresse auf der Liste; den Zeitpunkt der Bestätigung speichern wir als Nachweis Ihrer Einwilligung. Um Missbrauch des Formulars zu begrenzen, führen wir außerdem bis zu 3 Tage lang Zähler, die mit einem nicht umkehrbaren, schlüsselabhängigen Hashwert der IP-Adresse (bei IPv6: ihres Netzes) und der E-Mail-Adresse gebildet werden, sowie einen Zähler aller versandten Bestätigungs-E-Mails; keiner dieser Zähler enthält eine Adresse.
 
 **Zweck:** Sie zu informieren, wenn die Vollversion von ChangeLens verfügbar ist, und Ihnen den Early-Bird-Rabatt zu gewähren. Eine Adresse auf der Liste ist kein Konto und für die Nutzung der App nicht erforderlich.
 
-**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO; für die E-Mails auch § 7 Abs. 2 UWG). Sie können sie jederzeit widerrufen, indem Sie an [KONTAKT-E-MAIL] schreiben [und über den Abmeldelink in jeder E-Mail an die Liste: NOCH NICHT GEBAUT]; wir löschen Ihre Adresse dann. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.
+**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO; für die E-Mails auch § 7 Abs. 2 UWG). Sie können sie jederzeit widerrufen: über den Abmeldelink in jeder E-Mail an die Liste oder indem Sie an [KONTAKT-E-MAIL] schreiben. Über den Link wird Ihre Adresse sofort gelöscht, und wir bewahren keinen Vermerk darüber auf, dass sie auf der Liste stand; wenn Sie uns schreiben, löschen wir sie dann. Kopien in Backups laufen wie in Abschnitt 6 beschrieben ab. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.
 
-**Speicherdauer:** Eine nicht bestätigte Adresse wird nach 7 Tagen gelöscht. Eine bestätigte Adresse bleibt gespeichert, bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen.
+**Speicherdauer:** Eine nicht bestätigte Adresse wird 7 Tage nach der letzten Bestätigungs-E-Mail gelöscht. Eine bestätigte Adresse bleibt gespeichert, bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen.
 
 ## 4. Empfänger und Auftragsverarbeiter
 
@@ -117,7 +119,7 @@ Wir speichern und verarbeiten Ihre Daten in Deutschland. Wenn Sie sich mit Apple
 | Server-Protokolle | [14] Tage |
 | Serverseitige Nutzungsereignisse (3.4) | 12 Monate, danach nur noch als anonyme Summen |
 | Freiwillige Nutzungsstatistiken (3.5), Feedback und Antworten (3.6) | 12 Monate, oder bis zum Widerruf oder zur Kontolöschung |
-| Early-Bird-Liste (3.8) | Nicht bestätigte Adresse: 7 Tage. Bestätigte Adresse: bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen |
+| Early-Bird-Liste (3.8) | Nicht bestätigte Adresse: 7 Tage nach der letzten Bestätigungs-E-Mail. Bestätigte Adresse: bis Sie Ihre Einwilligung widerrufen (Abmeldelink: sofortige Löschung) oder wir die Liste schließen |
 | Minimale Lösch- und Kostennachweise (Kennungen, Zeitpunkte und Beträge, keine Inhalte) | Solange zum Abschluss der Löschung und zum Kostenabgleich nötig, höchstens [90] Tage nach Kontolöschung |
 
 ## 7. Konto löschen

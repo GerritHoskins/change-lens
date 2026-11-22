@@ -12,6 +12,10 @@ shared by every api process; `MemoryCounters` is the single-process stand-in for
 The client IP is the socket address, unless that address is a configured trusted proxy: then the
 right-most `X-Forwarded-For` entry that isn't a trusted proxy. A spoofed header from anywhere else is
 ignored.
+
+`network_key` is what the early-bird limits count a client by (`api/early_bird_pages.py`): an IPv6 client
+by its /64 network, because one subscriber usually holds a whole /64 and can pick any address in it. The
+limits above count the exact address, as before.
 """
 from __future__ import annotations
 
@@ -77,6 +81,20 @@ def client_ip(request: Request) -> str:
         if address not in trusted:
             return address
     return peer
+
+
+def network_key(address: str) -> str:
+    """An IPv4 address as it is; an IPv6 address as its /64 network; an IPv4-mapped IPv6 address as the
+    IPv4 address. Anything that isn't an address is returned unchanged."""
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return address
+    if ip.version == 4:
+        return str(ip)
+    if ip.ipv4_mapped is not None:
+        return str(ip.ipv4_mapped)
+    return str(ipaddress.ip_network((ip, 64), strict=False))
 
 
 def limit_account(request: Request, user_id) -> None:

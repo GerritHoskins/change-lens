@@ -1401,4 +1401,159 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kindText => 'Pasted text';
+
+  @override
+  String demoLine(int remaining, int limit) {
+    return 'Demo · $remaining of $limit comparisons left';
+  }
+
+  @override
+  String demoWallTitle(int limit) {
+    return 'Your $limit demo comparisons are used';
+  }
+
+  @override
+  String demoWallTitleInFlight(int limit) {
+    return 'Your $limit demo comparisons are in use';
+  }
+
+  @override
+  String get demoWallBody =>
+      'This is the demo period. The full version is coming soon. Your reports, findings and history stay available.';
+
+  @override
+  String get demoWallInFlight =>
+      'A comparison is still running. If it fails, it doesn\'t count and you can start another.';
+
+  @override
+  String get demoWallDiscount =>
+      'Giving feedback earns the early-bird discount, one per person.';
+
+  @override
+  String get demoGiveFeedback => 'Give feedback';
+
+  @override
+  String get demoFeedbackSent => 'Your feedback was sent. Thank you.';
+
+  @override
+  String get demoListTitle => 'Join the early-bird list';
+
+  @override
+  String get demoListBody =>
+      'The list is on our website. Open this address in your browser:';
+
+  @override
+  String get demoCopyLink => 'Copy link';
+
+  @override
+  String get demoLinkCopied => 'Link copied';
+
+  @override
+  String get demoFeedbackTitle => 'Demo feedback';
+
+  @override
+  String get demoFeedbackIntro => 'Two questions, sent once per account.';
+
+  @override
+  String get demoMissingQuestion =>
+      'What is missing, or what should be better?';
+
+  @override
+  String get demoMissingChoose => 'Choose an answer';
+
+  @override
+  String get demoMissingScreenshotImport => 'Importing screenshots or photos';
+
+  @override
+  String get demoMissingMoreFileTypes => 'More file types, such as Word';
+
+  @override
+  String get demoMissingShareReport => 'Sharing or exporting a report';
+
+  @override
+  String get demoMissingBetterAccuracy => 'More accurate findings';
+
+  @override
+  String get demoMissingFasterResults => 'Faster results';
+
+  @override
+  String get demoMissingTeam => 'Working with a team';
+
+  @override
+  String get demoMissingOther => 'Other';
+
+  @override
+  String get demoMissingOtherLabel => 'What is it?';
+
+  @override
+  String demoMissingOtherHint(int min) {
+    return 'At least $min characters.';
+  }
+
+  @override
+  String get demoAnythingElse => 'Anything else?';
+
+  @override
+  String get demoAnythingElseHint =>
+      'Optional. Please don\'t paste text from your documents.';
+
+  @override
+  String get demoPriceQuestion =>
+      'What would you pay per month for the full version?';
+
+  @override
+  String get demoPlan =>
+      'The full version, for one person: 20 comparisons a month, pasted text or PDFs with selectable text, source evidence, review and project history.';
+
+  @override
+  String get demoPriceNothing => 'Nothing';
+
+  @override
+  String get demoPrice5 => '€5';
+
+  @override
+  String get demoPrice10 => '€10';
+
+  @override
+  String get demoPrice15 => '€15';
+
+  @override
+  String get demoPriceOver15 => 'More than €15';
+
+  @override
+  String get demoPriceNotSure => 'Not sure';
+
+  @override
+  String get demoPriceNote =>
+      'This is a question, not an offer. Nothing is charged.';
+
+  @override
+  String get demoSend => 'Send feedback';
+
+  @override
+  String get demoSending => 'Sending…';
+
+  @override
+  String get demoNeedsMissing => 'Choose what is missing first.';
+
+  @override
+  String demoNeedsOther(int min) {
+    return 'Describe what is missing, in at least $min characters.';
+  }
+
+  @override
+  String get demoNeedsPrice => 'Choose an amount.';
+
+  @override
+  String get demoSendHint => 'Sent once. You can\'t change it afterwards.';
+
+  @override
+  String get demoSendFailed =>
+      'Your feedback could not be sent. Your entries are still here. Try again.';
+
+  @override
+  String get demoDone => 'Done';
+
+  @override
+  String get settingsDemo => 'Demo';
 }

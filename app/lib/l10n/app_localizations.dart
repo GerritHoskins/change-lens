@@ -2334,6 +2334,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pasted text'**
   String get kindText;
+
+  /// No description provided for @demoLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo · {remaining} of {limit} comparisons left'**
+  String demoLine(int remaining, int limit);
+
+  /// No description provided for @demoWallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {limit} demo comparisons are used'**
+  String demoWallTitle(int limit);
+
+  /// No description provided for @demoWallTitleInFlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {limit} demo comparisons are in use'**
+  String demoWallTitleInFlight(int limit);
+
+  /// No description provided for @demoWallBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the demo period. The full version is coming soon. Your reports, findings and history stay available.'**
+  String get demoWallBody;
+
+  /// No description provided for @demoWallInFlight.
+  ///
+  /// In en, this message translates to:
+  /// **'A comparison is still running. If it fails, it doesn\'t count and you can start another.'**
+  String get demoWallInFlight;
+
+  /// No description provided for @demoWallDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Giving feedback earns the early-bird discount, one per person.'**
+  String get demoWallDiscount;
+
+  /// No description provided for @demoGiveFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Give feedback'**
+  String get demoGiveFeedback;
+
+  /// No description provided for @demoFeedbackSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your feedback was sent. Thank you.'**
+  String get demoFeedbackSent;
+
+  /// No description provided for @demoListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the early-bird list'**
+  String get demoListTitle;
+
+  /// No description provided for @demoListBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The list is on our website. Open this address in your browser:'**
+  String get demoListBody;
+
+  /// No description provided for @demoCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get demoCopyLink;
+
+  /// No description provided for @demoLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get demoLinkCopied;
+
+  /// No description provided for @demoFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo feedback'**
+  String get demoFeedbackTitle;
+
+  /// No description provided for @demoFeedbackIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Two questions, sent once per account.'**
+  String get demoFeedbackIntro;
+
+  /// No description provided for @demoMissingQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What is missing, or what should be better?'**
+  String get demoMissingQuestion;
+
+  /// No description provided for @demoMissingChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an answer'**
+  String get demoMissingChoose;
+
+  /// No description provided for @demoMissingScreenshotImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing screenshots or photos'**
+  String get demoMissingScreenshotImport;
+
+  /// No description provided for @demoMissingMoreFileTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'More file types, such as Word'**
+  String get demoMissingMoreFileTypes;
+
+  /// No description provided for @demoMissingShareReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing or exporting a report'**
+  String get demoMissingShareReport;
+
+  /// No description provided for @demoMissingBetterAccuracy.
+  ///
+  /// In en, this message translates to:
+  /// **'More accurate findings'**
+  String get demoMissingBetterAccuracy;
+
+  /// No description provided for @demoMissingFasterResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Faster results'**
+  String get demoMissingFasterResults;
+
+  /// No description provided for @demoMissingTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Working with a team'**
+  String get demoMissingTeam;
+
+  /// No description provided for @demoMissingOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get demoMissingOther;
+
+  /// No description provided for @demoMissingOtherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What is it?'**
+  String get demoMissingOtherLabel;
+
+  /// No description provided for @demoMissingOtherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least {min} characters.'**
+  String demoMissingOtherHint(int min);
+
+  /// No description provided for @demoAnythingElse.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else?'**
+  String get demoAnythingElse;
+
+  /// No description provided for @demoAnythingElseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Please don\'t paste text from your documents.'**
+  String get demoAnythingElseHint;
+
+  /// No description provided for @demoPriceQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you pay per month for the full version?'**
+  String get demoPriceQuestion;
+
+  /// No description provided for @demoPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'The full version, for one person: 20 comparisons a month, pasted text or PDFs with selectable text, source evidence, review and project history.'**
+  String get demoPlan;
+
+  /// No description provided for @demoPriceNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing'**
+  String get demoPriceNothing;
+
+  /// No description provided for @demoPrice5.
+  ///
+  /// In en, this message translates to:
+  /// **'€5'**
+  String get demoPrice5;
+
+  /// No description provided for @demoPrice10.
+  ///
+  /// In en, this message translates to:
+  /// **'€10'**
+  String get demoPrice10;
+
+  /// No description provided for @demoPrice15.
+  ///
+  /// In en, this message translates to:
+  /// **'€15'**
+  String get demoPrice15;
+
+  /// No description provided for @demoPriceOver15.
+  ///
+  /// In en, this message translates to:
+  /// **'More than €15'**
+  String get demoPriceOver15;
+
+  /// No description provided for @demoPriceNotSure.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure'**
+  String get demoPriceNotSure;
+
+  /// No description provided for @demoPriceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a question, not an offer. Nothing is charged.'**
+  String get demoPriceNote;
+
+  /// No description provided for @demoSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get demoSend;
+
+  /// No description provided for @demoSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get demoSending;
+
+  /// No description provided for @demoNeedsMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what is missing first.'**
+  String get demoNeedsMissing;
+
+  /// No description provided for @demoNeedsOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what is missing, in at least {min} characters.'**
+  String demoNeedsOther(int min);
+
+  /// No description provided for @demoNeedsPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an amount.'**
+  String get demoNeedsPrice;
+
+  /// No description provided for @demoSendHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent once. You can\'t change it afterwards.'**
+  String get demoSendHint;
+
+  /// No description provided for @demoSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your feedback could not be sent. Your entries are still here. Try again.'**
+  String get demoSendFailed;
+
+  /// No description provided for @demoDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get demoDone;
+
+  /// No description provided for @settingsDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo'**
+  String get settingsDemo;
 }
 
 class _AppLocalizationsDelegate

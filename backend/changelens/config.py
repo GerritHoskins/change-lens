@@ -28,12 +28,15 @@ DEPLOYED_REQUIRED = ("CHANGELENS_DATABASE_URL", "CHANGELENS_S3_ENDPOINT", "CHANG
 # Only the api and retention may hold these (03 §6). The worker parses uploaded files, so in logto mode it
 # stops at start when it finds one in its environment (LR-4).
 NOT_FOR_THE_WORKER = ("CHANGELENS_LOGTO_M2M_APP_ID", "CHANGELENS_LOGTO_M2M_APP_SECRET", "CHANGELENS_RATE_LIMIT_KEY",
-                      "CHANGELENS_SMTP_PASSWORD")
-# The early-bird list's confirmation mail (double opt-in): what the api needs in logto mode to send it and
-# to build its links. A missing one stops the api and retention at start (the rule L11 set); the port has
-# a default (587, STARTTLS). The worker reads none of them.
+                      "CHANGELENS_SMTP_PASSWORD", "CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY")
+# The early-bird list's confirmation mail (double opt-in) and its removal links: what the api needs in logto
+# mode to send the mail, to build its links and to check a removal link. A missing one stops the api at start
+# (the rule L11 set); the port has a default (587, STARTTLS). The api alone reads them: retention sends no
+# mail and starts without them (`from_env(mail=False)`), and the worker refuses the two credentials.
 EARLY_BIRD_REQUIRED = ("CHANGELENS_SMTP_HOST", "CHANGELENS_SMTP_USER", "CHANGELENS_SMTP_PASSWORD",
-                       "CHANGELENS_MAIL_FROM", "CHANGELENS_PUBLIC_API_URL", "CHANGELENS_LANDING_URL")
+                       "CHANGELENS_MAIL_FROM", "CHANGELENS_PUBLIC_API_URL", "CHANGELENS_LANDING_URL",
+                       "CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY")
+UNSUBSCRIBE_KEY_MIN = 32  # characters; also checked by `changelens.early_bird_export`
 
 
 def database_url_from_env() -> str:
@@ -117,7 +120,9 @@ class Settings:
     # The early-bird list (docs/landing-page-handoff.md): `POST /early-bird` and its confirmation mail.
     early_bird_per_ip_per_day: int = 5  # sign-up requests per IP per UTC day
     early_bird_mails_per_address_per_day: int = 3  # confirmation mails to one address per UTC day
-    early_bird_pending_days: int = 7  # unconfirmed sign-ups are deleted after this many days
+    early_bird_mails_per_hour: int = 30  # confirmation mails to all addresses together, per hour
+    early_bird_mails_per_day: int = 200  # and per UTC day
+    early_bird_mails_per_row: int = 5  # confirmation mails for one pending sign-up, over its whole life
     smtp_host: Optional[str] = None  # set = the SMTP sender; logto mode requires it (from_env)
     smtp_port: int = 587  # submission with STARTTLS
     smtp_user: Optional[str] = None
@@ -125,6 +130,14 @@ class Settings:
     mail_from: Optional[str] = None  # the confirmation mail's sender address
     public_api_url: str = ""  # this API's public origin, for the confirmation link
     landing_url: str = ""  # the landing page's origin: redirect target and the one allowed CORS origin
+    # The HMAC key of the list's removal links (`api/early_bird_unsubscribe.py`). Its own key, not the
+    # rate-limit key: replacing it ends every removal link already mailed.
+    early_bird_unsubscribe_key: str = field(default="changelens-dev-only-unsubscribe-key-0000", repr=False)
+    # The demo period (docs/demo-wall-handoff.md). The limit is comparisons per account for its lifetime;
+    # 0 switches it off. The discount flag only switches a sentence on in the app (`discount_offered`);
+    # it stays off until the legal review has answered. Neither is required anywhere.
+    demo_comparison_limit: int = 3
+    demo_feedback_discount: bool = False
     # The owner role's URL (I-8 S3): migrations only. The running processes use `database_url`.
     migration_database_url: Optional[str] = field(default=None, repr=False)
     # The worker's settings (LR-4): it checks no token and calls no sign-in service, so it holds none of their
@@ -153,16 +166,24 @@ class Settings:
             if not isinstance(cap, Decimal) or not cap.is_finite() or cap < 0:
                 raise ValueError("spend caps must be non-negative amounts")
         for limit in (self.rate_limit_account_per_minute, self.rate_limit_ip_per_minute, self.signups_per_ip_per_day,
-                      self.early_bird_per_ip_per_day, self.early_bird_mails_per_address_per_day):
+                      self.early_bird_per_ip_per_day, self.early_bird_mails_per_address_per_day,
+                      self.early_bird_mails_per_hour, self.early_bird_mails_per_day, self.early_bird_mails_per_row):
             if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
                 raise ValueError("rate limits must be positive integers")
-        days = self.early_bird_pending_days
-        if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
-            raise ValueError("the early-bird pending period must be 1 to 365 days")
+        limit = self.demo_comparison_limit
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 0 <= limit <= 1000:
+            raise ValueError("the demo comparison limit must be 0 (off) to 1000")
+        if not isinstance(self.demo_feedback_discount, bool):
+            raise ValueError("the demo feedback discount setting must be true or false")
+        if self.early_bird_mails_per_row > 100:
+            raise ValueError("at most 100 confirmation mails per pending sign-up")
         if not isinstance(self.smtp_port, int) or isinstance(self.smtp_port, bool) or not 1 <= self.smtp_port <= 65535:
             raise ValueError("the SMTP port must be 1 to 65535")
         if self.worker and (self.smtp_host or self.smtp_user or self.smtp_password or self.mail_from):
             raise ValueError("the worker holds no mail settings")
+        key = self.early_bird_unsubscribe_key
+        if not isinstance(key, str) or len(key) < UNSUBSCRIBE_KEY_MIN:
+            raise ValueError("the early-bird unsubscribe key needs at least 32 characters")
         if self.smtp_host is not None and not (_plain(self.smtp_host) and _plain(self.smtp_user)
                                                and self.smtp_password and _mail_address(self.mail_from)):
             raise ValueError("the SMTP sender needs host, user, password and a from-address")
@@ -190,9 +211,10 @@ class Settings:
             raise ValueError("Logto management needs an https endpoint, app ID and secret")
 
     @classmethod
-    def from_env(cls, worker: bool = False) -> "Settings":
+    def from_env(cls, worker: bool = False, mail: bool = True) -> "Settings":
         """`worker=True` reads the worker's settings: the same database, storage and model requirements, nothing
-        about sign-in, and in logto mode no start when a credential it must not hold is set."""
+        about sign-in, and in logto mode no start when a credential it must not hold is set. `mail=False`
+        (retention) reads no mail, link or removal-key setting and requires none: only the api sends mail."""
         env = os.environ
         mode = env.get("CHANGELENS_AUTH_MODE", "dev")
         auth: dict = {"auth_mode": mode, "worker": worker}
@@ -245,8 +267,12 @@ class Settings:
                 early_bird_per_ip_per_day=int(env.get("CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY", "5")),
                 early_bird_mails_per_address_per_day=int(
                     env.get("CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY", "3")),
-                early_bird_pending_days=int(env.get("CHANGELENS_EARLY_BIRD_PENDING_DAYS", "7")),
-                **({} if worker else _early_bird_from_env(env, mode)),
+                early_bird_mails_per_hour=int(env.get("CHANGELENS_EARLY_BIRD_MAILS_PER_HOUR", "30")),
+                early_bird_mails_per_day=int(env.get("CHANGELENS_EARLY_BIRD_MAILS_PER_DAY", "200")),
+                early_bird_mails_per_row=int(env.get("CHANGELENS_EARLY_BIRD_MAILS_PER_ROW", "5")),
+                demo_comparison_limit=int(env.get("CHANGELENS_DEMO_COMPARISON_LIMIT", "3")),
+                demo_feedback_discount=_flag(env.get("CHANGELENS_DEMO_FEEDBACK_DISCOUNT", "false")),
+                **(_early_bird_from_env(env, mode) if mail and not worker else {}),
                 **auth,
             )
         except (ValueError, ArithmeticError) as exc:
@@ -278,9 +304,10 @@ def _sign_in_from_env(env) -> dict:
 
 
 def _early_bird_from_env(env, mode: str) -> dict:
-    """The early-bird list's mail and link settings, for the api and retention; the worker never reads them.
-    In logto mode a missing one stops the process: a sign-up form that answers 202 and sends no mail would
-    look healthy and confirm nobody. Dev mode sends nothing (the recording sender), so all are optional."""
+    """The early-bird list's mail, link and removal-key settings, for the api; retention and the worker never
+    read them. In logto mode a missing one stops the api: a sign-up form that answers 202 and sends no
+    mail would look healthy and confirm nobody, and removal links signed with a development key could be
+    forged. Dev mode sends nothing (the recording sender), so all are optional."""
     if mode == "logto":
         # Names only in the message: one of the values is a credential.
         missing = [name for name in EARLY_BIRD_REQUIRED if not env.get(name, "").strip()]
@@ -291,9 +318,21 @@ def _early_bird_from_env(env, mode: str) -> dict:
     mail = {"public_api_url": values.pop("public_api_url").rstrip("/"),
             "landing_url": values.pop("landing_url").rstrip("/"),
             "smtp_port": int(env.get("CHANGELENS_SMTP_PORT", "587"))}
+    if env.get("CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY"):
+        mail["early_bird_unsubscribe_key"] = env["CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY"]
     if values["smtp_host"]:
         mail.update(values, smtp_password=env.get("CHANGELENS_SMTP_PASSWORD", ""))
     return mail
+
+
+def _flag(value: str) -> bool:
+    """`true` or `false` (also 1/0, on/off, yes/no); anything else stops the process at start."""
+    word = value.strip().lower()
+    if word in ("true", "1", "on", "yes"):
+        return True
+    if word in ("false", "0", "off", "no", ""):
+        return False
+    raise ValueError("a true/false setting has another value")
 
 
 def _plain(value) -> bool:

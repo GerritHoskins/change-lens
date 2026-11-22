@@ -164,13 +164,18 @@ def test_a_complete_deployment_loads_the_mail_settings_and_the_defaults(monkeypa
     assert (settings.public_api_url, settings.landing_url) == ("https://api.example.test",
                                                                "https://landing.example.test")
     assert (settings.early_bird_per_ip_per_day, settings.early_bird_mails_per_address_per_day,
-            settings.early_bird_pending_days) == (5, 3, 7)
+            settings.early_bird_mails_per_hour, settings.early_bird_mails_per_day,
+            settings.early_bird_mails_per_row) == (5, 3, 30, 200, 5)
     _env(monkeypatch, {**LOGTO, "CHANGELENS_SMTP_PORT": "2525", "CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY": "9",
                        "CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY": "2",
-                       "CHANGELENS_EARLY_BIRD_PENDING_DAYS": "14"})
+                       "CHANGELENS_EARLY_BIRD_MAILS_PER_HOUR": "12", "CHANGELENS_EARLY_BIRD_MAILS_PER_DAY": "90",
+                       "CHANGELENS_EARLY_BIRD_MAILS_PER_ROW": "4",
+                       "CHANGELENS_EARLY_BIRD_PENDING_DAYS": "14"})  # no longer a setting: ignored
     settings = Settings.from_env()
     assert (settings.smtp_port, settings.early_bird_per_ip_per_day, settings.early_bird_mails_per_address_per_day,
-            settings.early_bird_pending_days) == (2525, 9, 2, 14)
+            settings.early_bird_mails_per_hour, settings.early_bird_mails_per_day,
+            settings.early_bird_mails_per_row) == (2525, 9, 2, 12, 90, 4)
+    assert not hasattr(settings, "early_bird_pending_days")  # the period is fixed in the database
 
 
 @pytest.mark.parametrize("values", [
@@ -184,7 +189,8 @@ def test_a_complete_deployment_loads_the_mail_settings_and_the_defaults(monkeypa
     {"CHANGELENS_SMTP_HOST": "smtp.example.test X"},
     {"CHANGELENS_SMTP_PORT": "0"}, {"CHANGELENS_SMTP_PORT": "smtp"},
     {"CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY": "0"}, {"CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY": "-1"},
-    {"CHANGELENS_EARLY_BIRD_PENDING_DAYS": "0"}, {"CHANGELENS_EARLY_BIRD_PENDING_DAYS": "366"},
+    {"CHANGELENS_EARLY_BIRD_MAILS_PER_HOUR": "0"}, {"CHANGELENS_EARLY_BIRD_MAILS_PER_DAY": "many"},
+    {"CHANGELENS_EARLY_BIRD_MAILS_PER_ROW": "0"}, {"CHANGELENS_EARLY_BIRD_MAILS_PER_ROW": "101"},
 ])
 def test_malformed_mail_and_link_settings_do_not_start(monkeypatch, values):
     _env(monkeypatch, {**LOGTO, **values})

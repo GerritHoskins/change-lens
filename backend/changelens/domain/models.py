@@ -312,6 +312,40 @@ class ConsentEvent(Base):
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class DemoComparison(Base):
+    """One comparison that counts against the demo limit (docs/demo-wall-handoff.md): it reached `complete` or
+    `partial`. Written by the worker in the transaction that sets that status; the primary key makes it once
+    per comparison. No foreign key to `comparisons`, so project deletion and retention give nothing back.
+    IDs and a time only (AC-23). Deleted with the account."""
+    __tablename__ = "demo_comparisons"
+    comparison_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    counted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class DemoFeedback(Base):
+    """The demo feedback form of one account, sent once (docs/demo-wall-handoff.md): two codes, the plan the
+    price question referred to, and two free-text fields. The text fields hold whatever the person typed:
+    never logged, never counted, never shown to another account. Deleted with the account."""
+    __tablename__ = "demo_feedback"
+    __table_args__ = (
+        CheckConstraint("missing IN ('screenshot_import', 'more_file_types', 'share_report', 'better_accuracy', "
+                        "'faster_results', 'team', 'other')", name="ck_demo_feedback_missing"),
+        CheckConstraint("price IN ('eur_0', 'eur_5', 'eur_10', 'eur_15', 'eur_over_15', 'not_sure')",
+                        name="ck_demo_feedback_price"),
+        CheckConstraint("(missing = 'other') = (missing_other IS NOT NULL)", name="ck_demo_feedback_other"),
+    )
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", name="fk_demo_feedback_user"),
+                                                  primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant()
+    missing: Mapped[str] = mapped_column(String(32), nullable=False)
+    missing_other: Mapped[Optional[str]] = mapped_column(String(500))
+    anything_else: Mapped[Optional[str]] = mapped_column(String(500))
+    price: Mapped[str] = mapped_column(String(16), nullable=False)
+    plan_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class AccountDeletion(Base):
     """Account-deletion receipt (03a P8 DELETE_ACCOUNT; I-8 S5): IDs, status and timestamps only. Written in
     the transaction that freezes the account; maintenance retries it until `complete`."""
@@ -341,15 +375,18 @@ class RateLimitCounter(Base):
 
 class EarlyBirdSignup(Base):
     """An address on the landing page's early-bird list (docs/landing-page-handoff.md). Double opt-in: a row
-    is `pending` until the link in the confirmation mail is opened. `token_hash` is the SHA-256 of that
-    single-use link token, never the token, and is cleared on confirmation. No `tenant_id` and no account:
-    reached only through the `early_bird_*` functions. Pending rows are deleted after the pending period."""
+    is `pending` until the person confirms on the page the confirmation mail links to. `token_hash` is the
+    SHA-256 of that single-use link token, never the token; `next_token_hash` is a newer token whose mail is
+    not known to be sent yet (migration 0011). Both are cleared on confirmation. `mail_count` bounds the
+    mails for one pending row. No `tenant_id` and no account: reached only through the `early_bird_*`
+    functions. Pending rows are deleted after the pending period."""
     __tablename__ = "early_bird_signups"
     __table_args__ = (
         UniqueConstraint("email", name="uq_early_bird_signups_email"),
         CheckConstraint("locale IN ('en', 'de')", name="ck_early_bird_signups_locale"),
         CheckConstraint("status IN ('pending', 'confirmed')", name="ck_early_bird_signups_status"),
         Index("ix_early_bird_signups_token_hash", "token_hash", unique=True),
+        Index("ix_early_bird_signups_next_token_hash", "next_token_hash", unique=True),
     )
     id: Mapped[uuid.UUID] = _id()
     email: Mapped[str] = mapped_column(String(254), nullable=False)  # trimmed and lower-cased
@@ -359,6 +396,10 @@ class EarlyBirdSignup(Base):
     created_at: Mapped[datetime] = _now()
     confirmation_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    token_issued_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    next_token_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    next_token_issued_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    mail_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
 
 
 class AppleTokenPark(Base):

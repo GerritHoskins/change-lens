@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from changelens.domain.demo import DemoRepo
 from changelens.domain.identity import IdentityRepo
 from changelens.domain.models import (
     AccountOnboarding, ClientApprovalRecord, Comparison, ComparisonCostTombstone, ConsentEvent, FactCacheEntry,
@@ -123,27 +124,38 @@ class Database:
         with self._pre_tenant() as s:
             return s.execute(text("SELECT rate_limit_prune()")).scalar_one()
 
-    def early_bird_request(self, email: str, locale: str, token_hash: str, pending_days: int) -> bool:
-        """Record a sign-up for the early-bird list: a new pending row, or a new link token for a pending
-        one. True when a confirmation mail is due; a confirmed address changes nothing and gives False."""
+    def early_bird_request(self, email: str, locale: str, token_hash: str, max_mails: int) -> bool:
+        """Record a sign-up for the early-bird list: a new pending row, or a new (next) link token for a
+        pending one. True when a confirmation mail is due; a confirmed address, or a pending row that has
+        had `max_mails` mails, changes nothing and gives False."""
         with self._pre_tenant() as s:
-            return s.execute(text("SELECT early_bird_request(:e, :l, :h, :d)"),
-                             {"e": email, "l": locale, "h": token_hash, "d": pending_days}).scalar_one()
+            return s.execute(text("SELECT early_bird_request(:e, :l, :h, :m)"),
+                             {"e": email, "l": locale, "h": token_hash, "m": max_mails}).scalar_one()
 
     def early_bird_mark_sent(self, token_hash: str) -> None:
+        """The mail with this token was handed to the mail server: its link replaces the one before."""
         with self._pre_tenant() as s:
             s.execute(text("SELECT early_bird_mark_sent(:h)"), {"h": token_hash})
 
-    def early_bird_confirm(self, token_hash: str, pending_days: int) -> Optional[str]:
+    def early_bird_confirm(self, token_hash: str) -> Optional[str]:
         """Confirm once by the link token's hash; the sign-up's locale, or None for an unknown, used or
-        expired token."""
+        expired token. The pending period is fixed in the database (migration 0011)."""
         with self._pre_tenant() as s:
-            return s.execute(text("SELECT early_bird_confirm(:h, :d)"),
-                             {"h": token_hash, "d": pending_days}).scalar_one()
+            return s.execute(text("SELECT early_bird_confirm(:h)"), {"h": token_hash}).scalar_one()
 
-    def early_bird_prune(self, pending_days: int) -> int:
+    def early_bird_prune(self) -> int:
         with self._pre_tenant() as s:
-            return s.execute(text("SELECT early_bird_prune(:d)"), {"d": pending_days}).scalar_one()
+            return s.execute(text("SELECT early_bird_prune()")).scalar_one()
+
+    def early_bird_pending_days(self) -> int:
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT early_bird_pending_days()")).scalar_one()
+
+    def early_bird_unsubscribe(self, signup_id: uuid.UUID) -> Optional[str]:
+        """Delete one address from the list by its row ID (the caller has checked the removal link's MAC);
+        the row's locale, or None when there is no such row."""
+        with self._pre_tenant() as s:
+            return s.execute(text("SELECT early_bird_unsubscribe(:i)"), {"i": signup_id}).scalar_one()
 
     def assert_app_role(self) -> None:
         """Refuse to run a process as a role that row-level security does not apply to (I-8 S3)."""
@@ -187,7 +199,7 @@ class DbFactCache:
                 repo.cache_facts(self.version_id, key, value)
 
 
-class TenantRepo:
+class TenantRepo(DemoRepo):
     """Repository bound to one tenant. Another tenant's row is indistinguishable from a missing one."""
 
     def __init__(self, session: Session, tenant_id: uuid.UUID):

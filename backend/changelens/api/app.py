@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.concurrency import run_in_threadpool
 from starlette.datastructures import MutableHeaders
 from starlette.formparsers import MultiPartParser
 
@@ -14,11 +16,13 @@ from changelens.api.reviews import router as review_router
 from changelens.api.comparisons import router as comparison_router
 from changelens.api.onboarding import router as onboarding_router
 from changelens.api.consent import router as consent_router
+from changelens.api.demo import router as demo_router
 from changelens.api.retention import router as retention_router
 from changelens.api.routes import router
 from changelens.api.session import router as session_router
 from changelens.api.account import router as account_router
 from changelens.api.early_bird import EarlyBirdCors, MemoryEarlyBird, router as early_bird_router
+from changelens.api.early_bird_unsubscribe import router as early_bird_unsubscribe_router
 from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.api.limits import MemoryCounters, RateLimiter
@@ -27,6 +31,7 @@ from changelens.domain.social import social_for
 from changelens.config import Settings
 from changelens.domain import Database
 from changelens.mail import mailer_for
+from changelens.mail.queue import MailQueue
 from changelens.storage import ObjectStore, S3ObjectStore
 
 _DEFAULT = object()
@@ -108,9 +113,19 @@ class BodyLimitMiddleware:
         await self.app(scope, _receive, send)
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Nothing at start. At the end the mail queue is shut down: waiting mails are dropped, the (at most
+    two) running sends are waited for, and its threads end."""
+    yield
+    queue = getattr(app.state, "mail_queue", None)
+    if queue is not None:
+        await run_in_threadpool(queue.shutdown)
+
+
 def create_app(settings: Settings, db: Optional[Database] = None, store: Optional[ObjectStore] = None,
                keys: Optional[JwksKeyHolder] = None, idp=_DEFAULT, limiter: Optional[RateLimiter] = None,
-               providers=_DEFAULT, apple=_DEFAULT, mailer=_DEFAULT, early_bird=None) -> FastAPI:
+               providers=_DEFAULT, apple=_DEFAULT, mailer=_DEFAULT, early_bird=None, mail_queue=None) -> FastAPI:
     max_body = max(settings.limits.max_pdf_bytes, settings.limits.max_text_bytes) + _OVERHEAD
     # Uploads stay in memory: never spool document bytes to a temp file on disk (03 §9.1 `storage`).
     # The parser sees the full multipart stream before per-slot validation. Even a
@@ -119,9 +134,10 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     if settings.auth_mode == "logto":
         # A deployment serves no interactive documentation and no schema: without these three routes the
         # paths answer `not_found` like any other unknown path. `app.openapi()` still works in process.
-        app = FastAPI(title="ChangeLens API", version="0.0.1", docs_url=None, redoc_url=None, openapi_url=None)
+        app = FastAPI(title="ChangeLens API", version="0.0.1", docs_url=None, redoc_url=None, openapi_url=None,
+                      lifespan=_lifespan)
     else:
-        app = FastAPI(title="ChangeLens dev API (I-22)", version="0.0.1-dev")
+        app = FastAPI(title="ChangeLens dev API (I-22)", version="0.0.1-dev", lifespan=_lifespan)
     app.state.settings = settings
     app.state.db = db or Database(settings.database_url)
     if store is None:
@@ -148,6 +164,8 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     # lives in Postgres behind functions. Test doubles for the database get the single-process list.
     app.state.mailer = mailer_for(settings) if mailer is _DEFAULT else mailer
     app.state.early_bird = early_bird or (app.state.db if isinstance(app.state.db, Database) else MemoryEarlyBird())
+    # Mails are sent from their own two threads, which start with the first mail (mail/queue.py).
+    app.state.mail_queue = None if app.state.mailer is None else (mail_queue or MailQueue())
     if settings.auth_mode == "logto":
         keys = keys or JwksKeyHolder(JwtPolicy(settings.logto_issuer, settings.logto_audience),
                                      settings.logto_jwks_url)
@@ -160,12 +178,14 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
     app.include_router(retention_router)
     app.include_router(onboarding_router)
     app.include_router(consent_router)
+    app.include_router(demo_router)
     app.include_router(session_router)
     app.include_router(account_router)
     if app.state.mailer is not None:
         # No sender, no list: without one the routes are absent (`not_found`) instead of accepting
-        # addresses nobody can confirm. CORS exists for this one path only.
+        # addresses nobody can confirm. CORS exists for this one path only (not for removal, either).
         app.include_router(early_bird_router)
+        app.include_router(early_bird_unsubscribe_router)
         app.add_middleware(EarlyBirdCors, origin=settings.landing_url)
     app.add_middleware(BodyLimitMiddleware, max_bytes=max_body)
     app.add_middleware(AccessLogMiddleware)

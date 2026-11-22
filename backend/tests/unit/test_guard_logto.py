@@ -28,6 +28,7 @@ from changelens.domain import TenantRepo
 from changelens.domain.models import AccountOnboarding, ConsentEvent, Membership, User
 from changelens.storage import MemoryObjectStore
 from helpers import EARLY_BIRD_ENV
+from demo_fixture import create_demo_tables
 from identity_fixture import SqliteIdentity, sqlite_engine
 
 ISSUER = "https://auth.example.test/oidc"
@@ -86,6 +87,7 @@ class GuardDb:
         self.identity_scope = self.identity.identity_scope
         AccountOnboarding.__table__.create(self.engine)
         ConsentEvent.__table__.create(self.engine)
+        create_demo_tables(self.engine)  # `POST /session` carries the demo state
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
 
     @contextmanager

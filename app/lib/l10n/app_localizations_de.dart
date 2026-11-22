@@ -1419,4 +1419,160 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get kindText => 'Eingefügter Text';
+
+  @override
+  String demoLine(int remaining, int limit) {
+    return 'Demo · $remaining von $limit Vergleichen übrig';
+  }
+
+  @override
+  String demoWallTitle(int limit) {
+    return 'Deine $limit Demo-Vergleiche sind aufgebraucht';
+  }
+
+  @override
+  String demoWallTitleInFlight(int limit) {
+    return 'Deine $limit Demo-Vergleiche sind belegt';
+  }
+
+  @override
+  String get demoWallBody =>
+      'Das ist die Demo-Phase. Die Vollversion kommt bald. Deine Berichte, Befunde und der Verlauf bleiben verfügbar.';
+
+  @override
+  String get demoWallInFlight =>
+      'Ein Vergleich läuft noch. Schlägt er fehl, zählt er nicht und du kannst einen neuen starten.';
+
+  @override
+  String get demoWallDiscount =>
+      'Für dein Feedback bekommst du den Early-Bird-Rabatt, einen pro Person.';
+
+  @override
+  String get demoGiveFeedback => 'Feedback geben';
+
+  @override
+  String get demoFeedbackSent => 'Dein Feedback wurde gesendet. Danke.';
+
+  @override
+  String get demoListTitle => 'Auf die Early-Bird-Liste';
+
+  @override
+  String get demoListBody =>
+      'Die Liste findest du auf unserer Website. Öffne diese Adresse im Browser:';
+
+  @override
+  String get demoCopyLink => 'Link kopieren';
+
+  @override
+  String get demoLinkCopied => 'Link kopiert';
+
+  @override
+  String get demoFeedbackTitle => 'Demo-Feedback';
+
+  @override
+  String get demoFeedbackIntro => 'Zwei Fragen, einmal pro Konto gesendet.';
+
+  @override
+  String get demoMissingQuestion => 'Was fehlt, oder was sollte besser sein?';
+
+  @override
+  String get demoMissingChoose => 'Antwort wählen';
+
+  @override
+  String get demoMissingScreenshotImport =>
+      'Screenshots oder Fotos importieren';
+
+  @override
+  String get demoMissingMoreFileTypes => 'Mehr Dateitypen, zum Beispiel Word';
+
+  @override
+  String get demoMissingShareReport => 'Einen Bericht teilen oder exportieren';
+
+  @override
+  String get demoMissingBetterAccuracy => 'Genauere Befunde';
+
+  @override
+  String get demoMissingFasterResults => 'Schnellere Ergebnisse';
+
+  @override
+  String get demoMissingTeam => 'Zusammenarbeit im Team';
+
+  @override
+  String get demoMissingOther => 'Etwas anderes';
+
+  @override
+  String get demoMissingOtherLabel => 'Was ist es?';
+
+  @override
+  String demoMissingOtherHint(int min) {
+    return 'Mindestens $min Zeichen.';
+  }
+
+  @override
+  String get demoAnythingElse => 'Noch etwas?';
+
+  @override
+  String get demoAnythingElseHint =>
+      'Optional. Bitte füge keinen Text aus deinen Dokumenten ein.';
+
+  @override
+  String get demoPriceQuestion =>
+      'Was würdest du pro Monat für die Vollversion zahlen?';
+
+  @override
+  String get demoPlan =>
+      'Die Vollversion, für eine Person: 20 Vergleiche im Monat, eingefügter Text oder PDFs mit auswählbarem Text, Belegstellen aus der Quelle, Prüfung und Projektverlauf.';
+
+  @override
+  String get demoPriceNothing => 'Nichts';
+
+  @override
+  String get demoPrice5 => '5 €';
+
+  @override
+  String get demoPrice10 => '10 €';
+
+  @override
+  String get demoPrice15 => '15 €';
+
+  @override
+  String get demoPriceOver15 => 'Mehr als 15 €';
+
+  @override
+  String get demoPriceNotSure => 'Weiß ich nicht';
+
+  @override
+  String get demoPriceNote =>
+      'Das ist eine Frage, kein Angebot. Es wird nichts berechnet.';
+
+  @override
+  String get demoSend => 'Feedback senden';
+
+  @override
+  String get demoSending => 'Wird gesendet…';
+
+  @override
+  String get demoNeedsMissing => 'Wähle zuerst, was fehlt.';
+
+  @override
+  String demoNeedsOther(int min) {
+    return 'Beschreibe mit mindestens $min Zeichen, was fehlt.';
+  }
+
+  @override
+  String get demoNeedsPrice => 'Wähle einen Betrag.';
+
+  @override
+  String get demoSendHint =>
+      'Wird einmal gesendet. Danach kannst du es nicht mehr ändern.';
+
+  @override
+  String get demoSendFailed =>
+      'Dein Feedback konnte nicht gesendet werden. Deine Eingaben sind noch da. Versuche es erneut.';
+
+  @override
+  String get demoDone => 'Fertig';
+
+  @override
+  String get settingsDemo => 'Demo';
 }

@@ -18,7 +18,7 @@ Module layout follows `docs/03-technical-design.md` §9.1:
 | `pipeline` | `changelens/pipeline/` | Pure stages: `parse` (I-1) and its sandbox, `extract` (I-2), `align`, `compare` and `values` (I-3), `verify` and `report` (I-5) |
 | `llm` | `changelens/llm/` | The `llm` port, the fake adapter, the metered wrapper, the IONOS adapter (`ionos.py`) and output schemas (`schemas.py`) |
 | `metering` | `changelens/metering/` | Per-comparison cost meter and ceiling |
-| `mail` | `changelens/mail/` | The `mail` port, the recording sender, the SMTP sender (`smtp.py`) and the early-bird confirmation mail's wording (`confirmation.py`); §14 |
+| `mail` | `changelens/mail/` | The `mail` port, the recording sender, the SMTP sender (`smtp.py`), the mail queue (`queue.py`), the early-bird confirmation mail's wording (`confirmation.py`) and the list's removal-link token (`unsubscribe.py`); §14 |
 | logging | `changelens/logs.py` | Log scrubbing (AC-23) |
 
 ## 1. Start Postgres and MinIO
@@ -128,6 +128,7 @@ Authentication settings. `dev` is the default mode, and `Settings.from_env` refu
 | `CHANGELENS_LOGTO_M2M_APP_ID`, `CHANGELENS_LOGTO_M2M_APP_SECRET` | `logto` mode, required: a machine-to-machine app with the Logto Management API role. Set them for the api and the retention process |
 | `CHANGELENS_LOGTO_MANAGEMENT_RESOURCE` | optional; default `https://default.logto.app/api` (Logto OSS) |
 | `CHANGELENS_RATE_LIMIT_KEY` | `logto` mode, required, at least 32 characters: the HMAC key for the rate-limit counters (I-8 S6). `dev` mode uses a dev-only default |
+| `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` | `logto` mode, required, at least 32 characters: the HMAC key for the early-bird list's removal links (§14). Its own value; replacing it ends every link already mailed. `dev` mode uses a dev-only default |
 
 Logto access tokens must live at most 900 s (`JwtPolicy`; set this on the API resource in Logto, D-8 C5) and be signed with RS256 (the verifier also accepts PS256 and ES256 keys, nothing else).
 
@@ -150,10 +151,13 @@ Optional environment variables. In `logto` mode six of them have no default: `CH
 | `CHANGELENS_RATE_LIMIT_IP_PER_MINUTE` | `20` failed authentications and `POST /session` calls per IP |
 | `CHANGELENS_SIGNUPS_PER_IP_PER_DAY` | `5` new accounts per IP per UTC day |
 | `CHANGELENS_TRUSTED_PROXIES` | empty; comma-separated proxy IPs whose `X-Forwarded-For` is believed (the right-most entry that isn't a trusted proxy is the client) |
-| `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` | `5` requests to `POST /early-bird` per IP per UTC day (§14) |
-| `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` | `3` confirmation mails to one address per UTC day |
-| `CHANGELENS_EARLY_BIRD_PENDING_DAYS` | `7`; an unconfirmed early-bird address is deleted after this many days |
+| `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` | `5` requests to `POST /early-bird` per client per UTC day; a client is an IPv4 address or an IPv6 /64 network (§14) |
+| `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` | `3` confirmation mails to one address per UTC day (a `+tag` doesn't make a new address) |
+| `CHANGELENS_EARLY_BIRD_MAILS_PER_HOUR`, `CHANGELENS_EARLY_BIRD_MAILS_PER_DAY` | `30` and `200`: confirmation mails to all addresses together, per hour and per UTC day |
+| `CHANGELENS_EARLY_BIRD_MAILS_PER_ROW` | `5` confirmation mails for one unconfirmed sign-up over its whole life (at most 100) |
 | `CHANGELENS_SMTP_PORT` | `587` (STARTTLS) |
+| `CHANGELENS_DEMO_COMPARISON_LIMIT` | `3` comparisons per account for its lifetime (§15); `0` switches the limit off |
+| `CHANGELENS_DEMO_FEEDBACK_DISCOUNT` | `false`; `true` only switches the app's sentence about a discount for feedback on (`discount_offered`, §15). Leave it off until the legal review has answered |
 
 ## 4. Example curl sequence (Git Bash)
 
@@ -242,6 +246,7 @@ They cover:
 - GUARD in Postgres: a deleted user, an inactive membership or no membership is rejected on the next request; one active membership per user; onboarding rows and review actors carry the user ID.
 - row-level security (I-8 S3, `test_rls_db.py`): conftest bootstraps the roles, migrates as `changelens_owner` and runs the api, worker and retention as `changelens_app`, so the whole suite runs under RLS; only fixtures (`env.sql`, seeding, truncation) use an owner connection. The tests check that every table with `tenant_id` has a forced policy, direct SQL and an unfiltered query as the app role, every route in the OpenAPI schema across tenants, every job kind, and the functions' columns and argument checks.
 - account deletion (I-8 S5, `test_account_deletion_db.py`): `DELETE /me` removes the tenant's rows and objects and leaves a tombstone, locks the token out at once, resumes after a failure at the project, account-row or Logto step, and leaves the other tenant untouched.
+- the demo limit and feedback (`test_demo_db.py`, migration 0012): the worker's counted row, the fourth comparison refused, a failed one not counted, two simultaneous starts at two used admitting one, an idempotent retry at the limit, project deletion giving nothing back, the state in `POST /session`, one feedback row per account, and the migration's count of existing comparisons.
 
 The unit tests cover the Logto path with keys generated in the test and the JWKS served through `httpx.MockTransport` (`tests/unit/test_guard_logto.py`), and the Logto Management client the same way (`tests/unit/test_logto_management.py`).
 
@@ -396,18 +401,60 @@ Preview is read-only and creates no schema or bucket. `--apply --once` executes 
 
 ## 14. Early-bird list (landing page)
 
-Two public routes without a bearer token, in `changelens/api/early_bird.py`; the list is the table `early_bird_signups` (migration `0009_early_bird`, no tenant, reached only through the `early_bird_*` functions). An address on the list is not an account.
+Five public routes without a bearer token, in `changelens/api/early_bird.py` (sign-up, confirmation) and `changelens/api/early_bird_unsubscribe.py` (removal), with the one-button page both link routes show in `early_bird_pages.py`; the list is the table `early_bird_signups` (migrations `0009_early_bird`, `0010_early_bird_unsubscribe` and `0011_early_bird_hardening`, no tenant, reached only through the `early_bird_*` functions). The fixes of the security review of 2026-11-22 are in [`docs/security-review.md`](../docs/security-review.md) (EB-1 to EB-13). An address on the list is not an account.
 
-- `POST /early-bird` with `{"email": "…", "locale": "en" | "de"}` as `application/json`, at most 1 KiB, no other field. Answers `202 {"status": "accepted"}` for every valid request, whether the address is new, waiting for confirmation or already confirmed. Other answers: `422 invalid_request` (never echoes the input; an address must be ASCII, at most 254 characters, with one `@` and a dotted host name), `413 limit_exceeded`, and `429 rate_limited` with `Retry-After` after `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` requests from one IP in a UTC day (invalid requests count). A new or pending address gets a confirmation mail with a fresh single-use link, sent after the response, at most `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` per UTC day; beyond that the answer is the same and nothing is sent.
-- `GET /early-bird/confirm?token=…` always answers `303`: to `<landing>/#confirmed` (`<landing>/de/#confirmed` for a German sign-up) when the token confirms, to `<landing>/#confirm-failed` for a missing, unknown, used or expired token and when the per-minute IP limit is reached. A token works once and for `CHANGELENS_EARLY_BIRD_PENDING_DAYS` days; only its SHA-256 is stored.
+- `POST /early-bird` with `{"email": "…", "locale": "en" | "de"}` as `application/json`, at most 1 KiB, no other field. Answers `202 {"status": "accepted"}` for every valid request, whether the address is new, waiting for confirmation or already confirmed. Other answers: `422 invalid_request` (never echoes the input; an address must be ASCII, at most 254 characters, with one `@` and a dotted host name), `413 limit_exceeded`, and `429 rate_limited` with `Retry-After` after `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` requests from one client in a UTC day (counted before the body is read, so invalid, oversized and slow requests count; an IPv6 client is its /64 network). A new or pending address gets a confirmation mail with a fresh single-use link. Four mail limits answer the same `202` while nothing is sent and nothing changes: per address per UTC day (`…_MAILS_PER_ADDRESS_PER_DAY`; the counter ignores a `+tag`, the stored address keeps it), for all addresses together per hour and per UTC day (`…_MAILS_PER_HOUR`, `…_MAILS_PER_DAY`; these count every request that reaches them, also one for a confirmed address), and per unconfirmed sign-up over its life (`…_MAILS_PER_ROW`, counted in the database when a link is issued, sent or not). The cap for all addresses also covers the two-day burst around midnight UTC.
+- `GET /early-bird/confirm?token=…` (the link in the mail) changes nothing, because mail scanners open links: a well-formed token gets `200` and the one-button page, without the list being read, so the page says nothing about the token; a malformed one gets `303` to `<landing>/#confirm-failed`. `POST /early-bird/confirm` (the page's form, field `token`, at most 1 KiB) confirms once and answers `303`: to `<landing>/#confirmed` (`<landing>/de/#confirmed` for a German sign-up), or to `<landing>/#confirm-failed` for a missing, unknown, used or expired token. A link lives 7 days from when it was issued; the period is fixed in the database (`early_bird_pending_days()`, migration 0011) and is not a setting, and `PENDING_DAYS` in `mail/confirmation.py` is the same number for the mail's text (tests hold the two together). Only a token's SHA-256 is stored. A newer link is the row's *next* token until its mail was handed to the mail server; until then the link mailed before keeps working. The link routes share a per-minute limit of their own (`CHANGELENS_RATE_LIMIT_IP_PER_MINUTE` requests per client, counted before a body is read; over it: `303` to the failed state with `Retry-After`).
+- `GET /early-bird/unsubscribe?token=…` never changes anything (mail scanners open links). A token with a valid MAC gets `200` and a small HTML page with one button, a form that posts the token back; anything else gets `303` to `<landing>/#unsubscribe-failed`. The page is served by the API with inline CSS only: no script, no outside request, no address, English and German together (so the list is not read to pick a language, and the page is the same whether or not the address is still on the list), `noindex`, and the headers `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`. Its wording is new and unreviewed.
+- `POST /early-bird/unsubscribe` removes. The token is read from the query string (RFC 8058 one-click: the mail client posts `List-Unsubscribe=One-Click` to the link itself) or, when the query has none, from the form field `token` (`application/x-www-form-urlencoded`, at most 1 KiB). A valid MAC deletes the row (`early_bird_unsubscribe`, pending or confirmed) and answers `303` to `<landing>/#unsubscribed` (`<landing>/de/#unsubscribed` when the deleted row was German); a row that is already gone gets the same answer. An invalid token, a larger body or a failed database call answers `303` to `<landing>/#unsubscribe-failed`. Both routes count against the per-minute IP limit (`CHANGELENS_RATE_LIMIT_IP_PER_MINUTE`, shared with the confirm route); over it they redirect to `#unsubscribe-failed` with `Retry-After`. No CORS headers, and no CSRF token: a form posted from another site can only remove an address whose valid token the sender already holds.
+- The removal token is `<signup id>.<mac>`: the row's UUID and a hex HMAC-SHA256 over `early-bird-unsubscribe:<signup id>` with `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` (`changelens/mail/unsubscribe.py`). Nothing is stored for it and it never expires; the format is checked with a strict pattern first and the MAC is compared in constant time. The key is the list's own and not `CHANGELENS_RATE_LIMIT_KEY`: that one is documented as replaceable at any time (counters start again), and a replaced key ends every removal link already mailed.
 - CORS exists for `/early-bird` only: the origin in `CHANGELENS_LANDING_URL` may `POST` with `Content-Type`, without credentials. With no landing URL (dev) no origin is allowed.
-- Mail: `changelens/mail/` holds the port, the recording sender (dev mode and tests; nothing is sent) and the SMTP sender (`smtplib`, STARTTLS, 10 s timeout). The wording in `mail/confirmation.py` is a draft pending legal review, and its imprint line is a placeholder.
-- Logs: event codes and the page language only (`early_bird_accepted`, `early_bird_mail_sent`, `early_bird_mail_failed`, `early_bird_mail_capped`, `early_bird_confirmed`, `early_bird_confirm_failed`). The accepted and confirmed lines are the server-side counts per day and language; nothing aggregates them yet.
-- Maintenance (`python -m changelens.retention --apply`) deletes unconfirmed addresses after the pending period (`pruned_early_bird_pending` in its summary).
+- Mail: `changelens/mail/` holds the port, the recording sender (dev mode and tests; nothing is sent), the SMTP sender (`smtplib`, STARTTLS) and the mail queue. Mails are sent from two threads of their own, never from the request threads; at most 50 wait, one more is dropped and logged (`early_bird_mail_failed reason=queue_full`); the queue shuts down with the app. One send has 10 s per socket operation and gives up between its steps once 30 s have passed; that is not a hard limit (`mail/smtp.py` says why). The wording in `mail/confirmation.py` is a draft pending legal review, and its imprint line is a placeholder.
+- Logs: event codes and the page language only (`early_bird_accepted`, `early_bird_mail_due`, `early_bird_mail_sent`, `early_bird_mail_failed` with an exception class name or `queue_full`, `early_bird_mail_capped scope=address|all_hour|all_day`, `early_bird_confirmed`, `early_bird_confirm_failed`, `early_bird_unsubscribed` with `locale=none` for a row already gone, `early_bird_unsubscribe_failed`, `early_bird_unsubscribe_error`), never a row ID, an address or a token. The server-side counts per day and language: `early_bird_accepted` is every valid request to the form (also a repeated one, one for a confirmed address and one over a mail limit), `early_bird_mail_due` is a request that issued a link, the count of sign-up attempts, and `early_bird_confirmed` is an address that joined the list. Nothing aggregates them yet.
+- Maintenance (`python -m changelens.retention --apply`) deletes unconfirmed addresses 7 days after the sign-up or after its last mailed link, whichever is later (`pruned_early_bird_pending` in its summary). It can't choose the period, and it reads no mail setting.
 
-In `logto` mode these have no default, and the api and retention stop at start when one is missing: `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM` (the bare address), `CHANGELENS_PUBLIC_API_URL` (this API's origin, for the link) and `CHANGELENS_LANDING_URL` (the landing page's origin). Both URLs are `https` origins without a path. The worker reads none of them and refuses to start with `CHANGELENS_SMTP_PASSWORD`. In `dev` mode all are optional: the recording sender is used whatever is set, and the link falls back to the request's own host.
+In `logto` mode these have no default, and the api stops at start when one is missing (retention sends no mail and starts without them): `CHANGELENS_SMTP_HOST`, `CHANGELENS_SMTP_USER`, `CHANGELENS_SMTP_PASSWORD`, `CHANGELENS_MAIL_FROM` (the bare address), `CHANGELENS_PUBLIC_API_URL` (this API's origin, for the links), `CHANGELENS_LANDING_URL` (the landing page's origin) and `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` (at least 32 characters). Both URLs are `https` origins without a path. The worker reads none of them and refuses to start with `CHANGELENS_SMTP_PASSWORD` or `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY`. In `dev` mode all are optional: the recording sender is used whatever is set, and the link falls back to the request's own host.
 
-Not built: removal from the list (unsubscribe), any link between a list address and an account or a discount, and the Umami `list-confirmed` event. Opening the link confirms with a `GET`, so a mail scanner that opens links can confirm an address by itself.
+**Mailing the list (owner only).** The api, worker and retention run as the app role, which has no right on the table and no function that returns an address. The addresses leave the database through one command, which no route reaches. It connects as the owner role (`CHANGELENS_MIGRATION_DATABASE_URL`, like migrations: the role owns the table and bypasses its forced row-level security, so no extra function was needed), refuses to run as a role that row-level security applies to, reads in a read-only transaction and prints CSV to stdout: `email,locale,confirmed_at,unsubscribe_url`, confirmed addresses only. stderr gets `early_bird_export rows=N formula_start=M` and nothing else. Outside `CHANGELENS_ENV=local` it has no default for `CHANGELENS_MIGRATION_DATABASE_URL`, `CHANGELENS_PUBLIC_API_URL` or `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` (the api's value, or the api refuses the links) and stops when one is missing.
+
+Local, PowerShell, from `backend/` (the links point at the dev api):
+
+```powershell
+$env:CHANGELENS_ENV = 'local'
+```
+
+```powershell
+$env:CHANGELENS_PUBLIC_API_URL = 'http://127.0.0.1:8000'
+```
+
+```powershell
+.venv\Scripts\python -m changelens.early_bird_export
+```
+
+Server, Bash, as root (the tool reads `admin.env` and `changelens.env`; not run there yet):
+
+```bash
+cd /opt/changelens/deploy/ionos && (umask 077 && docker compose --profile tools run --rm -T early-bird-export > /root/early-bird-list.csv)
+```
+
+The file holds addresses and working removal links: delete it after the mail (`shred -u /root/early-bird-list.csv`). It is input for a mail tool, not a spreadsheet: `formula_start` counts addresses that begin with `=`, `+`, `-` or `@`, which a spreadsheet would read as a formula. Every mail to the list must carry its row's `unsubscribe_url` three times: as a visible link in the body, and in the two headers `List-Unsubscribe: <unsubscribe_url>` (the URL in angle brackets) and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (`list_headers()` in `changelens/mail/unsubscribe.py` builds both). One-click removal by mail providers also needs the mail to be DKIM-signed with those headers covered; that is not set up or checked here.
+
+The confirmation mail carries no removal link, on purpose: an unconfirmed address is deleted after the pending period anyway, the mail says so, and `early_bird_request` does not return the row ID a link would need.
+
+Not built: sending a mail to the list (there is no sender for list mails, only the export above), any link between a list address and an account or a discount, and the Umami `list-confirmed` event. The confirm page's wording is new and unreviewed, like the removal page's.
+
+## 15. Demo limit and feedback
+
+The demo period ([`../docs/demo-wall-handoff.md`](../docs/demo-wall-handoff.md)): each account has `CHANGELENS_DEMO_COMPARISON_LIMIT` comparisons for its lifetime, then new comparisons are refused; reports stay readable.
+
+- **Counted:** a comparison that reached `complete` or `partial`. The worker writes one `demo_comparisons` row in the transaction that sets that status, whatever the limit is. The row has no foreign key to `comparisons`, so project deletion and the 30-day retention give nothing back. A `failed` comparison is never counted.
+- **In flight:** comparisons in `waiting_for_versions`, `queued` or `running` hold a place until they end.
+- **Admission:** `POST /projects/{id}/comparisons` answers `403 demo_limit_reached` (problem+json with `used`, `in_flight` and `limit`) when `used + in_flight >= limit`. The check runs after an idempotent replay has returned, under a per-tenant lock, before anything is written or charged.
+- **`GET /me/demo`**, and the same object as `demo` in the `POST /session` response: `{"limit", "used", "in_flight", "remaining", "feedback": {"submitted", "discount_offered"}}`. With the limit off, `limit` and `remaining` are `null`.
+- **`POST /me/demo-feedback`** → `201` with the new state; a second one from the same account → `409 already_answered`. Body: `missing` (`screenshot_import`, `more_file_types`, `share_report`, `better_accuracy`, `faster_results`, `team`, `other`), `missing_other` (20 to 500 characters, required exactly when `missing` is `other`), `anything_else` (optional, up to 500) and `price` (`eur_0`, `eur_5`, `eur_10`, `eur_15`, `eur_over_15`, `not_sure`). Unknown fields and codes are `422 invalid_request`. The row stores the plan the price question described (`individual_20_v1`).
+- **Free text:** control characters are removed (line breaks stay) and the ends trimmed; otherwise the text is stored as written. It is never logged, counted or echoed. Feedback never changes the limit.
+- **Deletion:** `DELETE /me` removes the feedback and the counted comparisons.
+- **Not built:** nothing redeems a discount, and nothing matches an account to an address on the early-bird list (the backend holds no email address).
 
 ## What is placeholder or out of scope
 

@@ -81,3 +81,30 @@ Open, low. Each is fixed, scheduled or accepted by the owner before L22 closes:
 Not covered: Logto's own configuration and behaviour, the live server (file modes, firewall, bucket
 policies), plugin internals beyond the browser plugin, and known-vulnerability data for the pinned versions
 (the weekly audit covers Python).
+
+## Review of 2026-11-22: the early-bird list
+
+Method: an independent read-only review of the early-bird list as committed in `1e1a5a3` (the public sign-up
+and confirmation routes, the mail sender, migration `0009_early_bird`, the landing page and its Caddy site).
+Nothing was checked on the server; the list is not deployed and the form is switched off. No way was found to
+read an address through the api, and no SQL built from input. The owner asked for every finding to be fixed.
+All fixes are in one change after the unsubscribe routes (migration `0011_early_bird_hardening`; tests in
+`backend/tests/unit/test_early_bird_hardening.py` and `backend/tests/integration/test_early_bird_hardening_db.py`).
+Fixed findings have a row in [`review-ledger.md`](review-ledger.md); EB-13 is open and gets its row when the
+server check is done.
+
+| ID | Review | Finding | State |
+|---|---|---|---|
+| EB-1 | M1, medium | No overall cap on confirmation mails: limits were per IP and per exact address, so many IPv6 addresses of one network, `+tag` variants and repeated requests could send unbounded mail | Fixed: mails to all addresses per hour and per UTC day (30 and 200), clients counted by IPv6 /64 network, the address counter ignores a `+tag`, at most 5 mails per unconfirmed sign-up. Limit: the caps for all addresses count requests that reach them, not mails sent, so a flood of valid requests can use them up and stop confirmation mails for the rest of the hour or day |
+| EB-2 | M2, medium | The confirmation link confirmed on `GET`, so a mail scanner that opens links completed the double opt-in | Fixed: the link opens a page with one button; only its `POST` confirms. The page is shown for any well-formed token without reading the list |
+| EB-3 | M3, medium | SMTP sends ran on the shared request thread pool; a slow mail server could hold the threads every route needs | Fixed: a queue with two threads of its own and 50 waiting places, one more is dropped and logged. One send gives up between its steps after 30 s; this is not a hard limit, the standard library has none (`mail/smtp.py`) |
+| EB-4 | L1, low | A new token ended the previous link before the new mail was known to be sent | Fixed: the new token is the row's next token and replaces the mailed one only when its own mail is out |
+| EB-5 | L2, low | A link's lifetime ran from the row's creation, so a link in a later mail could die earlier than the mail said | Fixed: lifetime from the token's issue time; an unconfirmed row is deleted 7 days after its creation or its last mailed link, whichever is later |
+| EB-6 | L3, low | The app role chose the pending period as a function argument | Fixed: the period is a constant of migration 0011; no function takes it; the setting is gone |
+| EB-7 | L4, low | The retention process needed the SMTP password and the other mail settings to start | Fixed: only the api requires and reads them. On the server retention still shares the api's env file, so the values are still in its environment (LR-19 covers what containers see) |
+| EB-8 | L5, low | Two bursts around midnight UTC: the per-day limits allow a day's worth before and after it | Covered by EB-1's hourly cap for all addresses; no separate change |
+| EB-9 | L6, low | Any exception's `reason` attribute was logged, not only a `MailError`'s | Fixed |
+| EB-10 | N1, note | The per-IP count happened after the body was read, and the docstring said otherwise | Fixed for the sign-up route and the link routes' form posts |
+| EB-11 | N2, note | `early_bird_accepted` could not be told apart from a mail that was actually due | Fixed: `early_bird_mail_due` is logged when a link is issued; the README says which line counts what |
+| EB-12 | N3, note | The landing site set no Content-Security-Policy | Fixed in `deploy/ionos/Caddyfile`; checked in a browser against the pinned Caddy image on both pages and both themes, with an answer chosen and the form submitted. Not on the server yet. The call to the api (`connect-src`) was not exercised: the form is switched off |
+| EB-13 | N4, note | Whether IPv6 visitors reach Caddy with their own address can't be seen in code or in a log. If they don't, all IPv6 visitors share one early-bird limit | **Open.** A check with two IPv6 networks is step 7 of the landing-page release in `deploy/ionos/one-off-releases.md`; not run |
