@@ -289,7 +289,7 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 **Description:** One sitting on the iPhone and the Fairphone against the IONOS server, with synthetic documents only. It closes every device check the audit found open. The iPhone half has a step-by-step checklist with a result line per step: [`docs/device-sitting-1.md`](../docs/device-sitting-1.md). The Fairphone half follows it, with its own checklist: [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md).
 
 **Acceptance criteria:**
-- [ ] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26 (iPhone 2026-11-20: all five; Fairphone 2026-11-18: all but MFA, which is task L30)
+- [x] Sign-in: Apple on the iPhone, Google on both, an email code on both, a completed `link_required` link, and MFA as in AC-26 (iPhone 2026-11-20: all five; Fairphone 2026-11-18: all but MFA; MFA with email and with Google on 2026-11-20, task L30)
 - [x] One PDF comparison started from screen P2 completes on the server on each phone (this also proves the worker's egress allow-list); on the iPhone the PDF comes from the picker (Fairphone 2026-11-18, iPhone 2026-11-20)
 - [x] Account deletion works on both phones and the Logto user is gone; the consent screen (build with `CHANGELENS_CONSENT=true`) shows once and the Settings switch withdraws (Fairphone 2026-11-18, iPhone 2026-11-20; on the iPhone the Logto check is the owner's report)
 
@@ -317,7 +317,7 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 **Dependencies:** None · **Files likely touched:** `docs/data-inventory.md`, `deploy/ionos/README.md` · **Estimated scope:** XS
 
 ### Checkpoint B: M2 exit
-- [ ] A new user signs up, compares and deletes the account on both platforms
+- [ ] A new user signs up, compares and deletes the account on both platforms (iPhone: sections 1 and 5 of [`docs/device-sitting-2.md`](../docs/device-sitting-2.md), not yet run)
 - [ ] Runbook section E has no unticked line; the S7 evidence row exists in 06
 - [ ] Owner review before feature work
 
@@ -483,7 +483,7 @@ the deployed system, and write the incident-response runbook with the 72-hour Ar
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
 
-Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 4 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19), 5 low. Open: 3 medium (L33, L34, and the rest of LR-13: the storage keys were split on the server on 2026-11-19, the backup job's internet access is open) and 20 low to fix, schedule or accept.
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 6 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19, LR-10 in L33 on 2026-11-21, LR-13 with the key split of 2026-11-19 and the backup job's internet access, on the server since 2026-11-21; the first daily base backup through the proxy was uploaded on 2026-11-22), 5 low. Open: 1 medium (L34) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 
@@ -599,11 +599,11 @@ once. Before launch that affects the owner's phones only.
 
 **Acceptance criteria:**
 - [x] The iPhone sitting's results are written into `docs/device-sitting-1.md`, including whether Logto offered MFA setup and whether the onboarding was finished there (2026-11-20: offered after the email code and set up; the onboarding was finished)
-- [ ] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone open)
-- [ ] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed
+- [x] With a new test account, MFA is set up with an authenticator, and Logto asks for its code with email and with Google, on both phones (C4 step 4 says MFA is offered, not forced) (iPhone 2026-11-20: yes for both; Fairphone 2026-11-20: yes with email, by the owner's report, sign-in completed 22:10:16 UTC in the api log; with Google the same evening: asked, then the project list, and Settings said "Signed in with Google", by the owner's report; in the api log the one-time token is at 22:46:57 and the completing `POST /session 200` at 22:47:27 UTC, with no `link_required`, no new user and no `PUT /me/onboarding`; a first attempt at 22:42:58 was not carried through)
+- [x] Onboarding finished on one phone does not show again on the other; if it does, the cause is found and fixed (2026-11-20: account A finished the onboarding on the iPhone, and the Fairphone opened the project list after the email sign-in, by the owner's report, and the api log has no `PUT /me/onboarding` since the install; the 2026-11-18 case was an account that had not finished it)
 
 **Verification:**
-- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for the iPhone 2026-11-20; the 06 row is the owner's)
+- [ ] Results recorded in runbook section E (MFA line) and a dated 06 row (section E: done for both phones 2026-11-20; the 06 row is the owner's)
 
 **Dependencies:** None · **Files likely touched:** `docs/device-sitting-1.md`, `deploy/ionos/README.md`, possibly `app/lib/auth/session.dart` · **Estimated scope:** S
 
@@ -638,14 +638,14 @@ retention, and a compromised parser unable to read the worker's secrets.
 
 ## Task L33: Per-account bounds on uploads and queued work (L22, LR-10)
 
-**Description:** One account must not keep the single worker busy for everyone or fill the storage. The fair-use allowance (T8 to T12) counts comparisons, not uploads or waiting jobs.
+**Description:** One account must not keep the single worker busy for everyone or fill the storage. The fair-use allowance (T8 to T12) counts comparisons, not uploads or waiting jobs. Built 2026-11-21, on the server since the release of the same day; the limits are settings with defaults, so the server's env file needs no change. Not covered: how long one upload may take (a slow upload holds its slot), and the app shows its general "not accepted" message for the new refusal.
 
 **Acceptance criteria:**
-- [ ] An upload or comparison is refused with 429 when the account already has N unparsed versions or N unfinished comparisons (numbers: owner, with L5)
-- [ ] Stored bytes per account have a ceiling
-- [ ] Concurrent uploads are bounded so the api stays within its memory limit
+- [x] An upload or comparison is refused with 429 when the account already has N unparsed versions or N unfinished comparisons (numbers: owner, with L5) (built 2026-11-21: `429 account_limit_reached` with the bound's name, checked in the transaction that would add the rows, both upload routes; a replay of an accepted request is still answered; defaults 8 unparsed versions and 3 unfinished comparisons; the owner kept all four defaults on 2026-11-21)
+- [x] Stored bytes per account have a ceiling (built 2026-11-21: default 1 GiB, counted over every original the account still has a row for, deleted projects included)
+- [x] Concurrent uploads are bounded so the api stays within its memory limit (built 2026-11-21: 4 upload requests at once per api process, 2 of them for one account, taken after sign-in is checked and before the body is read; over that `429 rate_limited` with `Retry-After`. Sizing estimated, not measured: a request with two 10 MB PDFs peaks near 60 MB, and the api has 1 GB)
 
-**Verification:** backend unit and integration tests pass in CI.
+**Verification:** backend unit and integration tests pass in CI. (2026-11-21 locally: 921 unit tests, 20 new in `tests/unit/test_account_bounds.py`, 8 of which fail with the check switched off; 181 integration tests against Postgres and MinIO in Docker, 5 new in `tests/integration/test_account_bounds_db.py`, the 4 Linux-only tests skipped. In CI the same day: the pull request's checks and the three workflows on `main` passed. Released on the server 2026-11-21 with the app release command (runbook F): the api, the worker, retention and Caddy were recreated and every service is up; the running api reads the four limits as 8, 3, 1073741824 and 4; afterwards the api log shows a comparison from the app accepted (`POST /projects/{project_id}/comparisons 202`) and opened three seconds later. Not checked on the server: the refusal itself.)
 
 **Dependencies:** L5 for the numbers · **Files likely touched:** `backend/changelens/api/routes.py`, `backend/changelens/api/comparisons.py`, `backend/changelens/api/app.py`, `backend/changelens/config.py` · **Estimated scope:** M
 
@@ -657,7 +657,7 @@ retention, and a compromised parser unable to read the worker's secrets.
 - [ ] After sign-out, Continue with email asks for the address and the code again, on Android and iOS
 - [ ] Google and Apple sign-in still complete without an extra step
 
-**Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab.
+**Verification:** App command passes. Manual on both phones: the two criteria. Before the change, the first one on the Fairphone shows whether its browser already honours the private tab. Fairphone, 2026-11-20, before any change (debug build from `main` at `b4cbea6`; Android 15, default browser Chrome 157, both read over adb): after Settings → Sign out, Continue with email asked for the address and the mail code again, by the owner's report, one run. The api log since the install has one `POST /session 200` (22:10:16 UTC), the sign-in before the sign-out, and none after it: the owner stopped the second attempt once Logto asked again, and what Logto's page asked is not in the api log. So Chrome on this phone honours the private tab. Other browsers and other Chrome versions are not covered by this check. Owner's decision, 2026-11-20: the task stays open and is not built now.
 
 **Dependencies:** A device sitting · **Files likely touched:** `app/lib/auth/logto.dart`, `app/test/auth_session_test.dart`, `docs/device-sitting-1*.md` · **Estimated scope:** S
 

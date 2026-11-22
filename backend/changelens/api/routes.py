@@ -118,7 +118,7 @@ async def _read_upload(request: Request) -> tuple[bytes, Optional[str]]:
 
 
 @router.post("/projects/{project_id}/versions", status_code=201)
-async def upload_version(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(current_tenant)):
+async def upload_version(project_id: uuid.UUID, request: Request, tenant: uuid.UUID = Depends(uploads.upload_slot)):
     state = request.app.state
     data, label = await _read_upload(request)
     label = uploads.check_label(label, state.settings.limits)
@@ -137,6 +137,7 @@ def _store_version(state, tenant, project_id, data, label, kind):
             repo.lock_comparison_key(request_key)
             if repo.project(project_id) is None:
                 raise not_found()
+            uploads.check_bounds(repo, state.settings, new_versions=1, new_bytes=len(data))
             ticket = prepare_write(state.db, tenant, project_id, request_key)
             write_prepared(state.db, state.store, ticket, data)
             v = repo.add(SourceVersion(project_id=project_id, label=label, kind=kind,

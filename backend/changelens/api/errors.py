@@ -18,6 +18,7 @@ TITLES = {
     "unauthenticated": "Authentication required",
     "spend_cap_reached": "Monthly spend cap reached",
     "rate_limited": "Too many requests",
+    "account_limit_reached": "Account limit reached",  # LR-10: unparsed uploads, unfinished comparisons or stored bytes
     "provider_unavailable": "Sign-in provider unavailable",  # I-8 S4: Google, Apple or Logto failed; retry
     "policy_version_stale": "Privacy policy version is not current",  # D-18 consent: re-read and ask again
     "demo_limit_reached": "Demo comparisons used",  # docs/demo-wall-handoff.md: final, waiting does not help

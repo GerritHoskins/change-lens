@@ -34,9 +34,10 @@ Android: the consent screen, a comparison on the server, MFA and account deletio
 - [x] Two synthetic PDFs with a text layer are in the Downloads folder (an earlier and a newer brief).
       2026-11-18: `P-703-old.pdf` and `P-703-new.pdf` (ReportLab, text extracts: "P-703 (earlier version)" /
       "(newer version)"); `P-713-old/new.pdf` are there too.
-- [ ] The authenticator app that holds account A's two-step code is at hand (on the iPhone, or on this phone).
+- [x] The authenticator app that holds account A's two-step code is at hand (on the iPhone, or on this phone).
       2026-11-18, fail: no authenticator entry for Logto on any device, so MFA was never set up for account A
-      (the iPhone MFA step did not set it up). Finding, task L30.
+      (the iPhone MFA step did not set it up). Finding, task L30. Repeat 2026-11-20: the new account A has an
+      authenticator entry (set up in the iPhone sitting that day).
 - [x] The Google account of account A's address is signed in on the phone. 2026-11-18: the owner believes
       so (not checked on the phone).
 - [x] If the app opens signed in from an earlier check: Menu (top right) → Settings → **Sign out**.
@@ -52,22 +53,34 @@ Android: the consent screen, a comparison on the server, MFA and account deletio
       Result: 2026-11-18, pass.
 - [x] Continue with email → enter account A's address on Logto's page → enter the code from the mail.
       Result: 2026-11-18, pass. The code arrived and was accepted.
-- [ ] MFA: Logto's page asks for the authenticator code before it returns to the app. If it doesn't ask,
+- [x] MFA: Logto's page asks for the authenticator code before it returns to the app. If it doesn't ask,
       write that down; it is then a finding.
       Result: 2026-11-18, fail. Not asked; account A has no MFA set up (see Before you start). Finding.
+      Repeat 2026-11-20 (new account A with two-step verification, debug build from `main` at `b4cbea6`):
+      pass. The authenticator code was asked for after the mail code, by the owner's report.
 - [x] The app opens the project list directly. The onboarding and the consent screen do not appear, because
       account A answered both on the iPhone, and the project from the iPhone sitting is there.
       Result: 2026-11-18, pass (onboarding was skipped on this phone just before, see Before you start).
+      Repeat 2026-11-20 (new account A, onboarding finished on the iPhone that day): pass, the project list
+      opened directly. The api log has no `PUT /me/onboarding` since the install.
 - [x] Menu → Settings: the line "Access token lifetime: 900 s" shows (debug builds only).
       Result: 2026-11-18, pass.
 
 ## 2. Google sign-in with the linked account (Fairphone)
 
 - [x] Settings → **Sign out**. The sign-in screen says "You're signed out." 2026-11-18, pass.
+      2026-11-20 (task L34, debug build from `main` at `b4cbea6`, Chrome 157): after a sign-out, Continue with
+      email asked for the address and the mail code again. The api log has the sign-in before it (22:10:16 UTC)
+      and no completed sign-in after it; the owner stopped there.
 - [x] Continue with Google, with account A's Gmail address. It signs in directly, because the link was
       completed on the iPhone. Settings says "Signed in with Google", with account A's address.
       Result (was the authenticator code asked for with Google?): 2026-11-18, pass. No authenticator code
       asked for (account A has no MFA).
+      Repeat 2026-11-20 (new account A with two-step verification, debug build from `main` at `b4cbea6`):
+      pass. The authenticator code was asked for, the project list opened, and Settings said "Signed in with
+      Google", by the owner's report. Api log: one-time token 22:46:57, completing `POST /session 200`
+      22:47:27 UTC, no `link_required`, no new user, no `PUT /me/onboarding`. A first attempt at 22:42:58 was
+      not carried through.
 
 ## 3. A PDF comparison from the picker (Fairphone)
 

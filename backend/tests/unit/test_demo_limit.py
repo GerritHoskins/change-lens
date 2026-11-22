@@ -111,6 +111,9 @@ def test_reports_stay_readable_at_the_limit(env):
 
 def test_limit_zero_refuses_nothing(monkeypatch):
     env = Environment(monkeypatch, demo_limit=0)
+    # The account bounds (LR-10: three unfinished comparisons, eight unparsed versions) would refuse the
+    # fourth start here; they have their own suite (test_account_bounds.py).
+    env.client.app.state.settings = dataclasses.replace(env.settings, max_unfinished_comparisons=100, max_unparsed_versions=100)
     try:
         for n in range(6):
             assert start(env, n).status_code == 202

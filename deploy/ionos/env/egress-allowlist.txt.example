@@ -1,3 +1,4 @@
-# /etc/changelens/egress-allowlist.txt: host names the worker may reach (HTTPS only), one per line.
+# /etc/changelens/egress-allowlist.txt: host names the worker and the backup job may reach (HTTPS only),
+# one per line. The storage host must be the host of RCLONE_CONFIG_IONOS_ENDPOINT in backup.env.
 openai.inference.de-txl.ionos.com
 s3.eu-central-1.ionoscloud.com

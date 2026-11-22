@@ -98,7 +98,10 @@ def make_settings(db_url: str, **overrides) -> Settings:
                 rate_limit_account_per_minute=100_000, rate_limit_ip_per_minute=100_000, signups_per_ip_per_day=100_000,
                 # Off here: several suites run more comparisons per tenant than the demo allows.
                 # test_demo_db.py sets the real limit (docs/demo-wall-handoff.md).
-                demo_comparison_limit=0)
+                demo_comparison_limit=0,
+                # Likewise for the per-account bounds (LR-10); test_account_bounds_db.py sets those.
+                max_unparsed_versions=100_000, max_unfinished_comparisons=100_000, max_stored_bytes=10 ** 12,
+                max_concurrent_uploads=64)
     base.update(overrides)
     return Settings(**base)
 
