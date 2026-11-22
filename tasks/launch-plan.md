@@ -135,7 +135,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 
 Tasks that need a Mac or the iPhone go first. Every iOS build runs on Codemagic's Mac (`ios-device-check`,
 `ios-testflight`), so the owner's Mac is needed only to inspect a release build (L25). The iPhone must be in
-hand for steps 3 to 5. PC work comes first only where it saves a second iPhone sitting.
+hand for steps 3 to 6. PC work comes first only where it saves a second iPhone sitting.
 
 1. **Before the build (PC, no device), done 2026-11-18.** L27, then L28's code for A6 and A8, so the sitting sees the final
    screens and the screen reader is checked once. `ios-device-check` gets
@@ -149,9 +149,14 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
    AC-15, AC-24, AC-25) and unlocks Checkpoint B, L22, L25 and L26. The Fairphone half of L13 needs no Apple
    hardware and can follow (checklist:
    [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md)).
-4. **iPhone and Mac sitting 2, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
+4. **iPhone sitting 2** (checklist: [`docs/device-sitting-2.md`](../docs/device-sitting-2.md))**, added
+   2026-11-22, not yet run.** One new `ios-device-check` build from `main`. The iPhone half of Checkpoint B (a
+   new user signs up, compares and deletes the account), the screens changed since build 6 (Projects home,
+   the three kinds of message, onboarding, keyboard) and the lines of the Logto branding plan's §5 that were
+   not run.
+5. **iPhone and Mac sitting 3, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
    the `ios-testflight` build: the receipt checks of `scripts/release/README.md`, three of them iOS only.
-5. **iPhone sitting 3.** L26, the usability test.
+6. **iPhone sitting 4.** L26, the usability test.
 
 Open before these steps:
 
@@ -164,7 +169,7 @@ Open before these steps:
   Keychain protection are task L29, built 2026-11-18 and passed on the iPhone on 2026-11-20 (build 5).
   `handoff_file_protection` left the iOS launch set on 2026-11-18 (owner's decision) and comes back with I-16.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
-  sitting 2.
+  sitting 3.
 
 ## Parallelisation
 
