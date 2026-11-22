@@ -317,7 +317,7 @@ without a token and Caddy proxies them. Turn all three off in `logto` mode and n
 **Dependencies:** None · **Files likely touched:** `docs/data-inventory.md`, `deploy/ionos/README.md` · **Estimated scope:** XS
 
 ### Checkpoint B: M2 exit
-- [ ] A new user signs up, compares and deletes the account on both platforms
+- [ ] A new user signs up, compares and deletes the account on both platforms (iPhone: sections 1 and 5 of [`docs/device-sitting-2.md`](../docs/device-sitting-2.md), not yet run)
 - [ ] Runbook section E has no unticked line; the S7 evidence row exists in 06
 - [ ] Owner review before feature work
 
@@ -483,7 +483,7 @@ the deployed system, and write the incident-response runbook with the 72-hour Ar
 **Verification:**
 - [ ] Owner sign-off recorded in 06; `./scripts/ci.ps1` passes
 
-Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 6 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19, LR-10 in L33 on 2026-11-21, LR-13 with the key split of 2026-11-19 and the backup job's internet access, on the server since 2026-11-21; its daily base backup through the proxy is still to come), 5 low. Open: 1 medium (L34) and 20 low to fix, schedule or accept.
+Review of 2026-11-18: [`docs/security-review.md`](../docs/security-review.md). Fixed: 1 high, 6 medium (LR-2, LR-3 in L31, LR-4 in L32, LR-12 on 2026-11-19, LR-10 in L33 on 2026-11-21, LR-13 with the key split of 2026-11-19 and the backup job's internet access, on the server since 2026-11-21; the first daily base backup through the proxy was uploaded on 2026-11-22), 5 low. Open: 1 medium (L34) and 20 low to fix, schedule or accept.
 
 **Dependencies:** L13, L11, L12, and Phase 4 (the review covers the launch scope) · **Files likely touched:** `docs/incident-runbook.md` (new), `docs/review-ledger.md`, `docs/05-backlog.md` (private) · **Estimated scope:** M
 

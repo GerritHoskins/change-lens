@@ -163,7 +163,14 @@ was not restarted. Step 4 printed `rc=1`. Step 5 printed `rc=1`, and the proxy l
 `wal shipped=1` at 16:07:34 UTC, with no `wal upload failed`. Step 1's line was not in the output that was
 kept; step 6 shows that the proxy lets the job's storage host through. The run of the release command that
 was kept found the backup job already running and started the api, the worker and retention again. Not looked
-at: the proxy's own log line for the storage host. Still to come: `base backup uploaded` within a day.
+at: the proxy's own log line for the storage host.
+
+Two hours after the release `docker compose ps` showed all eight services up: the api (healthy), the worker,
+retention and the backup job two hours old, Caddy six hours, Postgres and Logto two days (both healthy) and
+the proxy five days. The first base backup through the proxy followed on 2026-11-22: `base backup uploaded`
+at 07:47:18 UTC, one second after it was tried, then `remote objects older than 30 days deleted` and `logto
+audit entries deleted=0` at 07:47:27 UTC. Between the release and that check (12:45 UTC) the job logged no
+failed upload, and its last shipped segment was two seconds old.
 
 1. **Before: the job's storage host is on the allow-list.** Prints the host and `on the list`:
    ```bash
