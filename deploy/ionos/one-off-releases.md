@@ -278,10 +278,10 @@ TLS pause for about a minute.
    mail wording and the privacy text are reviewed and a test mail has arrived. The footer's legal pages
    don't exist yet (L23).
 
-## Starting Umami (once, only after the legal answer)
+## Starting Umami (once)
 
-**Not done, and not to be done yet:** the tracker stays off until the legal review has answered whether it
-may run without consent (`docs/landing-page-handoff.md`, Measurement).
+**Owner's decision, 2026-11-22:** the tracker is switched on before the legal review has answered whether it
+may run without consent (`docs/landing-page-handoff.md`, Measurement); that answer is still open.
 
 1. **Umami's database password**, generated into `postgres.env` without showing it; Postgres must be
    recreated to see it (a pause of about a minute):

@@ -205,8 +205,8 @@ services:
     logging: *logging
 
   # Umami: visits and click events for the landing page (docs/landing-page-handoff.md, Measurement). Off
-  # unless the `stats` profile is named: docker compose --profile stats up -d umami. It stays off until the
-  # legal review has answered whether the tracker may run without consent.
+  # unless the `stats` profile is named: docker compose --profile stats up -d umami. Running since
+  # 2026-11-22 by the owner's decision; the legal answer on consent is still open.
   # Caddy passes on /umami/script.js and /umami/api/send only; the dashboard is on the host's loopback
   # (SSH tunnel), like Logto's admin console.
   umami:

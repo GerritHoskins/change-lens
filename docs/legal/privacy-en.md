@@ -75,7 +75,9 @@ If you send feedback or answer an optional question in the app (for example, wha
 
 **Data:** time, route, status code, error type, the IP address of the request, and internal IDs. Logs never contain document content.
 
-**Website (changelens.pixeltronic.dev):** for each page view we log the time, the page, the website that linked to us (host name only), campaign parameters (`utm_…`) and whether the request came from a crawler. We do not log your IP address, your browser, or any cookie, and we do not count unique visitors. Log lines are deleted after 30 days; daily totals without personal data are kept. [DRAFT 2026-11-22: optional visit statistics with a self-hosted tool (Umami) are not active; describe them here before they are switched on.]
+**Website (changelens.pixeltronic.dev):** for each page view we log the time, the page, the website that linked to us (host name only), campaign parameters (`utm_…`) and whether the request came from a crawler. We do not log your IP address, your browser, or any cookie, and we do not count unique visitors. Log lines are deleted after 30 days; daily totals without personal data are kept. 
+
+**Visit statistics (website):** we also run Umami, a statistics tool on our own server; no data goes to a third party. A small script from our own host reports each page view and clicks on a few elements (the early-bird buttons, the scope answers, the language switch). From your IP address and browser identifier Umami computes a visitor code with a key that changes every day, so a visitor can't be recognised on a later day; the IP address itself is not stored. It also stores the country, the browser and the device class. It sets no cookie. If your browser sends "Do Not Track", nothing is recorded. [DRAFT 2026-11-22: switched on by the owner's decision before the legal review (L4) has answered whether this needs consent; legal basis and retention period are still to be set.]
 
 **Purpose:** to run the service securely and find errors. **Legal basis:** legitimate interest (Art. 6(1)(f) GDPR).
 
