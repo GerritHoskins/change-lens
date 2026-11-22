@@ -95,7 +95,10 @@ def make_settings(db_url: str, **overrides) -> Settings:
                 s3_bucket="changelens-test", dev_tokens=DEV_TOKENS,
                 cost_ceiling_eur=Decimal("1.50"), fake_llm_cost_eur=Decimal("0.01"),
                 # The suites send far more than the real limits; test_limits_db.py sets those (I-8 S6).
-                rate_limit_account_per_minute=100_000, rate_limit_ip_per_minute=100_000, signups_per_ip_per_day=100_000)
+                rate_limit_account_per_minute=100_000, rate_limit_ip_per_minute=100_000, signups_per_ip_per_day=100_000,
+                # Likewise for the per-account bounds (LR-10); test_account_bounds_db.py sets those.
+                max_unparsed_versions=100_000, max_unfinished_comparisons=100_000, max_stored_bytes=10 ** 12,
+                max_concurrent_uploads=64)
     base.update(overrides)
     return Settings(**base)
 

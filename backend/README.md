@@ -149,6 +149,10 @@ Optional environment variables. In `logto` mode six of them have no default: `CH
 | `CHANGELENS_RATE_LIMIT_ACCOUNT_PER_MINUTE` | `60` authenticated requests per account |
 | `CHANGELENS_RATE_LIMIT_IP_PER_MINUTE` | `20` failed authentications and `POST /session` calls per IP |
 | `CHANGELENS_SIGNUPS_PER_IP_PER_DAY` | `5` new accounts per IP per UTC day |
+| `CHANGELENS_MAX_UNPARSED_VERSIONS` | `8` uploads per account that the worker hasn't parsed yet; one more → `429 account_limit_reached`, detail `unparsed_versions` (LR-10) |
+| `CHANGELENS_MAX_UNFINISHED_COMPARISONS` | `3` waiting, queued or running comparisons per account; detail `unfinished_comparisons` |
+| `CHANGELENS_MAX_STORED_BYTES` | `1073741824` (1 GiB) of originals per account, deleted projects included until their rows are removed; detail `stored_bytes` |
+| `CHANGELENS_MAX_CONCURRENT_UPLOADS` | `4` upload requests held in memory at once per api process, half of them for one account; over that → `429 rate_limited` |
 | `CHANGELENS_TRUSTED_PROXIES` | empty; comma-separated proxy IPs whose `X-Forwarded-For` is believed (the right-most entry that isn't a trusted proxy is the client) |
 | `CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY` | `5` requests to `POST /early-bird` per IP per UTC day (§14) |
 | `CHANGELENS_EARLY_BIRD_MAILS_PER_ADDRESS_PER_DAY` | `3` confirmation mails to one address per UTC day |

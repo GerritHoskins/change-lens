@@ -148,6 +148,70 @@ user of its own and a bucket policy. **Done on the server 2026-11-19**, all ten 
     cd /etc/changelens && mv changelens.env.old-key changelens.env && mv worker.env.old-key worker.env && mv backup.env.old-key backup.env
     ```
 
+## The backup job behind the egress proxy (once, LR-13)
+
+Until this release the backup job is on the `outbound` network and can reach any host. From it the job is on
+`data` only, with no route out: rclone uploads through the egress proxy, which lets HTTPS through to the hosts
+in `/etc/changelens/egress-allowlist.txt` and nothing else. The backup job is recreated and its log starts
+again; nothing else in this change needs a restart. The restore test is unchanged. Checked in Docker on
+2026-11-21 with this `compose.yaml` and made-up keys: before the change the container connected to
+`1.1.1.1:443` and to `example.com`; after it neither, and the storage host answered through the proxy.
+
+**Done on the server on 2026-11-21**, with the checkout at `93d3e84`. The backup job was recreated; the proxy
+was not restarted. Step 4 printed `rc=1`. Step 5 printed `rc=1`, and the proxy logged `TCP_DENIED/403` for
+`CONNECT example.com:443`. Step 6 listed 6 base backups. Step 7 showed `backup started` at 16:04:33 UTC and
+`wal shipped=1` at 16:07:34 UTC, with no `wal upload failed`. Step 1's line was not in the output that was
+kept; step 6 shows that the proxy lets the job's storage host through. The run of the release command that
+was kept found the backup job already running and started the api, the worker and retention again. Not looked
+at: the proxy's own log line for the storage host.
+
+Two hours after the release `docker compose ps` showed all eight services up: the api (healthy), the worker,
+retention and the backup job two hours old, Caddy six hours, Postgres and Logto two days (both healthy) and
+the proxy five days. The first base backup through the proxy followed on 2026-11-22: `base backup uploaded`
+at 07:47:18 UTC, one second after it was tried, then `remote objects older than 30 days deleted` and `logto
+audit entries deleted=0` at 07:47:27 UTC. Between the release and that check (12:45 UTC) the job logged no
+failed upload, and its last shipped segment was two seconds old.
+
+1. **Before: the job's storage host is on the allow-list.** Prints the host and `on the list`:
+   ```bash
+   H=$(sed -n 's|^RCLONE_CONFIG_IONOS_ENDPOINT=https://||p' /etc/changelens/backup.env | tr -d '/\r') && grep -qxF "$H" /etc/changelens/egress-allowlist.txt && echo "$H: on the list" || echo "$H: missing"
+   ```
+   `missing`: add the host as a line of its own to `/etc/changelens/egress-allowlist.txt`, then
+   `cd /opt/changelens/deploy/ionos && docker compose restart egress` (the proxy reads the list at start).
+2. **The release:** the app release command.
+3. **Both are up**, and the backup job was created just now:
+   ```bash
+   docker compose ps backup egress
+   ```
+4. **No route out.** Prints `rc=1`:
+   ```bash
+   docker compose exec -T backup sh -c 'nc -z -w 5 1.1.1.1 443; echo rc=$?'
+   ```
+5. **A host off the list is refused by the proxy.** Prints `rc=1`, then a line with `TCP_DENIED/403` and
+   `CONNECT example.com:443`:
+   ```bash
+   docker compose exec -T backup sh -c 'rclone lsf --retries 1 --low-level-retries 1 --contimeout 8s --timeout 10s --http-url https://example.com :http: >/dev/null 2>&1; echo rc=$?'
+   ```
+   ```bash
+   docker compose exec -T egress grep -F 'example.com' /var/log/squid/access.log | tail -n 1
+   ```
+6. **The job's own bucket is reachable.** Prints the number of base backups in it, above `0`:
+   ```bash
+   docker compose exec -T backup sh -c 'rclone lsf --s3-no-check-bucket --retries 1 "ionos:$BACKUP_BUCKET/base/" | wc -l'
+   ```
+7. **The job ships.** Within about ten minutes the log shows `started` and then `wal shipped=…`, and no
+   `wal upload failed`; a day later `base backup uploaded` (the command that ends the L32 release):
+   ```bash
+   docker compose logs --since 15m backup | tail -n 5
+   ```
+
+`wal upload failed` keeps appearing: nothing is lost, the segments wait in the archive volume and the monitor
+mails after 30 minutes. Step 1 again first. Back to the file before this release, then `git checkout
+compose.yaml` once the cause is found:
+```bash
+git -C /opt/changelens show d97bbdc:deploy/ionos/compose.yaml > /opt/changelens/deploy/ionos/compose.yaml && docker compose up -d backup
+```
+
 ## The release with the landing page (once)
 
 **Not done.** Written 2026-11-22; tested on the PC only (the Caddyfile and the Umami service in the pinned

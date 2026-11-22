@@ -21,7 +21,7 @@ from changelens.api.account import router as account_router
 from changelens.api.early_bird import EarlyBirdCors, MemoryEarlyBird, router as early_bird_router
 from changelens.auth.jwks import JwksKeyHolder
 from changelens.auth.jwt_verifier import JwtPolicy
-from changelens.api.limits import MemoryCounters, RateLimiter
+from changelens.api.limits import MemoryCounters, RateLimiter, UploadSlots
 from changelens.auth.logto_management import idp_for
 from changelens.domain.social import social_for
 from changelens.config import Settings
@@ -137,6 +137,8 @@ def create_app(settings: Settings, db: Optional[Database] = None, store: Optiona
         hit = db_.rate_limit_hit if isinstance(db_, Database) else MemoryCounters()
         limiter = RateLimiter(hit, settings.rate_limit_key)
     app.state.limiter = limiter
+    # Uploads are held in memory, so the number of them at once is bounded per process (LR-10).
+    app.state.upload_slots = UploadSlots(settings.max_concurrent_uploads)
     # Deletes the IdP user on account deletion (I-8 S5); None leaves that step pending.
     app.state.idp = idp_for(settings) if idp is _DEFAULT else idp
     # Native Google and Apple sign-in (I-8 S4): provider clients by name, and Apple token handling for

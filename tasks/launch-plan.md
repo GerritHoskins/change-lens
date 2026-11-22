@@ -84,7 +84,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L10 Migrate the server to head and repeat the restore test (done 2026-11-17: `main` at `6a90bb5`, schema `0008_consent_events`, `RESTORE OK`)
 - [x] L11 Deployed configuration fails closed (built 2026-11-17; integration suite runs in CI)
 - [x] L12 Interactive API docs off in deployed mode (built 2026-11-17, not deployed)
-- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server (Fairphone 2026-11-18, iPhone 2026-11-20; open: MFA on the Fairphone (L30) and the 06 rows)
+- [ ] L13 Device session: sign-in, deletion, PDF picker, consent, one comparison on the server (Fairphone 2026-11-18, iPhone 2026-11-20; MFA on the Fairphone 2026-11-20 (L30); open: the 06 rows)
 - [x] L17 Outside uptime check and patch reminder (done 2026-11-18: HetrixTools monitors on both domains, alert mails received; calendar entry exists)
 
 ### Checkpoint B: M2 exit
@@ -112,11 +112,11 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 - [x] L19 Run every existing test in CI (built 2026-11-17)
 - [x] L20 Dependency audit and update bot in CI (built 2026-11-17; secret scanning was already covered by GitGuardian)
 - [x] L21 Move off Python 3.10 (done 2026-11-17: Python 3.14.10 in CI, on the PC and on the server)
-- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, 3 medium open: L33, L34 and the backup job's internet access (LR-13); runbook drafted)
+- [ ] L22 Security review and incident runbook (D-9) (review of the built scope done 2026-11-18: 1 high and 4 medium fixed, a fifth with L33 and a sixth with the backup job's internet access (LR-13) on 2026-11-21, both on the server; 1 medium open: L34; runbook drafted)
 - [x] L31 A deleted account can't be re-created by a token that is still valid (L22, LR-3) (built 2026-11-18; on the server since the release of 2026-11-19, not checked there)
 - [x] L32 The worker holds no Logto credential and has no route to Logto; parser hardening (L22, LR-4) (built 2026-11-18; released on the server 2026-11-19, `deploy/ionos/one-off-releases.md`; the base backup and a comparison from the iPhone ran on 2026-11-20)
-- [ ] L33 Per-account bounds on uploads and queued work (L22, LR-10)
-- [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision, device check)
+- [x] L33 Per-account bounds on uploads and queued work (L22, LR-10) (built 2026-11-21 with the limits the owner kept; on the server since the release of the same day; the refusal itself was not triggered there)
+- [ ] L34 Android sign-out ends the browser session on every browser (L22, LR-11; owner decision; Fairphone check of 2026-11-20 before any change: Chrome asked for the address and the code again; stays open by the owner's decision of that day)
 - [x] L35 Google sign-in on the iPhone opens the sign-in page every time, with one Google sheet (L13; found in the iPhone sitting of 2026-11-20; built the same day; build 6: 12 of 12 sign-ins, one sheet each)
 - [ ] L23 Legal texts: fill, apply the review, publish, link
 - [x] L24 Close or schedule the open UI findings (done 2026-11-18: 9 of 13 fixed, 4 partly open as L27 and L28)
@@ -135,7 +135,7 @@ Launch gates      L18 docs  L19 CI tests  L20 CI scans  L21 Python  (independent
 
 Tasks that need a Mac or the iPhone go first. Every iOS build runs on Codemagic's Mac (`ios-device-check`,
 `ios-testflight`), so the owner's Mac is needed only to inspect a release build (L25). The iPhone must be in
-hand for steps 3 to 5. PC work comes first only where it saves a second iPhone sitting.
+hand for steps 3 to 6. PC work comes first only where it saves a second iPhone sitting.
 
 1. **Before the build (PC, no device), done 2026-11-18.** L27, then L28's code for A6 and A8, so the sitting sees the final
    screens and the screen reader is checked once. `ios-device-check` gets
@@ -149,9 +149,14 @@ hand for steps 3 to 5. PC work comes first only where it saves a second iPhone s
    AC-15, AC-24, AC-25) and unlocks Checkpoint B, L22, L25 and L26. The Fairphone half of L13 needs no Apple
    hardware and can follow (checklist:
    [`docs/device-sitting-1-android.md`](../docs/device-sitting-1-android.md)).
-4. **iPhone and Mac sitting 2, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
+4. **iPhone sitting 2** (checklist: [`docs/device-sitting-2.md`](../docs/device-sitting-2.md))**, added
+   2026-11-22, not yet run.** One new `ios-device-check` build from `main`. The iPhone half of Checkpoint B (a
+   new user signs up, compares and deletes the account), the screens changed since build 6 (Projects home,
+   the three kinds of message, onboarding, keyboard) and the lines of the Logto branding plan's §5 that were
+   not run.
+5. **iPhone and Mac sitting 3, after L23.** The legal links open on the iPhone (L23). Then L25's iOS half on
    the `ios-testflight` build: the receipt checks of `scripts/release/README.md`, three of them iOS only.
-5. **iPhone sitting 3.** L26, the usability test.
+6. **iPhone sitting 4.** L26, the usability test.
 
 Open before these steps:
 
@@ -164,7 +169,7 @@ Open before these steps:
   Keychain protection are task L29, built 2026-11-18 and passed on the iPhone on 2026-11-20 (build 5).
   `handoff_file_protection` left the iOS launch set on 2026-11-18 (owner's decision) and comes back with I-16.
 - **T4, T7, T12, T15** each end with a manual device check on either phone. Those that are built by then join
-  sitting 2.
+  sitting 3.
 
 ## Parallelisation
 

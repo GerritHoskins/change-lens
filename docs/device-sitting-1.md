@@ -200,7 +200,8 @@ Account A stays for the Fairphone half of L13.
 - That polling really stops in the background is not visible on the phone; step 5 only shows that the
   screen recovers.
 - The access-token lifetime is shown in debug builds only. It was recorded on Android on 2026-11-16.
-- The legal links (L23) and the release-build inspection (L25) are sitting 2.
+- The legal links (L23) and the release-build inspection (L25) are sitting 3. Sitting 2
+  ([`device-sitting-2.md`](device-sitting-2.md)) covers the screens changed after build 6 and the new user.
 
 ## Where the results go
 

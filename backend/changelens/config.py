@@ -111,6 +111,13 @@ class Settings:
     signups_per_ip_per_day: int = 5
     trusted_proxies: tuple = ()  # proxy addresses whose X-Forwarded-For is believed
     rate_limit_key: str = field(default="changelens-dev-only-rate-limit-key-0000", repr=False)  # HMAC key
+    # Per-account bounds on uploads and queued work (LR-10): one account must not keep the single worker busy
+    # for everyone or fill the storage. A request over one is `429 account_limit_reached`.
+    max_unparsed_versions: int = 8  # uploads the worker hasn't parsed yet; a comparison can add two
+    max_unfinished_comparisons: int = 3  # waiting, queued or running
+    max_stored_bytes: int = 1024 ** 3  # originals kept for the account
+    # Upload requests that hold a body in memory at once in one api process; one account gets half of them.
+    max_concurrent_uploads: int = 4
     # The privacy-policy version a usage-events consent answer must name (D-18 tier B). Changing it makes
     # every earlier answer read as unanswered, so the app asks again.
     consent_policy_version: str = "2026-11-13"
@@ -171,6 +178,10 @@ class Settings:
         for url in (self.public_api_url, self.landing_url):
             if url and not _origin(url, https_only=self.auth_mode == "logto"):
                 raise ValueError("the public API URL and the landing URL must be origins (scheme and host, no path)")
+        bounds = (self.max_unparsed_versions, self.max_unfinished_comparisons, self.max_stored_bytes,
+                  self.max_concurrent_uploads)
+        if any(type(bound) is not int or bound < 1 for bound in bounds) or self.max_unparsed_versions < 2:
+            raise ValueError("account bounds must be positive integers; one comparison can add two unparsed versions")
         version = self.consent_policy_version
         if not isinstance(version, str) or not 1 <= len(version) <= 32 or version != version.strip():
             raise ValueError("the consent policy version must be 1 to 32 characters")
@@ -240,6 +251,10 @@ class Settings:
                 rate_limit_account_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_ACCOUNT_PER_MINUTE", "60")),
                 rate_limit_ip_per_minute=int(env.get("CHANGELENS_RATE_LIMIT_IP_PER_MINUTE", "20")),
                 signups_per_ip_per_day=int(env.get("CHANGELENS_SIGNUPS_PER_IP_PER_DAY", "5")),
+                max_unparsed_versions=int(env.get("CHANGELENS_MAX_UNPARSED_VERSIONS", "8")),
+                max_unfinished_comparisons=int(env.get("CHANGELENS_MAX_UNFINISHED_COMPARISONS", "3")),
+                max_stored_bytes=int(env.get("CHANGELENS_MAX_STORED_BYTES", str(1024 ** 3))),
+                max_concurrent_uploads=int(env.get("CHANGELENS_MAX_CONCURRENT_UPLOADS", "4")),
                 consent_policy_version=env.get("CHANGELENS_CONSENT_POLICY_VERSION", "2026-11-13"),
                 trusted_proxies=tuple(p.strip() for p in env.get("CHANGELENS_TRUSTED_PROXIES", "").split(",") if p.strip()),
                 early_bird_per_ip_per_day=int(env.get("CHANGELENS_EARLY_BIRD_PER_IP_PER_DAY", "5")),
