@@ -28,7 +28,7 @@ Nothing is built. This handoff records the owner's decisions of 2026-11-22 for t
 
 These decisions change earlier records, which are not yet updated:
 
-- [`PRODUCT.md`](../PRODUCT.md) records a free tier of three comparisons **per month**; [`api-contracts-draft.md`](api-contracts-draft.md) section B specifies 20 units a month with a ledger (T8 to T12). The lifetime cap replaces both for the demo period.
+- `PRODUCT.md` (kept private, not in the repository) records a free tier of three comparisons **per month**; [`api-contracts-draft.md`](api-contracts-draft.md) section B specifies 20 units a month with a ledger (T8 to T12). The lifetime cap replaces both for the demo period.
 - The same draft, section C2, makes feedback codes only with no free text. The feedback interview may change that.
 - [`tasks/plan.md`](../tasks/plan.md) Gate 0 says allowance and feedback work is not authorised. The owner's "build the landing page first" covers the page; ask before starting the demo limit.
 
@@ -40,7 +40,7 @@ Apple's App Review Guidelines were read on 2026-11-22. Google Play's policies we
 - **5.1.1:** features must not depend on giving contact details. The email earns the discount and nothing else. Never write that signing up unlocks more comparisons.
 - **3.1.3:** the app must not steer users to buy outside in-app purchase. The landing page is outside the app, so it may talk about the future paid version; the in-app wall has to be worded separately.
 - **2.3.1:** no false price. The page states no price, no percentage and no launch date. "The full version is coming soon" is the whole claim.
-- **[`PRODUCT.md`](../PRODUCT.md), Positioning:** no customer proof, time savings, accuracy guarantees or comparisons with other tools. German extraction quality is unmeasured, so the German page must not promise it.
+- **`PRODUCT.md` (private), Positioning:** no customer proof, time savings, accuracy guarantees or comparisons with other tools. German extraction quality is unmeasured, so the German page must not promise it.
 - **Marketing email in Germany:** the list needs a confirmed opt-in (double opt-in) and a line saying what the address is used for. The wording goes to the legal review that is already open (L4, L23 in [`tasks/launch-todo.md`](../tasks/launch-todo.md)).
 - **Imprint:** [`docs/legal/imprint.md`](legal/imprint.md) is a draft with unfilled placeholders. A German site needs a filled imprint before it is public. The privacy text must name the early-bird list.
 
