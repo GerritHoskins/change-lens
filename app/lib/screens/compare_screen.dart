@@ -171,7 +171,7 @@ class _CompareScreenState extends State<CompareScreen> {
           }),
         )),
       // Secondary actions: plain ink text buttons, aligned with the card's text edge.
-      Transform.translate(offset: const Offset(-12, 0), child: Wrap(spacing: 8, children: [
+      CalmTextEdge(child: Wrap(spacing: 8, children: [
         TextButton.icon(key: Key('$key-paste'), onPressed: locked ? null : () => _input(before, paste: true),
             icon: const Icon(CalmIcons.paste), label: Text(l.importPaste)),
         TextButton.icon(key: Key('$key-pdf'), onPressed: locked ? null : () => _input(before, paste: false),

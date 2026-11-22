@@ -259,12 +259,12 @@ class _FindingScreenState extends State<FindingScreen> {
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (busy) Semantics(liveRegion: true, child: Text(l.saving)),
             if (error != null) CalmWarning(text: l.contentLoadFailed,
-              child: TextButton(onPressed: busy || loading ? null : _load, child: Text(l.retry))),
+              child: CalmTextEdge(child: TextButton(onPressed: busy || loading ? null : _load, child: Text(l.retry)))),
             if (checking) Semantics(liveRegion: true, child: Text(l.evidenceChecking)),
             if (evidenceError != null) ...[
               Text(l.evidenceCheckFailed),
               Align(alignment: AlignmentDirectional.centerStart,
-                child: TextButton(onPressed: checking ? null : _checkEvidence, child: Text(l.retry))),
+                child: CalmTextEdge(child: TextButton(onPressed: checking ? null : _checkEvidence, child: Text(l.retry)))),
             ],
             if (evidenceModes(presentations).containsValue('text_fallback'))
               Semantics(sortKey: const OrdinalSortKey(0), liveRegion: true,
@@ -305,10 +305,11 @@ class _FindingScreenState extends State<FindingScreen> {
                         }))),
             )),
           SectionHeader(l.yourReview),
+          // One text edge for the section: the mark and the buttons move out by their own padding.
           Align(alignment: AlignmentDirectional.centerStart,
-            child: CalmReviewMark(key: ValueKey('$id-${f.review?.at}'),
-              text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved)),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+            child: CalmTextEdge(inset: 4, child: CalmReviewMark(key: ValueKey('$id-${f.review?.at}'),
+              text: reviewed ?? l.notReviewed, active: reviewed != null, animate: reviewJustSaved))),
+          CalmTextEdge(child: Wrap(spacing: 8, runSpacing: 8, children: [
             TextButton(onPressed: canReview ? () => _correct(f) : null, child: Text(l.actionCorrect)),
             TextButton(key: const Key('review-dismiss'), onPressed: canReview ? _dismiss : null,
               child: Text(l.actionDismiss)),
@@ -316,7 +317,7 @@ class _FindingScreenState extends State<FindingScreen> {
               final note = await _askNote(required: true);
               if (note != null && note.isNotEmpty) await _review('note', note: note);
             } : null, child: Text(l.actionNote)),
-          ]),
+          ])),
           if (d.reviews.isNotEmpty || d.revisions.length > 1) ...[
             SectionHeader(l.historyTitle),
             for (final r in d.revisions.length > 1 ? d.revisions : <Finding>[])
@@ -344,8 +345,8 @@ class _FindingScreenState extends State<FindingScreen> {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval, icon: const Icon(CalmIcons.add),
-                label: Text(l.recordApproval)),
+            child: CalmTextEdge(child: TextButton.icon(onPressed: busy || loading || error != null ? null : _recordApproval,
+                icon: const Icon(CalmIcons.add), label: Text(l.recordApproval))),
           ),
           ])),
         ]),

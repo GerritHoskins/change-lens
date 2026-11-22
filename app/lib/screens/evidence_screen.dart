@@ -128,7 +128,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
         CalmLoadError(onRetry: loading ? null : _load);
     }
     return Scaffold(
-      appBar: AppBar(title: Text('${e.earlier ? l.sideEarlier : l.sideNewer}: ${widget.version.label}')),
+      appBar: AppBar(title: Text('${e.earlier ? l.sideEarlier : l.sideNewer} · ${widget.version.label}')),
       body: SafeArea(top: false, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (pdf != null) Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Wrap(spacing: 8, children: [

@@ -32,6 +32,19 @@ class CalmInfoButton extends StatelessWidget {
   }
 }
 
+/// Lines a text button's label (or the review mark's text) up with the text edge above it: the
+/// button keeps its 48px target and its padding, and is moved out by that padding instead.
+class CalmTextEdge extends StatelessWidget {
+  const CalmTextEdge({super.key, required this.child, this.inset = 12});
+  final Widget child;
+  /// The child's own start padding: 12 for a text button, 4 for [CalmReviewMark].
+  final double inset;
+
+  @override
+  Widget build(BuildContext context) => Transform.translate(
+    offset: Offset(Directionality.of(context) == TextDirection.rtl ? inset : -inset, 0), child: child);
+}
+
 class CalmCard extends StatelessWidget {
   const CalmCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(18)});
   final Widget child;

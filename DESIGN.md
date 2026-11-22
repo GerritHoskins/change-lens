@@ -355,5 +355,15 @@ gelesen …" keeps its ellipsis on the line. `flutter analyze`: no issues; `flut
 the screenshots in `app/build/screenshots` were regenerated. Kept as decided earlier: the failure
 code under a sign-in error (L35) and the "Continue with" labels.
 
+**Polish (2026-11-22).** With content scrolled under it, the app bar takes the `disabled` tone
+(the scheme's `surfaceContainerHigh`) instead of staying `ground`, so text is not cut at an invisible
+edge; no shadow, and the Finding bar keeps its topic colour. Text buttons and the review mark line up
+with the text edge above them (`CalmTextEdge` moves them out by their own padding, the 48-pixel target
+stays): Finding's review actions, the import buttons on Project, "New project", and Retry inside a
+banner. The Projects title starts on the 20-pixel gutter. The evidence screen's title uses "·" like
+every other source label. Left as they are: the History dots and the comparison card's border (owner-
+approved drafts), definition text at the body role, and "Not reviewed yet" without a ring, as on the
+artboards.
+
 **Not started.** WP-E (allowance) has owner-reviewable drafts but needs the I-14 allowance
 contract. WP-G waits for D-19 and needs a region-evidence design and the share and image packages.
