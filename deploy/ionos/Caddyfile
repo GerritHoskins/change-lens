@@ -117,6 +117,11 @@ changelens.pixeltronic.dev {
 		X-Frame-Options DENY
 	}
 	header /assets/* Cache-Control "public, max-age=86400"
+	# Pages, the stylesheet and the script: a browser asks on every visit whether the file changed and
+	# downloads it again only then, so a release reaches returning visitors at once. Without the header
+	# browsers kept site.js for a time of their own choosing (seen 2026-11-23, the form stayed closed).
+	@fresh not path /assets/* /umami/*
+	header @fresh Cache-Control no-cache
 
 	handle @umami {
 		uri strip_prefix /umami
