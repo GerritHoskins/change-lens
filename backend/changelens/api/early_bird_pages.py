@@ -24,9 +24,11 @@ from changelens.api.limits import MINUTE, client_ip, limiter, network_key
 
 MAX_BODY = 1024
 FORM = "application/x-www-form-urlencoded"
+# The button posts to this page's own address, and the answer is a 303 to the landing page. Chrome applies
+# form-action to that redirect too, so with 'self' alone it blocked the button (seen 2026-11-23); the
+# landing page's origin is therefore allowed as well.
+_POLICY = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'%s; base-uri 'none'; frame-ancestors 'none'"
 PAGE_HEADERS = {
-    "Content-Security-Policy": ("default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; "
-                                "base-uri 'none'; frame-ancestors 'none'"),
     "Referrer-Policy": "no-referrer",  # the page's URL holds the token
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
@@ -89,10 +91,13 @@ button:focus-visible {{ outline: 2px solid var(--link); outline-offset: 3px; }}
 """
 
 
-def page(copy: dict, token: str) -> HTMLResponse:
-    """The one-button page for a token whose form was checked. It never holds an address."""
+def page(copy: dict, token: str, landing_url: str) -> HTMLResponse:
+    """The one-button page for a token whose form was checked. It never holds an address. `landing_url`
+    is the settings' landing origin, where the button's answer redirects to."""
+    policy = _POLICY % (" " + landing_url if landing_url else "")
     values = {name: escape(text, quote=True) for name, text in copy.items()}
-    return HTMLResponse(_PAGE.format(token=escape(token, quote=True), **values), headers=PAGE_HEADERS)
+    return HTMLResponse(_PAGE.format(token=escape(token, quote=True), **values),
+                        headers={"Content-Security-Policy": policy, **PAGE_HEADERS})
 
 
 def to_landing(landing_url: str, target: str, headers=None) -> RedirectResponse:

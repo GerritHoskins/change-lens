@@ -161,6 +161,8 @@ def test_opening_the_confirmation_link_changes_nothing_and_shows_the_one_button_
     assert env.list.rows[ADDRESS] == before and before["status"] == "pending"
     for name, value in PAGE_HEADERS.items():
         assert r.headers[name] == value, name
+    # The button's 303 goes to the landing page, and Chrome applies form-action to the redirect too.
+    assert "form-action 'self' %s;" % LANDING in r.headers["content-security-policy"]
     page = r.text
     assert page.count("<form") == 1 and '<form method="post">' in page and page.count("<button") == 1
     assert page.count(token) == 1 and '<input type="hidden" name="token" value="%s">' % token in page

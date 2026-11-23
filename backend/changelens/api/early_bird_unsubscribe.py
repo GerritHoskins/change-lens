@@ -72,7 +72,7 @@ def unsubscribe_page(request: Request) -> Response:
     token = request.query_params.get("token")
     if verify_unsubscribe_token(settings.early_bird_unsubscribe_key, token) is None:
         return _failed(settings.landing_url)
-    return page(COPY, token)
+    return page(COPY, token, settings.landing_url)
 
 
 @router.post(PATH)
