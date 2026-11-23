@@ -52,8 +52,10 @@
 </header>
 
 <main>
-  <!-- Confirmation states. The link in the confirmation mail (GET /early-bird/confirm on the API)
-       redirects to #confirmed or #confirm-failed; CSS :target shows the one that is addressed.
+  <!-- Confirmation and removal states. The link in the confirmation mail opens a page on the API whose
+       button (POST /early-bird/confirm) redirects to #confirmed or #confirm-failed, the removal link in a
+       mail to the list (POST /early-bird/unsubscribe) to #unsubscribed or #unsubscribe-failed; CSS :target
+       shows the one that is addressed.
        These are divs, not sections: site.js reads `main section[id]` for the language switch. -->
   <div class="notice" id="confirmed">
     <div class="wrap">
@@ -63,6 +65,16 @@
   <div class="notice" id="confirm-failed">
     <div class="wrap">
       <p class="msg msg-warning msg-banner"><span><strong>This link didn’t work.</strong> It may have been used already, or it has expired. If you are not on the list yet, enter your address again. <a href="#early-bird">Go to the form</a></span></p>
+    </div>
+  </div>
+  <div class="notice" id="unsubscribed">
+    <div class="wrap">
+      <p class="msg msg-info msg-banner"><span><strong>Your address is removed.</strong> You are no longer on the early-bird list, and we have deleted your email address.</span></p>
+    </div>
+  </div>
+  <div class="notice" id="unsubscribe-failed">
+    <div class="wrap">
+      <p class="msg msg-warning msg-banner"><span><strong>This link didn’t work.</strong> Your address was not removed. Open the link from the email again, or write to [CONTACT EMAIL] and we will remove it.</span></p>
     </div>
   </div>
 

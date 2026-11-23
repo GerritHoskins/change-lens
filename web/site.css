@@ -332,7 +332,8 @@ html:lang(de) h1 { max-width: 30ch; }
   --msg-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16.5v-5M12 7.5h.01'/%3E%3C/svg%3E");
 }
 
-/* Confirmation states: where the link in the confirmation mail lands (#confirmed, #confirm-failed).
+/* Confirmation and removal states: where the link in the confirmation mail lands (#confirmed,
+   #confirm-failed) and where the removal link does (#unsubscribed, #unsubscribe-failed).
    Hidden unless addressed; no script is involved. */
 .notice { display: none; padding-bottom: 28px; scroll-margin-top: 24px; }
 .notice:target { display: block; }

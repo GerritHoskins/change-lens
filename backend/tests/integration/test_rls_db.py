@@ -54,6 +54,8 @@ FUNCTIONS = {  # name -> result columns (03 §6: IDs and scalar fields only)
     "early_bird_mark_sent": ["early_bird_mark_sent"],
     "early_bird_confirm": ["early_bird_confirm"],
     "early_bird_prune": ["early_bird_prune"],
+    "early_bird_unsubscribe": ["early_bird_unsubscribe"],  # removal from the list (migration 0010)
+    "early_bird_pending_days": ["early_bird_pending_days"],  # the fixed pending period (migration 0011)
 }
 
 
@@ -76,7 +78,7 @@ def test_every_table_with_tenant_id_has_a_forced_tenant_policy_and_nothing_else_
     policies = {(t, cmd): (using, check) for t, cmd, using, check in env.sql(
         "SELECT tablename, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public'")}
     covered = tenant_tables(env)
-    assert len(covered) == 16
+    assert len(covered) == 18
     for name, (rls, forced, tenant) in tables.items():
         if not tenant:
             assert name in EXCEPTIONS, "%s has no tenant_id and is not an explicit exception" % name
@@ -110,6 +112,8 @@ def _fill_every_tenant_table(env):
         env.client.put("/me/onboarding", json={"step": 2}, headers=auth(token))
         assert env.client.put("/me/consent", json={"usage_events": {"granted": True, "policy_version": "2026-11-13"}},
                               headers=auth(token)).status_code == 200
+        assert env.client.post("/me/demo-feedback", json={"missing": "team", "price": "not_sure"},
+                               headers=auth(token)).status_code == 201
         pid = env.project(token)
         a = env.upload(pid, token, label="v1", text="\n".join(EARLIER_LINES)).json()["id"]
         b = env.upload(pid, token, label="v2", text="\n".join(LATER_LINES)).json()["id"]
@@ -193,9 +197,10 @@ def test_an_unfiltered_orm_query_in_tenant_scope_returns_only_that_tenant(env):
 # 4. Every route ------------------------------------------------------------------------------------
 NO_RESOURCE_ID = {("POST", "/session"), ("DELETE", "/me"), ("GET", "/projects"), ("POST", "/projects"),
                   ("GET", "/me/onboarding"), ("PUT", "/me/onboarding"), ("GET", "/me/consent"),
-                  ("PUT", "/me/consent"),
+                  ("PUT", "/me/consent"), ("GET", "/me/demo"), ("POST", "/me/demo-feedback"),
                   # Public, with no tenant and no resource ID (the early-bird list).
-                  ("POST", "/early-bird"), ("GET", "/early-bird/confirm")}
+                  ("POST", "/early-bird"), ("GET", "/early-bird/confirm"), ("POST", "/early-bird/confirm"),
+                  ("GET", "/early-bird/unsubscribe"), ("POST", "/early-bird/unsubscribe")}
 
 
 def _requests(a, b, cid, finding):
@@ -335,10 +340,12 @@ def test_each_function_returns_only_its_listed_columns(env):
              "account_apple_token": ("account_apple_token(:u)", {"u": uuid.uuid4()}),
              "account_apple_token_clear": ("account_apple_token_clear(:u, 'x')", {"u": uuid.uuid4()}),
              "account_social_cleanup": ("account_social_cleanup(:u)", {"u": uuid.uuid4()}),
-             "early_bird_request": ("early_bird_request('columns@example.test', 'en', :h, 7)", {"h": "0" * 64}),
+             "early_bird_request": ("early_bird_request('columns@example.test', 'en', :h, 5)", {"h": "0" * 64}),
              "early_bird_mark_sent": ("early_bird_mark_sent(:h)", {"h": "0" * 64}),
-             "early_bird_confirm": ("early_bird_confirm(:h, 7)", {"h": "1" * 64}),
-             "early_bird_prune": ("early_bird_prune(7)", {})}
+             "early_bird_confirm": ("early_bird_confirm(:h)", {"h": "1" * 64}),
+             "early_bird_prune": ("early_bird_prune()", {}),
+             "early_bird_unsubscribe": ("early_bird_unsubscribe(:i)", {"i": uuid.uuid4()}),
+             "early_bird_pending_days": ("early_bird_pending_days()", {})}
     for name, (call, params) in calls.items():
         columns, _ = _call(env, "SELECT * FROM " + call, **params)
         assert columns == FUNCTIONS[name], name
@@ -373,11 +380,12 @@ def test_each_function_returns_only_its_listed_columns(env):
     "early_bird_request(NULL, 'en', repeat('a', 64), 7)",
     "early_bird_request('a@example.test', 'fr', repeat('a', 64), 7)",
     "early_bird_request('a@example.test', 'en', 'not-a-hash', 7)",
-    "early_bird_request('a@example.test', 'en', repeat('a', 64), 0)",
+    "early_bird_request('a@example.test', 'en', repeat('a', 64), 0)",  # the mail bound: 1 to 100
+    "early_bird_request('a@example.test', 'en', repeat('a', 64), 101)",
     "early_bird_request('a@example.test', 'en', repeat('a', 64), NULL)",
     "early_bird_mark_sent('not-a-hash')", "early_bird_mark_sent(NULL)",
-    "early_bird_confirm('not-a-hash', 7)", "early_bird_confirm(NULL, 7)", "early_bird_confirm(repeat('a', 64), 366)",
-    "early_bird_prune(0)", "early_bird_prune(366)", "early_bird_prune(NULL)",
+    "early_bird_confirm('not-a-hash')", "early_bird_confirm(NULL)", "early_bird_confirm(repeat('A', 64))",
+    "early_bird_unsubscribe(NULL)",
 ])
 def test_functions_reject_invalid_arguments(env, call):
     with pytest.raises(DBAPIError) as error:

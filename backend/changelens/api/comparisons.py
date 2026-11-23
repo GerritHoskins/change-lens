@@ -20,6 +20,7 @@ from starlette.concurrency import run_in_threadpool
 
 from changelens import MODEL_CONFIG_ID, PIPELINE_VERSION, jobs
 from changelens.api import uploads
+from changelens.api.demo import check_demo_limit
 from changelens.api.errors import ApiError, not_found
 from changelens.domain.spend import cap_reached
 from changelens.domain.comparison_queue import advance_comparison
@@ -137,8 +138,10 @@ def create_confirmed(state, tenant, project_id, key: str, earlier: Slot, later: 
                     raise ApiError(409, "idempotency_conflict", "key already used for a different comparison")
                 repo.touch_comparison(existing)
                 return {"id": str(existing.id), "status": existing.status}
-            # Spend caps (I-8 S6) before anything is written or charged. The fair-use allowance
-            # (I-14) is checked here too, once it exists.
+            # The demo limit (docs/demo-wall-handoff.md) and the spend caps (I-8 S6), before anything is
+            # written or charged and after the idempotent replay above has returned. The fair-use
+            # allowance (I-14) is checked here too, once it exists.
+            check_demo_limit(repo, state.settings)
             if cap_reached(repo, state.settings) is not None:
                 raise ApiError(429, "spend_cap_reached", "the monthly spend cap is reached")
             # Per-account bounds on queued work and stored bytes (LR-10), after the replay above was answered.

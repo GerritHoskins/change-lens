@@ -22,7 +22,7 @@ from test_reviews import _compared, _findings, _post
 from conftest import PG, SUBJECT_A, TENANT_A, TENANT_B, TOKEN_A, auth, reset_schema, db_url
 
 SCRATCH_DB = "changelens_migrations_test"
-HEAD = "0009_early_bird"
+HEAD = "0012_demo_limit"
 OWNER_URL = db_url(SCRATCH_DB, OWNER_ROLE)
 
 
@@ -55,6 +55,8 @@ def build_legacy(engine) -> None:
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE account_onboarding DROP CONSTRAINT fk_account_onboarding_user"))
         conn.execute(text("DROP TABLE consent_events"))  # D-18 consent, after the baseline
+        conn.execute(text("DROP TABLE demo_feedback"))  # the demo limit and feedback, after the baseline
+        conn.execute(text("DROP TABLE demo_comparisons"))
         conn.execute(text("DROP TABLE early_bird_signups"))  # the landing page's list, after the baseline
         conn.execute(text("DROP TABLE account_deletions"))  # I-8 S5 and S6, after the baseline too
         conn.execute(text("DROP TABLE rate_limit_counters"))

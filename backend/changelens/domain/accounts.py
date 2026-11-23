@@ -8,8 +8,9 @@ Steps, each resumable, so a crash anywhere leaves a pending receipt that mainten
 2. Apple: revoke the stored refresh token with Apple first, while the row still holds it (AR-1), then
    null it; a failed revoke keeps it and the receipt stays pending (AR-6). No token: nothing to do;
 3. every project of the tenant through project deletion (rows and every object version);
-4. account rows: the onboarding row, its consent answers, the tenant's completed project-deletion receipts, pending links to
-   this user (deleted) and its parked Apple tokens (expired, so maintenance revokes then deletes them);
+4. account rows: the onboarding row, its consent answers, its demo feedback and counted demo comparisons, the
+   tenant's completed project-deletion receipts, pending links to this user (deleted) and its parked Apple
+   tokens (expired, so maintenance revokes then deletes them);
 5. the Logto user (its linked identities and sessions go with it); a 404 counts as done;
 6. tombstone: the subject is cleared, the membership deleted, the receipt `complete`.
 
@@ -109,6 +110,7 @@ def process_account_deletion(db, store, idp, tenant_id: uuid.UUID, user_id: uuid
                 if _projects_gone(repo, tenant_id):
                     repo.delete_onboarding(user_id)
                     repo.delete_consent(user_id)
+                    repo.delete_demo(user_id)
                     repo.s.execute(text("SELECT account_social_cleanup(:u)"), {"u": user_id})
                     repo.s.execute(delete(ProjectDeletion).where(ProjectDeletion.tenant_id == tenant_id,
                                                                  ProjectDeletion.status == "complete"))

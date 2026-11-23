@@ -229,8 +229,7 @@ def maintenance_snapshot(db, *, now=None, limit=100):
     return db.maintenance_candidates(now or utcnow(), limit)
 
 
-def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None, apple=None,
-                    early_bird_pending_days=7) -> dict:
+def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None, apple=None) -> dict:
     """Independent maintenance entry point. Default is a content-free dry run. `idp` deletes Logto users
     for pending account deletions (I-8 S5); without it that step stays pending. `apple`
     (`domain.social.AppleTokens`) revokes Apple tokens of deleted accounts and expired parks (I-8 S4)."""
@@ -254,7 +253,8 @@ def run_maintenance(db, store, *, now=None, limit=100, execute=False, idp=None, 
     result["resolved_uploads"] = reconcile_pending_writes(db, store, now=now, limit=limit)
     result["pruned_rate_limit_windows"] = db.rate_limit_prune()  # hashed counters older than 3 days
     # Early-bird sign-ups nobody confirmed within the pending period (the address is deleted with the row).
-    result["pruned_early_bird_pending"] = db.early_bird_prune(early_bird_pending_days)
+    # The period is fixed in the database (migration 0011); this process doesn't choose it.
+    result["pruned_early_bird_pending"] = db.early_bird_prune()
     from changelens.domain.accounts import run_account_deletions  # accounts imports this module
     result["completed_account_deletions"], result["pending_account_deletions"] = run_account_deletions(
         db, store, idp, now=now, limit=limit, apple=apple)

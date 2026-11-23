@@ -14,10 +14,12 @@ from changelens.auth.jwt_verifier import JwtPolicy
 from changelens.auth.logto_management import IdpUnavailable
 from changelens.domain.models import Membership, User
 from changelens.storage import MemoryObjectStore
+from demo_fixture import fresh
 from test_guard_logto import AUDIENCE, ISSUER, JWKS_URL, KEY_1, KEY_3, GuardDb, Jwks, logto_settings, sign
 
 UNANSWERED = {"usage_events": None}
-NEW = {"status": "active", "onboarding": {"completed": False, "step": None}, "consent": UNANSWERED}
+DEMO = fresh()  # the demo state of an account that has done nothing (tests/unit/test_demo.py covers the rest)
+NEW = {"status": "active", "onboarding": {"completed": False, "step": None}, "consent": UNANSWERED, "demo": DEMO}
 
 
 @pytest.fixture()
@@ -56,10 +58,10 @@ def test_later_calls_return_the_same_account_and_its_onboarding_state(env):
     auth = {"Authorization": "Bearer " + token}
     assert client.put("/me/onboarding", json={"step": 3}, headers=auth).status_code == 200
     assert session(client, token).json() == {"status": "active", "onboarding": {"completed": False, "step": 3},
-                                             "consent": UNANSWERED}
+                                             "consent": UNANSWERED, "demo": DEMO}
     assert client.put("/me/onboarding", json={"completed": True}, headers=auth).status_code == 200
     assert session(client, token).json() == {"status": "active", "onboarding": {"completed": True, "step": None},
-                                             "consent": UNANSWERED}
+                                             "consent": UNANSWERED, "demo": DEMO}
     assert len(rows(db, User)) == 1 and len(rows(db, Membership)) == 1
 
 

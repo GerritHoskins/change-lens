@@ -96,6 +96,9 @@ class TenantRepo:
     def cache_facts(self, version_id, key, value):
         self.state["cache"][(self.tenant_id, key)] = value
 
+    def record_demo_comparison(self, comparison_id, now=None):
+        self.state.setdefault("demo", []).append(comparison_id)
+
     def replace_findings(self, comparison_id, findings):
         self.state["findings"] = findings
 

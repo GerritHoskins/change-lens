@@ -203,6 +203,13 @@ class Api {
           headers: {..._auth, 'Content-Type': 'application/json'},
           body: jsonEncode({'usage_events': {'granted': granted, 'policy_version': policyVersion}}))));
 
+  /// The demo state (`GET /me/demo`) and the one feedback form (`POST /me/demo-feedback`, answering the
+  /// new state); `lib/demo.dart` reads both.
+  Future<Object?> demo() => _json(_client.get(_u('/me/demo'), headers: _auth));
+
+  Future<Object?> sendDemoFeedback(Map<String, dynamic> body) => _json(_client.post(_u('/me/demo-feedback'),
+      headers: {..._auth, 'Content-Type': 'application/json'}, body: jsonEncode(body)));
+
   /// `DELETE /me` (I-8 S5): true when every step finished, false when the rest is pending. Both mean the
   /// account is gone for the app: every later call is rejected.
   Future<bool> deleteAccount() async {

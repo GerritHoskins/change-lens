@@ -141,6 +141,22 @@ partial processing, personal review and client approval always have explicit tex
   what Start does. The pinned bars of
   Projects, Project and Compare (`CalmPinnedBar`) carry a `line` hairline, so a list scrolling
   under them is not cut mid-word.
+- **Demo line, wall and feedback (2026-11-22, `docs/demo-wall-handoff.md`):** while the server sends a
+  demo state, Projects (under the headline) and Compare (under the intro) show one `muted` `small` line,
+  "Demo · 2 of 3 comparisons left": text, never a badge or a bar. With none left, Compare on Projects and
+  Project opens the wall instead of the Compare screen; a start the server refuses with
+  `demo_limit_reached` opens it over Compare, and Back returns to the draft. The wall is a full screen
+  with Back: headline, a body line that reports stay available, the one black pill "Give feedback"
+  (after sending, a line replaces it), and the early-bird list as a title, the address as selectable
+  text and an ink text button "Copy link" (the app has no package that opens a browser). No price, store,
+  date or way to buy; the discount sentence shows only when the server offers it. The form is a full
+  screen: the "what is missing" choice opens a sheet of radio rows (`CalmSelectField`), "Other" adds a
+  required field with its minimum in a `muted` line, then an optional field with the request not to
+  paste document text, the plan description, the amounts as radio rows and the line that the question is
+  no offer. Nothing is preselected. "Send feedback" is pinned; under it a `muted` line names what is
+  missing, first thing first; a failed send shows an `error` message above it and keeps every entry.
+  Settings gets a "Demo" section with one row that opens the form, or the line that feedback was sent.
+  Without a demo state (limit off, older server) none of this appears.
 - **Status:** actual reading/queued/running/terminal status; no invented progress
   percentage. The user can return to the project while processing continues.
 - **Report:** source pair/scope, personal-review count, all-differences access,

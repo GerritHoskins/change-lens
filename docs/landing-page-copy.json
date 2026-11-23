@@ -138,6 +138,11 @@
   "confirm_failed_h": "This link didn’t work.",
   "confirm_failed": "It may have been used already, or it has expired. If you are not on the list yet, enter your address again.",
   "confirm_failed_link": "Go to the form",
+  "unsubscribe_states_note": "unsubscribed_h, unsubscribed, unsubscribe_failed_h and unsubscribe_failed are the two states the removal link lands on (#unsubscribed, #unsubscribe-failed). Added with the unsubscribe routes (2026-11-22). New and unreviewed, in both languages. The address in square brackets is the placeholder the privacy drafts use; the real contact address replaces it.",
+  "unsubscribed_h": "Your address is removed.",
+  "unsubscribed": "You are no longer on the early-bird list, and we have deleted your email address.",
+  "unsubscribe_failed_h": "This link didn’t work.",
+  "unsubscribe_failed": "Your address was not removed. Open the link from the email again, or write to [CONTACT EMAIL] and we will remove it.",
   "legal": [
    "Imprint",
    "Privacy policy",
@@ -275,6 +280,11 @@
   "confirm_failed_h": "Dieser Link hat nicht funktioniert.",
   "confirm_failed": "Er wurde vielleicht schon benutzt oder ist abgelaufen. Wenn du noch nicht auf der Liste stehst, trag deine Adresse noch einmal ein.",
   "confirm_failed_link": "Zum Formular",
+  "unsubscribe_states_note": "unsubscribed_h, unsubscribed, unsubscribe_failed_h and unsubscribe_failed are the two states the removal link lands on (#unsubscribed, #unsubscribe-failed). Added with the unsubscribe routes (2026-11-22). New and unreviewed, in both languages. The address in square brackets is the placeholder the privacy drafts use; the real contact address replaces it.",
+  "unsubscribed_h": "Deine Adresse ist entfernt.",
+  "unsubscribed": "Du stehst nicht mehr auf der Early-Bird-Liste, und wir haben deine E-Mail-Adresse gelöscht.",
+  "unsubscribe_failed_h": "Dieser Link hat nicht funktioniert.",
+  "unsubscribe_failed": "Deine Adresse wurde nicht entfernt. Öffne den Link aus der E-Mail noch einmal oder schreib an [KONTAKT-E-MAIL], dann entfernen wir sie.",
   "legal": [
    "Impressum",
    "Datenschutzerklärung",

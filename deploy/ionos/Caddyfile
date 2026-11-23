@@ -106,6 +106,16 @@ changelens.pixeltronic.dev {
 
 	# Text responses (HTML, CSS, script, SVG, the sitemap) are compressed; images and fonts already are.
 	encode zstd gzip
+	# The page loads its own files only: one stylesheet, one script, its fonts and images (the message icons
+	# are data: images inside the stylesheet), no inline style or script (the structured-data block in the
+	# head is data, not script, so the policy does not apply to it). Its script calls the API (the
+	# early-bird form) and, when the tracker is on, /umami/api/send on this host. The form itself targets the
+	# page. Checked in a browser with these headers on both pages and both themes (2026-11-22).
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.pixeltronic.dev; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+	}
 	header /assets/* Cache-Control "public, max-age=86400"
 
 	handle @umami {

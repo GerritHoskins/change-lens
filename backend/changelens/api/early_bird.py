@@ -1,27 +1,42 @@
-"""The landing page's early-bird list (docs/landing-page-handoff.md): two public routes, no bearer token.
+"""The landing page's early-bird list (docs/landing-page-handoff.md): public routes, no bearer token.
 
 `POST /early-bird`, JSON `{"email": ..., "locale": "en" | "de"}`, nothing else, at most 1 KiB, sent as
 `application/json` (so a browser must ask first, see CORS below). Invalid input is `422 invalid_request`
 and is never echoed. Every valid request gets the same `202` and the same body, whether the address is
-new, waiting for confirmation or already confirmed, so the route can't be used to test for addresses.
-The confirmation mail (double opt-in) is sent after the response.
+new, waiting for confirmation or already confirmed, and whether or not a mail goes out, so the route can't
+be used to test for addresses. The confirmation mail (double opt-in) is sent from the mail queue
+(`changelens/mail/queue.py`): two threads of its own, at most 50 mails waiting, one more is dropped.
 
-Limits: requests per IP per UTC day (`429 rate_limited` with `Retry-After`), counted before the body is
-looked at; and confirmation mails per address per UTC day, keyed through the limiter's HMAC so no counter
-holds an address. Over the second limit the answer is still `202` and nothing is sent or changed.
+Limits, all through the rate limiter (keyed hashes, no address or IP in a counter):
+- Requests per client per UTC day (`429 rate_limited` with `Retry-After`), counted before any of the body is
+  read. A client is an IPv4 address or an IPv6 /64 network.
+- Confirmation mails per address per UTC day. The counter's key ignores a `+tag` in the local part, so
+  `name+1@host` and `name+2@host` count as one; the stored address keeps its tag.
+- Confirmation mails to all addresses together, per hour and per UTC day. These count every request that
+  reaches them (valid, under the address limit), also one that then sends nothing.
+- Mails per pending sign-up over its whole life (`early_bird_request`, migration 0011).
+Over any of the last three the answer is still `202`, nothing is sent and nothing changes.
 
-`GET /early-bird/confirm?token=...` confirms once by the token's SHA-256 and always answers `303` to the
-landing page: `/#confirmed` (`/de/#confirmed` for a German sign-up) or `/#confirm-failed` for a missing,
-unknown, used or expired token and for a rate-limited or failed request. A person opening a mail link
-never gets a JSON error.
+`GET /early-bird/confirm?token=...` changes nothing: mail scanners open links. A well-formed token gets the
+one-button page (`early_bird_pages.py`) without the list being read, so the page says nothing about the
+token. `POST /early-bird/confirm` (the page's form, field `token`) confirms once by the token's SHA-256 and
+answers `303` to the landing page: `/#confirmed` (`/de/#confirmed` for a German sign-up), or
+`/#confirm-failed` for a missing, malformed, unknown, used or expired token and for a rate-limited or failed
+request. A person following a mail link never gets a JSON error. A newer link replaces the one mailed
+before only once its own mail was handed to the mail server; a link lives for the pending period
+(`mail.confirmation.PENDING_DAYS`, fixed in the database) from when it was issued.
+
+Removal from the list (`/early-bird/unsubscribe`) is in `early_bird_unsubscribe.py`.
 
 CORS, for `/early-bird` only (`EarlyBirdCors`): the configured landing origin may `POST` with
 `Content-Type`, no credentials. No other route has CORS headers, and with no landing origin configured
 (dev) no origin is allowed.
 
-Logs carry event codes and the page language only, never an address, a token or a link. They are also
-the server-side counts (handoff, Measurement): `early_bird_accepted` and `early_bird_confirmed` per day
-and language.
+Logs carry event codes and the page language only, never an address, a token or a link. They are also the
+server-side counts (handoff, Measurement), per day and language: `early_bird_accepted` is every valid
+request to the form (also a repeated one, one for a confirmed address and one over a mail limit);
+`early_bird_mail_due` is a request that issued a link and queued a mail, the count of sign-up attempts;
+`early_bird_confirmed` is an address that joined the list.
 """
 from __future__ import annotations
 
@@ -30,17 +45,19 @@ import json
 import logging
 import re
 import secrets
-import threading
-import time
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, Request
 from fastapi.concurrency import run_in_threadpool
 from starlette.datastructures import Headers, MutableHeaders
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import Response
 
+from changelens.api.early_bird_memory import MemoryEarlyBird  # noqa: F401 (imported from here by the app)
+from changelens.api.early_bird_pages import (client_key, counted_body, form_token, over_minute_limit, page,
+                                             read_body, to_landing)
 from changelens.api.errors import ApiError
-from changelens.api.limits import DAY, client_ip, limit_ip, limiter
+from changelens.api.limits import DAY, limiter
+from changelens.mail import MailError
 from changelens.mail.confirmation import LOCALES, confirmation_mail
 
 router = APIRouter()
@@ -49,12 +66,29 @@ log = logging.getLogger("changelens.early_bird")
 PATH = "/early-bird"
 MAX_BODY = 1024
 MAX_EMAIL = 254
+HOUR = 3600
 ACCEPTED = {"status": "accepted"}
+CONFIRM_FAILED = "/#confirm-failed"  # the language is unknown: the English root
 # Conservative, not RFC 5322: ASCII only, one "@", the usual local-part characters, a dotted host name.
 # Whitespace, control characters, quotes, brackets, commas and non-ASCII letters never pass, so the
 # address is safe in a mail header as it stands.
 _EMAIL = re.compile(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?")
 _TOKEN = re.compile(r"[A-Za-z0-9_-]{32,128}")
+
+# WORDING NEW AND UNREVIEWED (both languages), like the confirmation mail.
+CONFIRM_COPY = {
+    "title": "ChangeLens early-bird list",
+    "en_h": "Join the early-bird list?",
+    "en_p": ("Press the button to confirm your email address for the ChangeLens early-bird list. "
+             "If you did not ask for this, close this page: the address is deleted by itself."),
+    "de_h": "Auf die Early-Bird-Liste setzen?",
+    "de_p": ("Mit dem Button bestätigst du deine E-Mail-Adresse für die Early-Bird-Liste von ChangeLens. "
+             "Wenn du das nicht warst, schließe diese Seite: Die Adresse wird von selbst gelöscht."),
+    "en_button": "Confirm",
+    "de_button": "Bestätigen",
+    "en_note": "Nothing changes until you press the button.",
+    "de_note": "Solange du den Button nicht drückst, ändert sich nichts.",
+}
 
 
 def normalise_email(value) -> Optional[str]:
@@ -70,58 +104,15 @@ def normalise_email(value) -> Optional[str]:
     return email
 
 
+def counter_address(email: str) -> str:
+    """What the per-address mail limit counts by: the address without a `+tag` in its local part. Only the
+    counter's key; the address itself is stored and mailed as it was entered."""
+    local, _, host = email.rpartition("@")
+    return (local.split("+", 1)[0] or local) + "@" + host
+
+
 def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
-
-
-class MemoryEarlyBird:
-    """The list in one process, for tests without services: the same four calls and rules as the
-    `early_bird_*` functions of migration 0009 (`Database` has them as methods)."""
-
-    def __init__(self, clock=time.time):
-        self.rows: dict = {}
-        self._clock, self._lock = clock, threading.Lock()
-
-    def _expired(self, row: dict, pending_days: int) -> bool:
-        return row["created_at"] < self._clock() - pending_days * DAY
-
-    def early_bird_request(self, email: str, locale: str, hashed: str, pending_days: int) -> bool:
-        with self._lock:
-            row = self.rows.get(email)
-            if row is None:
-                self.rows[email] = {"locale": locale, "status": "pending", "token_hash": hashed,
-                                    "created_at": self._clock(), "confirmation_sent_at": None,
-                                    "confirmed_at": None}
-                return True
-            if row["status"] != "pending":
-                return False
-            if self._expired(row, pending_days):
-                row["created_at"] = self._clock()
-            row.update(locale=locale, token_hash=hashed)
-            return True
-
-    def early_bird_mark_sent(self, hashed: str) -> None:
-        with self._lock:
-            for row in self.rows.values():
-                if row["token_hash"] == hashed and row["status"] == "pending":
-                    row["confirmation_sent_at"] = self._clock()
-
-    def early_bird_confirm(self, hashed: str, pending_days: int) -> Optional[str]:
-        with self._lock:
-            for row in self.rows.values():
-                if (row["token_hash"] == hashed and row["status"] == "pending"
-                        and not self._expired(row, pending_days)):
-                    row.update(status="confirmed", confirmed_at=self._clock(), token_hash=None)
-                    return row["locale"]
-        return None
-
-    def early_bird_prune(self, pending_days: int) -> int:
-        with self._lock:
-            gone = [email for email, row in self.rows.items()
-                    if row["status"] == "pending" and self._expired(row, pending_days)]
-            for email in gone:
-                del self.rows[email]
-            return len(gone)
 
 
 class EarlyBirdCors:
@@ -157,20 +148,6 @@ def _invalid() -> ApiError:
     return ApiError(422, "invalid_request", "send {email, locale} as application/json")
 
 
-async def _body(request: Request) -> bytes:
-    """The body, read up to the route's own small cap (the app-wide cap is sized for documents)."""
-    length = request.headers.get("content-length")
-    if length is not None and (not length.isdigit() or int(length) > MAX_BODY):
-        raise ApiError(413, "limit_exceeded", "bytes")
-    chunks, seen = [], 0
-    async for chunk in request.stream():
-        seen += len(chunk)
-        if seen > MAX_BODY:
-            raise ApiError(413, "limit_exceeded", "bytes")
-        chunks.append(chunk)
-    return b"".join(chunks)
-
-
 def _parse(request: Request, raw: bytes) -> tuple[str, str]:
     # A JSON content type makes a cross-origin browser request ask first (preflight), which only the
     # landing origin passes; a form or text post from another site is refused here.
@@ -188,74 +165,103 @@ def _parse(request: Request, raw: bytes) -> tuple[str, str]:
     return email, locale
 
 
+def _count_request(request: Request) -> None:
+    settings = request.app.state.settings
+    limiter(request).check("early-bird", client_key(request), settings.early_bird_per_ip_per_day, DAY)
+
+
 @router.post(PATH, status_code=202)
-async def request_early_bird(request: Request, background: BackgroundTasks):
-    raw = await _body(request)
-    return await run_in_threadpool(_accept, request, raw, background)
+async def request_early_bird(request: Request):
+    await run_in_threadpool(_count_request, request)  # before the body: a large or slow one counts too
+    raw = await read_body(request, MAX_BODY)
+    if raw is None:
+        raise ApiError(413, "limit_exceeded", "bytes")
+    return await run_in_threadpool(_accept, request, raw)
 
 
-def _accept(request: Request, raw: bytes, background: BackgroundTasks) -> dict:
+def _mail_cap(request: Request, email: str) -> Optional[str]:
+    """Which mail limit this request is over, if any. The limits for all addresses come last, so a request
+    stopped by the address's own limit doesn't use them up."""
+    settings, check = request.app.state.settings, limiter(request).check
+    for scope, ident, limit, window, name in (
+            ("early-bird-mail", counter_address(email), settings.early_bird_mails_per_address_per_day, DAY, "address"),
+            ("early-bird-mail-hour", "all", settings.early_bird_mails_per_hour, HOUR, "all_hour"),
+            ("early-bird-mail-day", "all", settings.early_bird_mails_per_day, DAY, "all_day")):
+        try:
+            check(scope, ident, limit, window)
+        except ApiError:
+            return name
+    return None
+
+
+def _accept(request: Request, raw: bytes) -> dict:
     state = request.app.state
     settings = state.settings
-    limiter(request).check("early-bird", client_ip(request), settings.early_bird_per_ip_per_day, DAY)
     email, locale = _parse(request, raw)
+    log.info("early_bird_accepted locale=%s", locale)
+    capped = _mail_cap(request, email)
+    if capped:  # the same answer; no new token either, so a link already mailed keeps working
+        log.info("early_bird_mail_capped scope=%s", capped)
+        return ACCEPTED
     token = secrets.token_urlsafe(32)
     hashed = token_hash(token)
-    try:
-        limiter(request).check("early-bird-mail", email, settings.early_bird_mails_per_address_per_day, DAY)
-        capped = False
-    except ApiError:
-        capped = True  # same answer; no new token either, so a link already mailed keeps working
-    due = False if capped else state.early_bird.early_bird_request(email, locale, hashed,
-                                                                  settings.early_bird_pending_days)
-    log.info("early_bird_accepted locale=%s", locale)
-    if capped:
-        log.info("early_bird_mail_capped")
-    if due:
-        base = settings.public_api_url or str(request.base_url).rstrip("/")  # the fallback is dev mode only
-        background.add_task(_send_confirmation, state, email, locale, base + PATH + "/confirm?token=" + token,
-                            hashed)
+    if not state.early_bird.early_bird_request(email, locale, hashed, settings.early_bird_mails_per_row):
+        return ACCEPTED  # already confirmed, or this pending sign-up has had all its mails
+    log.info("early_bird_mail_due locale=%s", locale)
+    base = settings.public_api_url or str(request.base_url).rstrip("/")  # the fallback is dev mode only
+    link = base + PATH + "/confirm?token=" + token
+    if not state.mail_queue.submit(_send_confirmation, state, email, locale, link, hashed):
+        log.error("early_bird_mail_failed reason=queue_full")
     return ACCEPTED
 
 
 def _send_confirmation(state, email: str, locale: str, link: str, hashed: str) -> None:
-    """After the response. A failure is logged as an event code; the request was already answered."""
-    subject, body = confirmation_mail(locale, link, state.settings.early_bird_pending_days)
+    """On a mail-queue thread. A failure is logged as an event code; the request was already answered. The
+    new link replaces the one mailed before only here, once this mail is out."""
+    subject, body = confirmation_mail(locale, link)
     try:
         state.mailer.send(email, subject, body)
         state.early_bird.early_bird_mark_sent(hashed)
-    except Exception as exc:  # the class name only: a message could quote the address
-        log.error("early_bird_mail_failed reason=%s", getattr(exc, "reason", None) or type(exc).__name__)
+    except MailError as exc:  # its reason is an exception class name by construction
+        log.error("early_bird_mail_failed reason=%s", exc.reason)
+        return
+    except Exception as exc:  # the class name only: a message, or a `reason` of its own, could quote the address
+        log.error("early_bird_mail_failed reason=%s", type(exc).__name__)
         return
     log.info("early_bird_mail_sent locale=%s", locale)
 
 
 @router.get(PATH + "/confirm")
-def confirm_early_bird(request: Request):
+def confirm_page(request: Request) -> Response:
+    settings = request.app.state.settings
+    limited = over_minute_limit(request)
+    if limited is not None:
+        return to_landing(settings.landing_url, CONFIRM_FAILED, limited)
+    token = request.query_params.get("token", "")
+    if not _TOKEN.fullmatch(token):
+        log.info("early_bird_confirm_failed")
+        return to_landing(settings.landing_url, CONFIRM_FAILED)
+    return page(CONFIRM_COPY, token)
+
+
+@router.post(PATH + "/confirm")
+async def confirm_early_bird(request: Request) -> Response:
+    limited, raw = await counted_body(request)
+    if limited is not None:
+        return to_landing(request.app.state.settings.landing_url, CONFIRM_FAILED, limited)
+    return await run_in_threadpool(_confirm, request, raw)
+
+
+def _confirm(request: Request, raw: Optional[bytes]) -> Response:
     state = request.app.state
-    settings = state.settings
-    try:
-        limit_ip(request)
-    except ApiError as exc:
-        return _redirect(settings.landing_url, None, exc.headers)
-    token, locale = request.query_params.get("token", ""), None
+    token, locale = (form_token(request, raw) if raw is not None else None) or "", None
     if _TOKEN.fullmatch(token):
         try:
-            locale = state.early_bird.early_bird_confirm(token_hash(token), settings.early_bird_pending_days)
+            locale = state.early_bird.early_bird_confirm(token_hash(token))
         except Exception as exc:
             log.error("early_bird_confirm_error reason=%s", type(exc).__name__)
-    if locale in LOCALES:
-        log.info("early_bird_confirmed locale=%s", locale)
-    else:
-        log.info("early_bird_confirm_failed")
-    return _redirect(settings.landing_url, locale)
-
-
-def _redirect(landing_url: str, locale: Optional[str], headers=None) -> RedirectResponse:
     if locale not in LOCALES:
-        target = "/#confirm-failed"  # the language is unknown: the English root
-    else:
-        target = "/de/#confirmed" if locale == "de" else "/#confirmed"
-    # The confirmation URL holds the (now used) token: don't pass it on as a referrer.
-    return RedirectResponse(landing_url + target, status_code=303,
-                            headers={**(headers or {}), "Referrer-Policy": "no-referrer"})
+        log.info("early_bird_confirm_failed")
+        return to_landing(state.settings.landing_url, CONFIRM_FAILED)
+    log.info("early_bird_confirmed locale=%s", locale)
+    return to_landing(state.settings.landing_url, "/de/#confirmed" if locale == "de" else "/#confirmed")

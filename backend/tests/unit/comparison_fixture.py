@@ -17,6 +17,7 @@ from changelens import jobs
 from changelens.api.app import create_app
 from changelens.config import Limits, Settings
 from changelens.domain import comparison_lock_id, project_lock_id, used_at
+from changelens.domain.demo import IN_FLIGHT
 from changelens.domain.models import Comparison, ObjectWriteIntent, Project, SourceVersion
 from changelens.storage import MemoryObjectStore, original_key
 from changelens.worker import Worker
@@ -26,7 +27,7 @@ from identity_fixture import SqliteIdentity
 
 class TransactionalDb:
     def __init__(self):
-        self.state = {"projects": {}, "versions": {}, "comparisons": {}, "jobs": []}
+        self.state = {"projects": {}, "versions": {}, "comparisons": {}, "jobs": [], "demo": set()}
         self.lock = RLock()
         self.commit_failure = None
         self.intent_commit_failure = None
@@ -79,6 +80,24 @@ class TenantRepo:
 
     def global_month_spend(self, since):
         return Decimal("0")
+
+    # The demo limit (docs/demo-wall-handoff.md): `domain.demo.DemoRepo` over the in-memory state. The lock
+    # and the one-statement count need PostgreSQL (tests/integration/test_demo_db.py).
+    def lock_demo(self):
+        lock_id = comparison_lock_id(self.tenant_id, "demo")
+        assert lock_id not in self.db.active_locks
+        self.db.active_locks.add(lock_id)
+        self.held_locks.add(lock_id)
+
+    def demo_counts(self):
+        mine = [c for c in self.state["comparisons"].values()
+                if c.tenant_id == self.tenant_id and self.project(c.project_id) is not None]
+        used = sum(1 for tenant, _ in self.state["demo"] if tenant == self.tenant_id)
+        return used, sum(1 for c in mine if c.status in IN_FLIGHT)
+
+    def record_demo_comparison(self, comparison_id, now=None):
+        self.product_dirty = True
+        self.state["demo"].add((self.tenant_id, comparison_id))
 
     def _get(self, collection, identifier):
         row = self.state[collection].get(identifier)
@@ -206,11 +225,13 @@ class TenantRepo:
 
 
 class Environment:
-    def __init__(self, monkeypatch):
+    def __init__(self, monkeypatch, demo_limit=0):
+        """`demo_limit`: 0 (off) unless a test is about the demo limit; several tests here start more
+        comparisons for one tenant than the demo allows."""
         self.tenant, self.other_tenant = uuid.uuid4(), uuid.uuid4()
         self.db, self.store = TransactionalDb(), MemoryObjectStore()
         self.settings = Settings(database_url="unused", s3_endpoint="unused", s3_access_key="unused",
-            s3_secret_key="unused", s3_bucket="unused", dev_tokens=DEV_TOKENS,
+            s3_secret_key="unused", s3_bucket="unused", dev_tokens=DEV_TOKENS, demo_comparison_limit=demo_limit,
             limits=Limits(max_pdf_bytes=20_000, max_pdf_pages=2, max_text_bytes=1000, max_text_words=100))
         self.identity = SqliteIdentity()
         self.identity.seed(SUBJECT_A, self.tenant)
