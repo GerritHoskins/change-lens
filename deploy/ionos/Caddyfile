@@ -104,8 +104,11 @@ changelens.pixeltronic.dev {
 	log_append @bot bot 1
 	log_append @noagent bot 1
 
+	# Text responses (HTML, CSS, script, SVG, the sitemap) are compressed; images and fonts already are.
+	encode zstd gzip
 	# The page loads its own files only: one stylesheet, one script, its fonts and images (the message icons
-	# are data: images inside the stylesheet), no inline style or script. Its script calls the API (the
+	# are data: images inside the stylesheet), no inline style or script (the structured-data block in the
+	# head is data, not script, so the policy does not apply to it). Its script calls the API (the
 	# early-bird form) and, when the tracker is on, /umami/api/send on this host. The form itself targets the
 	# page. Checked in a browser with these headers on both pages and both themes (2026-11-22).
 	header {

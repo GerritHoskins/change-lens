@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /umami/
+
+Sitemap: https://changelens.pixeltronic.dev/sitemap.xml
