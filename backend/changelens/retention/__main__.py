@@ -28,7 +28,7 @@ def main(argv=None):
     parser.add_argument("--limit", type=positive, default=100)
     args = parser.parse_args(argv)
     configure_logging()
-    settings = Settings.from_env()
+    settings = Settings.from_env(mail=False)  # maintenance sends no mail and holds no mail setting
     db = Database(settings.database_url)
     # No schema bootstrap or bucket creation here: even preview must remain read-only.
     store = S3ObjectStore(settings.s3_endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_bucket)
@@ -38,8 +38,7 @@ def main(argv=None):
         db.assert_app_role()  # RLS must apply to this process (I-8 S3)
         while True:
             try:
-                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp,
-                                          apple=apple, early_bird_pending_days=settings.early_bird_pending_days)
+                summary = run_maintenance(db, store, limit=args.limit, execute=args.apply, idp=idp, apple=apple)
                 print(json.dumps(summary, sort_keys=True), flush=True)
                 if args.once:
                     return 0

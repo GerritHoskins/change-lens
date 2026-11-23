@@ -16,6 +16,7 @@ from changelens.config import Settings
 from changelens.domain import Database, DbFactCache
 from changelens.domain.budget import DbCostMeter
 from changelens.domain.comparison_queue import resume_waiting
+from changelens.domain.demo import COUNTED
 from changelens.domain.storage_intents import reconcile_pending_writes
 from changelens.domain.models import Finding
 from changelens.llm import FakeLlm, LlmPort
@@ -175,6 +176,8 @@ class Worker:
             c.unexplained = [_evidence_json(ev) for ev in checked.unexplained]
             c.presentation_only = [_evidence_json(ev) for ev in checked.presentation_only]
             c.status, c.warnings = status, warnings
+            if status in COUNTED:  # the demo limit counts it here, in this transaction, once; never `failed`
+                repo.record_demo_comparison(c.id)
             # Model attempts already persisted actual usage and outstanding holds. A retry
             # or late worker must never replace that history with its own run's total.
             if c.cost_actual is None:

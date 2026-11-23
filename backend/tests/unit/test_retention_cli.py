@@ -12,9 +12,9 @@ def test_one_pass_is_read_only_unless_explicitly_applied(monkeypatch, capsys, ap
     engine = SimpleNamespace(dispose=lambda: calls.append("dispose"))
     db = SimpleNamespace(engine=engine, _intent_engine=engine, assert_app_role=lambda: calls.append("role"))
     settings = SimpleNamespace(auth_mode="logto", logto_management_endpoint=None, database_url="synthetic", s3_endpoint="synthetic", s3_access_key="synthetic",
-                               s3_secret_key="synthetic", s3_bucket="synthetic", apple_client_id=None,
-                               early_bird_pending_days=9)
-    monkeypatch.setattr(cli.Settings, "from_env", lambda: settings)
+                               s3_secret_key="synthetic", s3_bucket="synthetic", apple_client_id=None)
+    # Maintenance asks for its settings without the mail ones (it sends no mail and holds no mail secret).
+    monkeypatch.setattr(cli.Settings, "from_env", lambda mail: calls.append({"mail": mail}) or settings)
     monkeypatch.setattr(cli, "Database", lambda url: db)
     monkeypatch.setattr(cli, "S3ObjectStore", lambda *args: object())
     monkeypatch.setattr(cli, "configure_logging", lambda: None)
@@ -26,8 +26,8 @@ def test_one_pass_is_read_only_unless_explicitly_applied(monkeypatch, capsys, ap
 
     monkeypatch.setattr(cli, "run_maintenance", maintain)
     assert cli.main(["--once", "--limit", "7"] + (["--apply"] if apply else [])) == 0
-    assert calls == ["role", {"limit": 7, "execute": apply, "idp": None, "apple": None,
-                               "early_bird_pending_days": 9}, "dispose", "dispose"]
+    assert calls == [{"mail": False}, "role", {"limit": 7, "execute": apply, "idp": None, "apple": None},
+                     "dispose", "dispose"]
     assert '"candidate_projects": 3' in capsys.readouterr().out
 
 

@@ -1,6 +1,7 @@
-"""The early-bird list's two public routes (docs/landing-page-handoff.md) with no services: the list and the
-rate-limit counters in memory, the recording mail sender. The Postgres functions are checked in
-tests/integration/test_early_bird_db.py."""
+"""The early-bird list's sign-up and confirmation routes (docs/landing-page-handoff.md) with no services: the
+list and the rate-limit counters in memory, the recording mail sender, mails sent inline instead of from the
+mail queue's threads. The Postgres functions are checked in tests/integration/test_early_bird_db.py; the
+fixes of the 2026-11-22 review (caps, link tokens, the queue) in test_early_bird_hardening.py."""
 import io
 import json
 import logging
@@ -16,6 +17,7 @@ from changelens.api.limits import MemoryCounters, RateLimiter
 from changelens.config import Settings
 from changelens.logs import configure_logging
 from changelens.mail import RecordingMailer
+from changelens.mail.queue import InlineMailQueue
 from changelens.storage import MemoryObjectStore
 from helpers import DEV_TOKENS
 
@@ -25,7 +27,7 @@ DAY = 86400
 
 
 class Env:
-    def __init__(self, mailer=None, **overrides):
+    def __init__(self, mailer=None, mail_queue=None, **overrides):
         base = dict(database_url="unused", s3_endpoint="unused", s3_access_key="x", s3_secret_key="x",
                     s3_bucket="x", dev_tokens=DEV_TOKENS, landing_url=LANDING, public_api_url=API)
         self.settings = Settings(**{**base, **overrides})
@@ -35,7 +37,7 @@ class Env:
         self.mailer = RecordingMailer() if mailer is None else mailer
         limiter = RateLimiter(self.counters, self.settings.rate_limit_key, clock=lambda: self.now)
         self.app = create_app(self.settings, SimpleNamespace(), MemoryObjectStore(), limiter=limiter,
-                              mailer=self.mailer, early_bird=self.list)
+                              mailer=self.mailer, early_bird=self.list, mail_queue=mail_queue or InlineMailQueue())
         self.client = self.at("203.0.113.5")
 
     def at(self, ip):
@@ -47,8 +49,14 @@ class Env:
     def token(self, index=-1):
         return re.search(r"/early-bird/confirm\?token=([A-Za-z0-9_-]+)", self.mailer.sent[index].body).group(1)
 
-    def confirm(self, token):
+    def open(self, token):
+        """Open the link in the mail: the page with the button. Changes nothing."""
         return self.client.get("/early-bird/confirm", params={"token": token})
+
+    def confirm(self, token):
+        """Press the page's button: the form post that confirms."""
+        return self.client.post("/early-bird/confirm?token=" + token, content="token=" + token,
+                                headers={"Content-Type": "application/x-www-form-urlencoded"})
 
 
 @pytest.fixture()
@@ -173,9 +181,17 @@ def test_a_newer_link_replaces_the_older_one(env):
                                    "?token=%3Cscript%3E", "?other=1"])
 def test_a_missing_unknown_or_malformed_token_redirects_and_is_never_json(env, query):
     env.join()
-    r = env.client.get("/early-bird/confirm" + query)
-    assert r.status_code == 303 and r.headers["location"] == LANDING + "/#confirm-failed"
-    assert "json" not in r.headers.get("content-type", "") and env.list.rows[ADDRESS]["status"] == "pending"
+    opened = env.client.get("/early-bird/confirm" + query)
+    if query == "?token=" + "a" * 43:  # well-formed: the page, which says nothing about the token
+        assert opened.status_code == 200 and opened.text == env.open(env.token()).text.replace(env.token(), "a" * 43)
+    else:
+        assert opened.status_code == 303 and opened.headers["location"] == LANDING + "/#confirm-failed"
+    form = {"Content-Type": "application/x-www-form-urlencoded"}
+    for r in (env.client.post("/early-bird/confirm" + query, content=query[1:], headers=form),
+              env.client.post("/early-bird/confirm" + query)):
+        assert r.status_code == 303 and r.headers["location"] == LANDING + "/#confirm-failed"
+        assert "json" not in r.headers.get("content-type", "")
+    assert env.list.rows[ADDRESS]["status"] == "pending"
 
 
 def test_a_token_expires_with_the_pending_period_and_the_row_is_pruned(env):
@@ -183,11 +199,11 @@ def test_a_token_expires_with_the_pending_period_and_the_row_is_pruned(env):
     token = env.token()
     env.now += 7 * DAY + 1
     assert env.confirm(token).headers["location"] == LANDING + "/#confirm-failed"
-    assert env.list.early_bird_prune(7) == 1 and not env.list.rows
+    assert env.list.early_bird_prune() == 1 and not env.list.rows
     env.join()  # the same address can sign up again
     env.confirm(env.token())
     env.now += 30 * DAY
-    assert env.list.early_bird_prune(7) == 0 and env.list.rows[ADDRESS]["status"] == "confirmed"
+    assert env.list.early_bird_prune() == 0 and env.list.rows[ADDRESS]["status"] == "confirmed"
 
 
 def test_an_expired_pending_row_starts_a_new_period_on_the_next_request(env):
@@ -201,7 +217,8 @@ def test_confirmation_is_limited_per_ip_with_a_redirect_not_an_error_page():
     env = Env(rate_limit_ip_per_minute=2)
     env.join()
     for _ in range(2):
-        assert env.client.get("/early-bird/confirm?token=" + "b" * 43).status_code == 303
+        assert env.confirm("b" * 43).status_code == 303
+    assert env.open(env.token()).headers["location"] == LANDING + "/#confirm-failed"  # the page is limited too
     limited = env.confirm(env.token())
     assert limited.status_code == 303 and limited.headers["location"] == LANDING + "/#confirm-failed"
     assert int(limited.headers["retry-after"]) > 0 and env.list.rows[ADDRESS]["status"] == "pending"
@@ -237,8 +254,8 @@ def test_the_fourth_mail_to_one_address_in_a_day_is_not_sent_but_the_answer_is_t
 
 def test_the_counters_hold_no_address_and_no_ip(env):
     env.join()
-    keys = [key for key, _ in env.counters._hits]
-    assert len(keys) == 2 and all(re.fullmatch(r"[0-9a-f]{64}", key) for key in keys)
+    keys = [key for key, _ in env.counters._hits]  # the client, the address, and all mails per hour and day
+    assert len(keys) == 4 and all(re.fullmatch(r"[0-9a-f]{64}", key) for key in keys)
     assert "ada" not in "".join(keys) and "203" not in "".join(keys)
 
 
@@ -319,7 +336,7 @@ def test_logs_hold_event_codes_and_never_the_address_token_or_link(env):
 
     out = _logged(run)
     for event in ("early_bird_accepted locale=de", "early_bird_mail_sent locale=de", "early_bird_confirmed locale=de",
-                  "early_bird_confirm_failed", "POST /early-bird 202", "GET /early-bird/confirm 303",
+                  "early_bird_confirm_failed", "POST /early-bird 202", "POST /early-bird/confirm 303",
                   "POST /early-bird 422"):
         assert event in out, event
     for leak in (ADDRESS, "ada", "example.test", env.token(0), env.token(1), "token=", "MARKER", "203.0.113.5"):

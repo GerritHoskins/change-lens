@@ -18,7 +18,7 @@ from helpers import EARLIER_LINES, LATER_LINES, SUBJECT_A, SUBJECT_B, TOKEN_A, T
 
 TENANT_TABLES = ("projects", "source_versions", "comparisons", "findings", "fact_cache", "jobs", "review_events",
                  "client_approvals", "object_write_intents", "object_purge_intents", "project_deletions",
-                 "account_onboarding", "consent_events", "memberships")
+                 "account_onboarding", "consent_events", "demo_comparisons", "demo_feedback", "memberships")
 
 
 class FakeIdp:
@@ -33,10 +33,14 @@ class FakeIdp:
 
 
 def _account(env, token, name):
-    """Two projects with versions, a comparison, a review, an onboarding row and a consent answer."""
+    """Two projects with versions, a comparison (counted for the demo limit), a review, an onboarding row, a
+    consent answer and the demo feedback with both text fields."""
     assert env.client.put("/me/onboarding", json={"step": 3}, headers=auth(token)).status_code == 200
     consent = {"usage_events": {"granted": True, "policy_version": "2026-11-13"}}
     assert env.client.put("/me/consent", json=consent, headers=auth(token)).status_code == 200
+    feedback = {"missing": "other", "missing_other": "A synthetic wish, long enough.", "anything_else": "Nothing.",
+                "price": "eur_5"}
+    assert env.client.post("/me/demo-feedback", json=feedback, headers=auth(token)).status_code == 201
     projects = []
     for n in range(2):
         pid = env.project(token, name="%s %d" % (name, n))
@@ -81,7 +85,8 @@ def test_deleting_an_account_removes_its_tenant_and_leaves_a_tombstone(env, capl
     pa, pb = _account(env, TOKEN_A, "A"), _account(env, TOKEN_B, "B")
     b_rows, b_objects = _rows(env, TENANT_B), _objects(env, TENANT_B, pb)
     assert _objects(env, TENANT_A, pa) > 0 and all(b_rows[t] for t in ("projects", "review_events", "account_onboarding",
-                                                                              "consent_events"))
+                                                                              "consent_events", "demo_comparisons",
+                                                                              "demo_feedback"))
     idp = FakeIdp()
     with caplog.at_level(logging.DEBUG):
         r = _client(env, idp).delete("/me", headers=auth(TOKEN_A))

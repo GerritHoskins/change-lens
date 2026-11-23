@@ -38,7 +38,7 @@ TENANT_A = uuid.UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = uuid.UUID("00000000-0000-4000-8000-00000000000b")
 TABLES = ("client_approvals, review_events, findings, fact_cache, comparisons, jobs, source_versions, projects, "
           "object_write_intents, object_purge_intents, comparison_cost_tombstones, project_deletions, "
-          "account_onboarding, consent_events, account_deletions, memberships, users, rate_limit_counters, pending_links, "
+          "account_onboarding, consent_events, demo_comparisons, demo_feedback, account_deletions, memberships, users, rate_limit_counters, pending_links, "
           "apple_token_parks, early_bird_signups")
 
 
@@ -96,6 +96,9 @@ def make_settings(db_url: str, **overrides) -> Settings:
                 cost_ceiling_eur=Decimal("1.50"), fake_llm_cost_eur=Decimal("0.01"),
                 # The suites send far more than the real limits; test_limits_db.py sets those (I-8 S6).
                 rate_limit_account_per_minute=100_000, rate_limit_ip_per_minute=100_000, signups_per_ip_per_day=100_000,
+                # Off here: several suites run more comparisons per tenant than the demo allows.
+                # test_demo_db.py sets the real limit (docs/demo-wall-handoff.md).
+                demo_comparison_limit=0,
                 # Likewise for the per-account bounds (LR-10); test_account_bounds_db.py sets those.
                 max_unparsed_versions=100_000, max_unfinished_comparisons=100_000, max_stored_bytes=10 ** 12,
                 max_concurrent_uploads=64)

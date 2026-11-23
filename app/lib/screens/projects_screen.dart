@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../services.dart';
 import 'project_screen.dart';
 import 'compare_screen.dart';
+import 'demo_wall.dart';
 import 'projects_home.dart';
 import 'report_screen.dart';
 import 'onboarding_screen.dart';
@@ -63,10 +64,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     try {
       final p = await api.projects();
       if (!mounted || !identical(api, s.api)) return;
+      // The demo state: asked for when it is not known (a development build, or a session that carried
+      // none) and again whenever the list changed, which is when a comparison started or ended.
+      final first = !_loaded;
       // A poll that changed nothing rebuilds nothing.
       final same = _loaded && error == null && !loading && p.length == projects.length &&
           [for (var i = 0; i < p.length; i++) p[i].signature == projects[i].signature].every((e) => e);
       _loaded = true;
+      if (first ? s.demo.state == null : !same) unawaited(s.demo.refresh());
       if (same) return;
       setState(() {
         projects = p;
@@ -150,7 +155,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ? CalmIcons.moreIOS : CalmIcons.more),
           onSelected: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => switch (item) {
             _ProjectsMenu.howItWorks => const OnboardingScreen(mode: OnboardingMode.replay),
-            _ProjectsMenu.account => SettingsScreen(session: s.auth!,
+            _ProjectsMenu.account => SettingsScreen(session: s.auth!, demo: s.demo,
                 consent: s.consentFlow ? AccountConsent(s.auth!) : null),
             _ProjectsMenu.devSettings => const DevSettingsScreen(),
           })),
@@ -172,7 +177,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           icon: const Icon(CalmIcons.add), label: Text(l.newProject)))
       : s.configured && projects.isNotEmpty ? CalmPinnedBar(
         child: FilledButton.icon(key: const Key('compare-briefs'),
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompareScreen())),
+          onPressed: () => openCompare(context),
           icon: const Icon(CalmIcons.compare), label: Text(l.compareBriefs))) : null,
       body: !s.configured
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.notConfigured, textAlign: TextAlign.center)))
@@ -185,6 +190,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 // With projects, the headline leads with the result; without, it names the screen.
                 if (projects.isEmpty) CalmPageHeader(title: l.projectsTitle, subtitle: l.projectsIntro)
                 else HomeHeadline(changed: home.changed),
+                DemoLine(demo: s.demo, padding: const EdgeInsets.only(bottom: 16)),
                 if (loading) LinearProgressIndicator(semanticsLabel: l.loading),
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16),
                   child: CalmWarning(text: error!,

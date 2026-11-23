@@ -178,7 +178,7 @@ Eight places where the design differs from the base handoff or from the app. Ask
 | 7 | Count line | "3 things moved · 1 needs a second look" beside three tiles and a fourth card | In the app the item that needs a second look is one of the things counted (the Cedar report counts 3: budget, deadline, hosting). On the page the line reads as three plus one | Count as the app does: "4 things moved · 1 needs a second look" for complete replacement and not sure; "3 things moved" for partial update, with the "Not addressed" card outside the count. Accepted by the owner, 2026-11-22 |
 | 8 | Where the result appears | The findings sit under the early-bird pill | At 1440 by 900 the findings start below the fold, so choosing an answer changes nothing the visitor can see | Keep the order. Once an answer is chosen, show the count line directly under the scope rows, above the pill; it is also the live region (Behaviour and semantics). Accepted by the owner, 2026-11-22 |
 
-Decided since this handoff was written (owner, 2026-11-22): the demo runs on TestFlight and a Play closed test; the store release follows with the full version. The page shows no store badge. Still open with the owner: the feedback interview, the imprint details, whether Cedar is the right public example, and the legal answer on a discount for feedback.
+Decided since this handoff was written (owner, 2026-11-22): the demo runs on TestFlight and a Play closed test; the store release follows with the full version. The page shows no store badge. Still open with the owner: the imprint details, whether Cedar is the right public example, and the legal answer on a discount for feedback.
 
 ## Work to do, in order
 

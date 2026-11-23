@@ -2,13 +2,18 @@
 
 WORDING PENDING LEGAL REVIEW (L4, L23 in tasks/launch-todo.md): every sentence below is a draft. The
 imprint line is a placeholder; the sender's imprint details must replace it before the first mail is
-sent. The mail says why it was sent, carries the confirmation link and says what happens when it is
-ignored. It has no marketing content, no price and no discount figure, and must not gain any: a
-confirmation mail that advertises is itself unsolicited advertising.
+sent. The mail says why it was sent, carries the confirmation link, says that the page behind it has a
+button to press (opening the link alone confirms nothing) and says what happens when it is ignored. It
+has no marketing content, no price and no discount figure, and must not gain any: a confirmation mail
+that advertises is itself unsolicited advertising.
 """
 from __future__ import annotations
 
 LOCALES = ("en", "de")
+# Days after which an unconfirmed address is deleted and its link stops working. The database fixes the
+# period (migration 0011, `early_bird_pending_days()`); this constant is for the mail's text only, and tests
+# hold the two together.
+PENDING_DAYS = 7
 
 # Draft wording, pending legal review. `{link}` and `{days}` are the only variables.
 _MAILS = {
@@ -16,7 +21,7 @@ _MAILS = {
            "You are receiving this email because this address was entered in the early-bird list form on "
            "the ChangeLens website.\n"
            "\n"
-           "To confirm your address, open this link:\n"
+           "To confirm your address, open this link and press the button on the page:\n"
            "{link}\n"
            "\n"
            "If you did not ask for this, ignore this email. An address that is not confirmed is deleted "
@@ -27,7 +32,7 @@ _MAILS = {
            "Du erhältst diese E-Mail, weil diese Adresse im Formular für die Early-Bird-Liste auf der "
            "ChangeLens-Website eingetragen wurde.\n"
            "\n"
-           "Um deine Adresse zu bestätigen, öffne diesen Link:\n"
+           "Um deine Adresse zu bestätigen, öffne diesen Link und drücke auf der Seite den Button:\n"
            "{link}\n"
            "\n"
            "Wenn du das nicht warst, ignoriere diese E-Mail. Eine nicht bestätigte Adresse wird nach "
@@ -37,7 +42,7 @@ _MAILS = {
 }
 
 
-def confirmation_mail(locale: str, link: str, pending_days: int) -> tuple[str, str]:
+def confirmation_mail(locale: str, link: str, pending_days: int = PENDING_DAYS) -> tuple[str, str]:
     """(subject, body) for a sign-up in `locale`. The address itself is never part of the text."""
     subject, body = _MAILS[locale]
     return subject, body.format(link=link, days=pending_days)

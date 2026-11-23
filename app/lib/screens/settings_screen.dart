@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 
 import '../auth/session.dart';
+import '../demo.dart';
 import '../design/calm_controls.dart';
 import '../design/calm_icons.dart';
 import '../design/calm_theme.dart';
@@ -16,16 +17,21 @@ import '../design/calm_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../services.dart' show KeychainProtection, readKeychainProtection;
 import 'consent_screen.dart';
+import 'demo_feedback_screen.dart';
 import 'sign_in_screen.dart' show methodName;
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.session, this.consent,
+  const SettingsScreen({super.key, required this.session, this.consent, this.demo,
     this.keychainProtection = readKeychainProtection});
 
   final AuthSession session;
 
   /// The account's usage-events answer (D-18); null hides the Privacy section until it exists.
   final UsageConsent? consent;
+
+  /// The demo period (docs/demo-wall-handoff.md): with a demo state, a "Demo" section offers the feedback
+  /// form at any time, or says that feedback was sent. Null or no state: no section.
+  final DemoController? demo;
 
   /// Reads what iOS reports for the stored sign-in; null hides the line (other platforms, nothing stored).
   final Future<KeychainProtection?> Function() keychainProtection;
@@ -129,6 +135,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Text('Access token lifetime: ${widget.session.accessTokenLifetime} s',
             key: const Key('token-lifetime'), style: text.bodySmall)),
+        if (widget.demo case final demo?) ListenableBuilder(listenable: demo, builder: (context, _) {
+          final demoState = demo.state;
+          if (demoState == null) return const SizedBox.shrink();
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const SizedBox(height: 28),
+            _SectionLabel(l.settingsDemo),
+            CalmCard(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: demoState.feedbackSubmitted
+                ? Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Text(l.demoFeedbackSent,
+                    key: const Key('settings-demo-feedback-sent'), style: text.bodyLarge))
+                : _SettingsRow(key: const Key('settings-demo-feedback'), icon: CalmIcons.mail,
+                    label: l.demoFeedbackTitle, onPressed: deleting ? null : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => DemoFeedbackScreen(demo: demo))))),
+          ]);
+        }),
         if (consent != null) ...[
           const SizedBox(height: 28),
           _SectionLabel(l.settingsPrivacy),

@@ -173,6 +173,7 @@ restart the services that read it (`docker compose up -d`).
 | Model key `IONOS_API_TOKEN` | `worker.env` | IONOS console | Only the worker reads it |
 | Logto Management credential | `changelens.env` | Logto console, the machine-to-machine app (runbook C5) | It can link identities and delete users. The api and retention read it; the worker doesn't start when it is given it |
 | `CHANGELENS_RATE_LIMIT_KEY` | `changelens.env` | A new random value | Counters start again |
+| `CHANGELENS_EARLY_BIRD_UNSUBSCRIBE_KEY` | `changelens.env` | A new random value (`openssl rand -hex 32`) | It signs the removal link in every mail to the early-bird list: with a new value every link already mailed stops working, so people on the list can then only be removed by writing in. Whoever has the old value and a row ID could remove that address, nothing more |
 | Google client secret, Apple `.p8` key | `/etc/changelens/signin/` | Google Cloud console; Apple Developer account (runbook C8) | Revoke the old Apple key there |
 | Apple-token keyring | `/etc/changelens/signin/apple-token-keys.json` | Add a new key and keep the old ones for decryption (03 §6) | Removing an old key makes stored tokens unreadable |
 | Backup key (`age`) | The private half is in the owner's password manager, never on the server | A new key pair; the public half goes into `backup.env` (runbook B6) | Backups made before stay readable with the old key only; they expire after 30 days |

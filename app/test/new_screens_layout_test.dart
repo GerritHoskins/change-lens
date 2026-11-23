@@ -1,6 +1,8 @@
 // Layout matrix for the WP-A to WP-C screens (handoff "Order, verification and done"): 320×568 and
 // 390×844, EN and DE, light and dark, text 1.0 and 2.0. No overflow, and each screen's actions stay
 // reachable: pinned ones without scrolling, list ones after scrolling. Widget tests, not device evidence.
+// The demo wall, the demo feedback form and the Settings demo row (docs/demo-wall-handoff.md) run through
+// the same matrix in their own test.
 import 'package:changelens/api.dart';
 import 'package:changelens/auth/session.dart';
 import 'package:changelens/design/calm_controls.dart';
@@ -8,6 +10,8 @@ import 'package:changelens/design/calm_theme.dart';
 import 'package:changelens/l10n/app_localizations.dart';
 import 'package:changelens/main.dart';
 import 'package:changelens/screens/consent_screen.dart';
+import 'package:changelens/screens/demo_feedback_screen.dart';
+import 'package:changelens/screens/demo_wall.dart';
 import 'package:changelens/screens/project_timeline.dart';
 import 'package:changelens/screens/review_completion.dart';
 import 'package:changelens/screens/settings_screen.dart';
@@ -17,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'account_screens_test.dart' show NoPicker;
 import 'fixtures/auth_fakes.dart';
+import 'fixtures/demo_fakes.dart';
 import 'review_completion_test.dart' show summaryReport;
 import 'session_settings_test.dart' show FakeConsent;
 
@@ -133,6 +138,100 @@ void main() {
             noError(tester, 'summary');
             await reachable(tester, 'review-back-to-project', pinned: true);
             await reachable(tester, 'review-not-approval');
+            await tester.pumpWidget(const SizedBox());
+          });
+
+          testWidgets('Demo wall, feedback form and the Settings demo row lay out: $name', (tester) async {
+            tester.view.physicalSize = size;
+            tester.view.devicePixelRatio = 1;
+            tester.platformDispatcher.textScaleFactorTestValue = scale;
+            addTearDown(tester.view.reset);
+            addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+            final l = lookupAppLocalizations(Locale(locale));
+
+            // The wall with every optional sentence: a comparison still running and the discount line.
+            final wall = DemoBackend(demoJson(remaining: 0, inFlight: 1, discount: true));
+            await tester.pumpWidget(localized(DemoWallScreen(demo: wall.controller()), locale, theme));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo wall');
+            await reachable(tester, 'demo-give-feedback', pinned: true);
+            await reachable(tester, 'demo-wall-discount');
+            await reachable(tester, 'demo-list-address');
+            // A text button moved out to the text edge: checked at its centre once scrolled to.
+            await tester.ensureVisible(find.byKey(const Key('demo-copy-link')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('demo-copy-link')).hitTestable(), findsOneWidget);
+
+            // The wall after feedback: the line that replaces the pill.
+            await tester.pumpWidget(localized(DemoWallScreen(
+              demo: DemoBackend(demoJson(remaining: 0, submitted: true)).controller()), locale, theme));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo wall, feedback sent');
+            await reachable(tester, 'demo-feedback-sent', pinned: true);
+
+            // The form: empty, then the choice sheet, "Other" with its field, a price and a failed send.
+            final backend = DemoBackend(demoJson(remaining: 0))..feedbackStatus = 500;
+            await tester.pumpWidget(localized(DemoFeedbackScreen(demo: backend.controller()), locale, theme));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo form');
+            await reachable(tester, 'demo-send', pinned: true);
+            await reachable(tester, 'demo-send-hint', pinned: true);
+            await reachable(tester, 'demo-missing');
+            await tester.tap(find.byKey(const Key('demo-missing')));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo form, choice sheet');
+            final other = find.text(l.demoMissingOther).last;
+            await tester.ensureVisible(other);
+            await tester.pumpAndSettle();
+            await tester.tap(other);
+            await tester.pumpAndSettle();
+            noError(tester, 'demo form, other');
+            await reachable(tester, 'demo-missing-other');
+            await tester.enterText(find.byKey(const Key('demo-missing-other')),
+              'Ein Export, den ich meinem Kunden schicken kann, mit allen Befunden und Belegstellen.');
+            await reachable(tester, 'demo-missing-other-hint');
+            await reachable(tester, 'demo-anything-else');
+            await reachable(tester, 'demo-anything-else-hint');
+            await reachable(tester, 'demo-plan');
+            for (final code in ['eur_0', 'eur_over_15', 'not_sure']) {
+              await reachable(tester, 'demo-price-$code');
+            }
+            await reachable(tester, 'demo-price-note');
+            await tester.ensureVisible(find.byKey(const Key('demo-price-eur_over_15')));
+            await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const Key('demo-price-eur_over_15')));
+            await tester.pumpAndSettle();
+            // With the error above it the pinned bar may scroll (large text): Send is reached by scrolling it.
+            await tester.ensureVisible(find.byKey(const Key('demo-send')));
+            await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const Key('demo-send')));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo form, failed send');
+            expect(find.byKey(const Key('demo-send-error')), findsOneWidget);
+            await tester.ensureVisible(find.byKey(const Key('demo-send')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('demo-send')).hitTestable(), findsOneWidget);
+
+            // Sent: the line and Done.
+            backend.feedbackStatus = 201;
+            await tester.tap(find.byKey(const Key('demo-send')));
+            await tester.pumpAndSettle();
+            noError(tester, 'demo form, sent');
+            await reachable(tester, 'demo-done', pinned: true);
+            await reachable(tester, 'demo-feedback-sent');
+
+            // Settings with the Demo section: the row, then the sent line.
+            final h = AuthHarness()..storeSession();
+            await h.session.restore();
+            for (final submitted in [false, true]) {
+              await tester.pumpWidget(localized(SettingsScreen(session: h.session,
+                demo: DemoBackend(demoJson(remaining: 1, submitted: submitted)).controller(),
+                consent: FakeConsent(), keychainProtection: () async => null), locale, theme));
+              await tester.pumpAndSettle();
+              noError(tester, 'settings with demo');
+              await reachable(tester, submitted ? 'settings-demo-feedback-sent' : 'settings-demo-feedback');
+              await reachable(tester, 'usage-events');
+            }
             await tester.pumpWidget(const SizedBox());
           });
         }

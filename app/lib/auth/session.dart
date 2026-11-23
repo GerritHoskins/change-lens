@@ -118,6 +118,9 @@ class AuthSession extends ChangeNotifier {
   /// The method of the last successful sign-in on this device, if any.
   SignInMethod? lastMethod;
 
+  /// Receives the `demo` object of every `POST /session` answer (null when the server sends none).
+  void Function(Object? demo)? onDemo;
+
   /// Changes whenever a different account (or the first one) signs in, so screens keyed on it start
   /// fresh; unchanged when the same account signs in again from the expired-session sheet.
   int account = 0;
@@ -257,7 +260,8 @@ class AuthSession extends ChangeNotifier {
     }
   }
 
-  /// `POST /session`: the onboarding state and the usage-events consent answer (null = ask).
+  /// `POST /session`: the onboarding state and the usage-events consent answer (null = ask). Its `demo`
+  /// object (docs/demo-wall-handoff.md; absent on an older server) goes to [onDemo].
   Future<(OnboardingState, bool?)> _bootstrap({String? linkId}) async {
     final token = await accessToken();
     final body = decodeApiResponse(await _inner.post(_u('/session'),
@@ -266,6 +270,7 @@ class AuthSession extends ChangeNotifier {
     if (body is! Map || body['status'] != 'active') throw ApiException(200, 'session_malformed');
     final onboarding = body['onboarding'];
     final consent = body['consent'];
+    onDemo?.call(body['demo']);
     return (
       onboarding is Map<String, dynamic> ? OnboardingState.fromJson(onboarding) : OnboardingState.notStarted,
       consent is Map && consent['usage_events'] is bool ? consent['usage_events'] as bool : null,

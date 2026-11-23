@@ -48,6 +48,8 @@ class FakeServer {
   final consentPuts = <Map<String, dynamic>>[];
   int consentStatus = 200; // PUT /me/consent; 409 answers policy_version_stale once
   int projectsStatus = 200;
+  // The demo state `POST /session` carries (docs/demo-wall-handoff.md); null = an older server sends none.
+  Map<String, dynamic>? demo;
 
   String issueCode() {
     final code = 'code-${pendingCodes.length + 1}';
@@ -95,7 +97,8 @@ class FakeServer {
         return _json(providerAnswer);
       }
       if (sessionStatus != 200) return _json({'code': 'unauthenticated'}, sessionStatus);
-      return _json({'status': 'active', 'onboarding': onboarding, 'consent': {'usage_events': consent}});
+      return _json({'status': 'active', 'onboarding': onboarding, 'consent': {'usage_events': consent},
+        'demo': ?demo});
     }
     if (bearer == null || !bearer.startsWith('Bearer at-')) return _json({'code': 'unauthenticated'}, 401);
     if (path == '/me/onboarding' && r.method == 'GET') return _json(onboarding);

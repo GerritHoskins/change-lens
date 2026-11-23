@@ -156,6 +156,8 @@ with the result without one report request per project.
 
 ## B. I-14 fair-use allowance
 
+**Not built for the demo period (owner, 2026-11-22).** The demo uses a lifetime limit of three comparisons per account instead: [`demo-wall-handoff.md`](demo-wall-handoff.md). This section stays as the design for the full version.
+
 The allowance belongs to the **tenant**, like the spend cap. In v1 one account is exactly one tenant,
 so `/me/usage` reads the caller's tenant. If shared tenants arrive later, this section must say whether
 teammates share it.
@@ -337,6 +339,8 @@ place", not "kept after deletion".
 
 ### C2. Feedback (WP-F report and finding feedback)
 
+**Not built for the demo period (owner, 2026-11-22):** no thumbs on single findings or reports. The demo collects one feedback form per account, with two free-text fields: [`demo-wall-handoff.md`](demo-wall-handoff.md). "Codes only, no free text" below no longer holds for that form.
+
 `POST /feedback`, with an `Idempotency-Key` header (the app keeps the key on retry, like compare).
 
 ```jsonc
@@ -361,78 +365,15 @@ place", not "kept after deletion".
 
 ### C3. "What is it worth to you?" question
 
-`GET /me/survey` returns the following when eligible, or
-`200 {"due": false, "question_id": null, "offer": null}` otherwise:
+**Superseded for the demo period (owner, 2026-11-22).** The separate survey with price ranges, its eligibility rule (three completed comparisons on two days) and its routes `GET /me/survey` and `POST /me/survey-responses` are not built. The price question is now part of the demo feedback form, with simple amounts (nothing, €5, €10, €15, more than €15, not sure): [`demo-wall-handoff.md`](demo-wall-handoff.md).
 
-```jsonc
-200 {
-  "due": true, "question_id": "worth_v1",
-  "offer": { "id": "individual_20_v1", "currency": "EUR", "billing_period": "month",
-             "vat_basis": "inclusive", "seats": 1, "monthly_units": 20,
-             "standard_units": 1, "heavy_units": 4, "heavy_threshold_words": 5000,
-             "retention_days_after_last_use": 30 }
-}
-```
+Kept from the old text, because the new form uses it:
 
-**Eligibility:** at least three distinct real comparisons with terminal status `complete`, whose
-**creation dates cover at least two UTC calendar days** (00:00 inclusive to the next 00:00 exclusive).
-Use the server's immutable `created_at`, not completion time, device timezone or a rolling 24 hours.
-This measures user-initiated comparison days; workers finishing a batch across midnight do not create
-a second use day. Exactly midnight belongs to the new day. Failed/partial runs, placeholder-pipeline
-results and product/operator-seeded examples do not qualify; complete no-change reports do.
-Example origin is server-owned metadata (`user` by default on normal creation, `example` for seeded
-examples); it is not inferred by inspecting document content or accepted as a client claim.
+- **The offer the price refers to, `individual_20_v1`:** "One person, 20 comparison units per UTC calendar month. Compare pasted text or PDFs with selectable text; view source evidence, review findings and keep project history. Standard comparisons use 1 unit; comparisons with either input over 5,000 words use 4 units. Documents and comparisons expire 30 days after last use. Up to 200 retained versions per project. Online access required."
+- **Total monthly prices including VAT.** No VAT rate or billing country is collected.
+- **It is research:** "The current release remains free; this answer does not start a subscription." Answers are not proof of demand and authorise no billing.
 
-**Bookkeeping:** store the initiating account with the comparison at creation. On first qualifying
-completion, transactionally insert
-`survey_qualifications(account_id, question_id, comparison_id, created_utc_day)` with a unique key on
-the first three fields. Under an account/question lock, count distinct comparisons/dates and set
-`survey_progress.eligible_at` once both thresholds are met. Retries, polling, repeated opens and
-retraction never add observations; only a new qualifying comparison can. Persist eligibility across
-devices and source retention. Once eligible, discard the qualification rows and stop collecting them
-for that question; the latched progress row prevents a retry from resetting eligibility. A saved answer
-also stops collection and clears qualification rows. Progress/responses are unique per account/question.
-Before eligibility, retain only these content-free deduplication records, not source text or labels;
-remove all survey records on account deletion. GET is read-only and derives `due` from latched eligibility
-and the absence of an answer. This reuses server comparison lifecycle data under the existing tier-A
-policy; respect its objection handling and do not add app telemetry or require tier-B consent.
-
-**Presentation:** `due` is permission to offer the question, not a modal trigger. The app shows it only
-after review or on returning to Projects from a successfully viewed report in the current session.
-Use transient navigation state; no new review-completion event is sent. Fresh app launch, background
-completion and polling alone never show it. Do not require positive feedback, allowance exhaustion or
-Confirm taps. Closing/Skip submits `declined`; merely fetching eligibility does not consume the question.
-
-`POST /me/survey-responses`. Body `{"question_id": "worth_v1", "answer": "eur_5_to_10"}` → `204`.
-
-- **Fixed offer copy:** "One person, 20 comparison units per UTC calendar month. Compare pasted text
-  or PDFs with selectable text; view source evidence, review findings and keep project history.
-  Standard comparisons use 1 unit; comparisons with either input over 5,000 words use 4 units.
-  Documents and comparisons expire 30 days after last use. Up to 200 retained versions per project.
-  Online access required."
-- **Fixed question:** "If ChangeLens became a paid product, what is the most you would consider paying
-  per month for this plan, including any applicable VAT?" All buckets are **total monthly prices**,
-  not net prices plus tax. No VAT rate, exemption status or billing-country data is collected.
-  Add: "This is pricing research. The current release remains free; this answer does not start a subscription."
-- `worth_v1` and `individual_20_v1` freeze this offer, wording, tax basis and buckets in a server-owned
-  question catalog; the response stores both IDs. Do not silently follow future allowance config or
-  add unbuilt screenshots, sharing or team features. A materially changed offer/question requires a
-  new ID and separate analysis. This gross-price survey must not be pooled with older ex-VAT pilot quotes.
-- Answers are half-open ranges in euros per month, so no amount falls in two buckets:
-  `eur_0` (nothing), `eur_under_5` (more than 0, under 5), `eur_5_to_10` (5 up to under 10),
-  `eur_10_to_15` (10 up to under 15), `eur_15_to_20` (15 up to under 20), `eur_20_plus` (20 or more),
-  `not_sure` ("Not sure yet"), and `declined` (Skip). This replaces the unimplemented `eur_10_to_20`
-  bucket so responses can distinguish the intended €12–15 price region.
-- `not_sure` is distinct from zero willingness to pay and from dismissal. Any answer, including
-  `not_sure` or `declined`, makes `due` false for this question; no automatic repeat invitation.
-- A second answer to the same question → `409 already_answered`.
-- An unanswered question whose eligibility threshold has not been met returns `409 survey_not_due`.
-- The server validates the question and answer against its catalog; unknown values are
-  `422 invalid_request`. The client does not supply prices, VAT treatment or its own offer definition.
-- The €9–15/month individual range remains a hypothesis. The €20+ response cannot validate the
-  earlier €39–59 team hypothesis; a defined team offer needs separate research. Use survey responses
-  to select later price tests, then validate through concrete buying decisions. They are not proof
-  of demand and do not change O-20's free launch or authorise billing.
+The full previous text is in the repository's history (this file before 2026-11-22).
 
 ### C4. Tier-B event intake (later, sketch only)
 
@@ -446,9 +387,10 @@ so it is listed only so that C1's shape doesn't block it.
 
 | Code | Status | Where |
 |---|---|---|
+| `demo_limit_reached` | 403 | Built 2026-11-22: compare creation in the demo period, with `used`, `in_flight` and `limit` (demo-wall-handoff; `GET /me/demo`, `POST /me/demo-feedback` in `backend/README.md` §15) |
 | `allowance_exhausted` | 429 | Compare creation (with `Retry-After`); also a comparison warning code when the worker finds nothing left |
 | `policy_version_stale` | 409 | `PUT /me/consent` |
-| `already_answered` | 409 | Survey response |
+| `already_answered` | 409 | Survey response; built 2026-11-22 for a second `POST /me/demo-feedback` |
 | `consent_required` | 403 | `POST /events` (later) |
 | `idempotency_conflict` | 409 | Already built; now also feedback. Missing from 03 §9.4 today |
 | `version_limit_reached` | 409 | Both version-creating paths, past the per-project cap (A) |
