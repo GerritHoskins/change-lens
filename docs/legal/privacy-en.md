@@ -85,7 +85,7 @@ If you send feedback or answer an optional question in the app (for example, wha
 
 ### 3.8 Early-bird list (website)
 
-> **Draft paragraph added 2026-11-22 with the early-bird endpoint; not legally reviewed, like the rest of this draft. The list is not open yet.**
+> **Draft paragraph added 2026-11-22 with the early-bird endpoint; not legally reviewed, like the rest of this draft. The list is open since 2026-11-23 by the owner's decision.**
 
 If you enter your email address in the early-bird form on our website, we store the address, the language of the page and the time. We then send one email with a confirmation link to that address (double opt-in). Only after you open the link and press the confirm button on the page is your address on the list; we store the time of the confirmation as proof of your consent. To limit misuse of the form we also keep, for up to 3 days, counters keyed with a non-reversible keyed hash of the IP address (for IPv6, of its network) and of the email address, and a count of all confirmation emails sent; none of these counters contains an address.
 

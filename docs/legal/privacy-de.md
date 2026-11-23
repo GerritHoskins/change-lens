@@ -85,7 +85,7 @@ Wenn Sie uns Feedback senden oder eine freiwillige Frage in der App beantworten 
 
 ### 3.8 Early-Bird-Liste (Website)
 
-> **Entwurfsabsatz vom 2026-11-22, ergänzt mit dem Early-Bird-Endpunkt; wie der übrige Entwurf nicht rechtlich geprüft. Die Liste ist noch nicht geöffnet.**
+> **Entwurfsabsatz vom 2026-11-22, ergänzt mit dem Early-Bird-Endpunkt; wie der übrige Entwurf nicht rechtlich geprüft. Die Liste ist seit 2026-11-23 auf Entscheidung des Betreibers geöffnet.**
 
 Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eintragen, speichern wir die Adresse, die Sprache der Seite und den Zeitpunkt. Wir senden dann eine E-Mail mit einem Bestätigungslink an diese Adresse (Double-Opt-in). Erst wenn Sie den Link öffnen und auf der Seite den Bestätigungsbutton drücken, steht Ihre Adresse auf der Liste; den Zeitpunkt der Bestätigung speichern wir als Nachweis Ihrer Einwilligung. Um Missbrauch des Formulars zu begrenzen, führen wir außerdem bis zu 3 Tage lang Zähler, die mit einem nicht umkehrbaren, schlüsselabhängigen Hashwert der IP-Adresse (bei IPv6: ihres Netzes) und der E-Mail-Adresse gebildet werden, sowie einen Zähler aller versandten Bestätigungs-E-Mails; keiner dieser Zähler enthält eine Adresse.
 
