@@ -1,6 +1,6 @@
 # Legal texts (I-20): drafts
 
-**Status: drafts written 2026-11-13 and accepted by the owner as the basis for legal review; not legally reviewed. Do not publish before review.** Placeholders in `[SQUARE BRACKETS]` must be filled in. The texts describe the free launch (O-20): no in-app purchase, a fair-use allowance, and the analytics design below. If the analytics design, a processor, or a retention period changes, update the texts, `docs/data-inventory.md`, the App Store privacy labels and the Play data-safety form together (I-17).
+**Status: drafts written 2026-11-13 and accepted by the owner as the basis for legal review; not legally reviewed. Do not publish before review.** **Owner's decision, 2026-11-23:** the drafts are published on the landing page as they are, with their placeholders marked and `noindex`, so the footer links lead somewhere while the tracker runs; the review is still open. The pages are built from these files: edit a draft, run `python scripts/build_legal_pages.py`, commit both. Placeholders in `[SQUARE BRACKETS]` must be filled in. The texts describe the free launch (O-20): no in-app purchase, a fair-use allowance, and the analytics design below. If the analytics design, a processor, or a retention period changes, update the texts, `docs/data-inventory.md`, the App Store privacy labels and the Play data-safety form together (I-17).
 
 | File | Content |
 |---|---|

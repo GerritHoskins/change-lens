@@ -303,7 +303,7 @@ TLS pause for about a minute.
    Expected: a line like `2026-…,en,,check,1`.
 9. **Not part of this release:** the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
    mail wording and the privacy text are reviewed and a test mail has arrived. The footer's legal pages
-   don't exist yet (L23).
+   are the unreviewed drafts with their placeholders, marked `noindex` (owner's decision 2026-11-23; L23 open).
 
 ## Starting Umami (once)
 
