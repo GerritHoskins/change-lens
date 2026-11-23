@@ -145,7 +145,10 @@
   ],
   "foot": "The Cedar website brief on this page is a synthetic example.",
   "nav_page": "Page",
-  "nav_legal": "Legal"
+  "nav_legal": "Legal",
+  "page_title": "ChangeLens: see what changed between two versions of a brief",
+  "meta_description": "ChangeLens compares two versions of a client brief and shows what changed, with the quoted passages as evidence. For freelancers and studios, on iOS and Android.",
+  "preview_image_alt": "ChangeLens report and finding screens next to the question: What changed since the last version of the brief?"
  },
  "de": {
   "lang": "de",
@@ -279,6 +282,9 @@
   ],
   "foot": "Das Cedar-Briefing auf dieser Seite ist ein erfundenes Beispiel.",
   "nav_page": "Seite",
-  "nav_legal": "Rechtliches"
+  "nav_legal": "Rechtliches",
+  "page_title": "ChangeLens: Was sich zwischen zwei Briefing-Versionen geändert hat",
+  "meta_description": "ChangeLens vergleicht zwei Versionen eines Kunden-Briefings und zeigt, was sich geändert hat, mit zitierten Textstellen als Beleg. Für Freelancer und Studios.",
+  "preview_image_alt": "Bericht und Befund in ChangeLens neben der Frage: Was hat sich seit der letzten Version des Briefings geändert?"
  }
 }

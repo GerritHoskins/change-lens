@@ -104,6 +104,8 @@ changelens.pixeltronic.dev {
 	log_append @bot bot 1
 	log_append @noagent bot 1
 
+	# Text responses (HTML, CSS, script, SVG, the sitemap) are compressed; images and fonts already are.
+	encode zstd gzip
 	header /assets/* Cache-Control "public, max-age=86400"
 
 	handle @umami {
