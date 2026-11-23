@@ -282,8 +282,8 @@
           </ul>
         </div>
 
-        <!-- Without scripting the button stays disabled and the "not open yet" message shows.
-             site.js enables the button and shows the message again on submit (EARLY_BIRD_OPEN). -->
+        <!-- Without scripting the button stays disabled and the "needs JavaScript" message shows.
+             site.js enables the button and clears the message; eb-msg-closed is for EARLY_BIRD_OPEN = false. -->
         <form class="form" id="early-bird" method="post" action="#early-bird" data-locale="de" aria-labelledby="form-title">
           <h3 class="h3" id="form-title">Auf die Early-Bird-Liste</h3>
           <div class="field">
@@ -292,8 +292,9 @@
             <p class="msg msg-error msg-field" id="eb-error" hidden>Gib eine gültige E-Mail-Adresse ein, zum Beispiel du@example.com.</p>
           </div>
           <button class="pill" type="submit" disabled data-umami-event="list-cta" data-umami-event-place="form">Eintragen</button>
-          <div class="form-status" id="eb-status" role="status"><p class="msg msg-info msg-banner">Die Liste ist noch nicht geöffnet. Deine Adresse wurde nicht gespeichert.</p></div>
+          <div class="form-status" id="eb-status" role="status"><p class="msg msg-info msg-banner">Dieses Formular braucht JavaScript.</p></div>
           <p class="meta" id="eb-note">Wir senden dir eine E-Mail mit einem Link, um deine Adresse zu bestätigen. [Der Wortlaut dieser Zeile wird noch rechtlich geprüft.]</p>
+          <template id="eb-msg-closed"><p class="msg msg-info msg-banner">Die Liste ist noch nicht geöffnet. Deine Adresse wurde nicht gespeichert.</p></template>
           <template id="eb-msg-sent"><p class="msg msg-info msg-banner">Sieh in dein Postfach. Wir haben dir einen Link geschickt, um deine Adresse zu bestätigen.</p></template>
           <template id="eb-msg-failed"><p class="msg msg-error msg-banner">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es noch einmal.</p></template>
         </form>

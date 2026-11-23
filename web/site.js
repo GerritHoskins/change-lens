@@ -4,12 +4,13 @@
 (function () {
   'use strict';
 
-  /* ---- Switches (list off, tracker on) ------------------------------------------- */
+  /* ---- Switches (list on, tracker on) -------------------------------------------- */
 
-  // Early-bird list. The endpoint does not exist yet. While this is false the form sends
-  // nothing and says that the list is not open. Set it to true only once the endpoint
-  // is deployed (docs/landing-page-handoff.md, "The early-bird endpoint").
-  var EARLY_BIRD_OPEN = false;
+  // Early-bird list. Open since 2026-11-23 by the owner's decision; the legal review of the
+  // mail wording and the privacy text is still open (docs/landing-page-handoff.md, "The
+  // early-bird endpoint"). While this is false the form sends nothing and says that the
+  // list is not open.
+  var EARLY_BIRD_OPEN = true;
   var EARLY_BIRD_URL = 'https://api.pixeltronic.dev/early-bird';
 
   // Umami tracker tag. On since 2026-11-22 by the owner's decision; the legal review's answer
@@ -78,9 +79,8 @@
   var button = form.querySelector('button[type="submit"]');
   var error = document.getElementById('eb-error');
   var status = document.getElementById('eb-status');
-  // The markup ships with the "not open yet" message visible and the button disabled,
-  // which is the honest state without scripting. Keep the message for later use.
-  var closedMessage = status.innerHTML;
+  // The markup ships with the "needs JavaScript" message visible and the button disabled,
+  // which is the honest state without scripting.
 
   form.noValidate = true; // errors are reported in the page's own text, not browser bubbles
   status.innerHTML = '';
@@ -118,7 +118,7 @@
     setInvalid(false);
 
     if (!EARLY_BIRD_OPEN) {
-      show(closedMessage); // nothing is sent and nothing is saved
+      show(template('eb-msg-closed')); // nothing is sent and nothing is saved
       return;
     }
 

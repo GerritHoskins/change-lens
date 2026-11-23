@@ -95,7 +95,7 @@ The chosen layout, measures, wording and results are in [`landing-page-direction
 
 ## The early-bird endpoint (backend, needed before go-live)
 
-The page ships with the form; the form posts to an endpoint that does not exist yet.
+The endpoint is deployed, and the form is open since 2026-11-23 by the owner's decision (`EARLY_BIRD_OPEN = true` in `web/site.js`); the legal review of the mail wording and the privacy text is still open. The points below are the endpoint's specification.
 
 - `POST https://api.pixeltronic.dev/early-bird`, unauthenticated, JSON `{"email": "…", "locale": "en" | "de"}`, `extra="forbid"`. Always answers `202` with the same body, whether or not the address is already known, so the endpoint can't be used to test for addresses.
 - Rate-limited per IP with the existing limiter (`limit_ip` in `backend/changelens/api/limits.py`). Add a stricter per-day scope for this route, like `limit_signup`. Since the security review of 2026-11-22 (`docs/security-review.md`, EB-1 to EB-13) there are also caps on mails per hour and day overall, per address and per pending row, and IPv6 clients are counted by network.
@@ -106,7 +106,7 @@ The page ships with the form; the form posts to an endpoint that does not exist 
 - An address on the list is not an account. Matching a confirmed address to an account's discount and the "does not stack" rule belong to the demo-wall work. Unsubscribing exists (2026-11-22): every mail to the list must carry the removal link from `python -m changelens.early_bird_export` (`backend/README.md` §14).
 - Add the record to `docs/data-inventory.md` and both privacy texts in the same change.
 
-Until the endpoint is deployed, the form's script shows a plain message that the list is not open yet. It must not pretend the address was saved.
+With `EARLY_BIRD_OPEN = false` the form's script shows a plain message that the list is not open yet. It must not pretend the address was saved. Without scripting the button is disabled and the form says that it needs JavaScript.
 
 ## Measurement
 

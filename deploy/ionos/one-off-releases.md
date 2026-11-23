@@ -301,7 +301,10 @@ TLS pause for about a minute.
    python3 /opt/changelens/deploy/ionos/landing-stats.py --dry-run --through-today
    ```
    Expected: a line like `2026-…,en,,check,1`.
-9. **Not part of this release:** the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
+9. **The form (owner's decision 2026-11-23: open now, `EARLY_BIRD_OPEN = true`).** The plan below was
+   overruled; the reviews are still open, and the test mail is the first thing to do after that release
+   (enter your own address in the form, the confirmation mail must arrive, its button must lead to
+   "Your address is confirmed"). The plan was: the form stays off (`EARLY_BIRD_OPEN = false` in `web/site.js`) until the
    mail wording and the privacy text are reviewed and a test mail has arrived. The footer's legal pages
    are the unreviewed drafts with their placeholders, marked `noindex` (owner's decision 2026-11-23; L23 open).
 
