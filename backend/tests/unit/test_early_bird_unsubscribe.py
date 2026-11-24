@@ -117,7 +117,8 @@ def test_get_shows_a_page_and_never_removes(env, confirm):
     for name, value in PAGE_HEADERS.items():
         assert r.headers[name] == value, name
     assert r.headers["content-security-policy"] == (
-        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
+        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' %s; base-uri 'none'; "
+        "frame-ancestors 'none'" % LANDING)  # the button's 303 goes to the landing page; Chrome checks it
     assert (r.headers["referrer-policy"], r.headers["cache-control"], r.headers["x-content-type-options"]) == (
         "no-referrer", "no-store", "nosniff")
 

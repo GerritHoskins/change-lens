@@ -241,7 +241,7 @@ def confirm_page(request: Request) -> Response:
     if not _TOKEN.fullmatch(token):
         log.info("early_bird_confirm_failed")
         return to_landing(settings.landing_url, CONFIRM_FAILED)
-    return page(CONFIRM_COPY, token)
+    return page(CONFIRM_COPY, token, settings.landing_url)
 
 
 @router.post(PATH + "/confirm")
