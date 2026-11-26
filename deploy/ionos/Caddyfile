@@ -132,3 +132,20 @@ changelens.pixeltronic.dev {
 		file_server
 	}
 }
+
+# Umami's tracker for sites that are not served here (owner's decision 2026-11-26; first one: pixeltronic.dev
+# on GitHub Pages). Such a page loads https://stats.pixeltronic.dev/script.js, and the script sends to
+# /api/send on the host it came from. Only these two paths are public, as on the landing page; the dashboard
+# stays on the host's loopback. Umami answers both with Access-Control-Allow-Origin: *. No access log.
+# The landing page keeps its own /umami/ paths, so it still talks to its own host only.
+stats.pixeltronic.dev {
+	import common
+
+	@umami path /script.js /api/send
+	handle @umami {
+		reverse_proxy umami:3000
+	}
+	handle {
+		respond 404
+	}
+}
