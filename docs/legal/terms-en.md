@@ -1,7 +1,5 @@
 # ChangeLens terms of use
 
-> **DRAFT 2026-11-13, not legally reviewed.**
-
 Last updated: 2026-11-13
 
 ## 1. Provider and scope

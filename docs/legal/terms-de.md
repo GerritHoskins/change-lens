@@ -1,7 +1,5 @@
 # Nutzungsbedingungen für ChangeLens
 
-> **ENTWURF 2026-11-13, nicht rechtlich geprüft.**
-
 Stand: 2026-11-13
 
 ## 1. Anbieter und Geltungsbereich

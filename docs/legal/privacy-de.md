@@ -1,7 +1,5 @@
 # Datenschutzerklärung für ChangeLens
 
-> **ENTWURF 2026-11-13, nicht rechtlich geprüft.**
-
 Stand: 2026-11-13
 
 ChangeLens ist eine App für iOS und Android, die zwei Fassungen eines Briefings vergleicht und zeigt, was sich geändert hat, mit Belegstellen aus beiden Dokumenten. Diese Erklärung beschreibt, welche personenbezogenen Daten wir verarbeiten, wenn Sie die App nutzen, zu welchem Zweck, wie lange, und welche Rechte Sie haben.

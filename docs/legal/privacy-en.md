@@ -1,7 +1,5 @@
 # ChangeLens privacy policy
 
-> **DRAFT 2026-11-13, not legally reviewed.**
-
 Last updated: 2026-11-13
 
 ChangeLens is an app for iOS and Android that compares two versions of a brief and shows what changed, with evidence from both documents. This policy explains which personal data we process when you use the app, why, for how long, and what rights you have.
