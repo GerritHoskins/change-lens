@@ -1,8 +1,6 @@
 # ChangeLens privacy policy
 
-> **DRAFT 2026-11-13, not legally reviewed.** Placeholders in `[SQUARE BRACKETS]`. The German version is binding; this is a translation.
-
-Last updated: [DATE]
+Last updated: 2026-11-13
 
 ChangeLens is an app for iOS and Android that compares two versions of a brief and shows what changed, with evidence from both documents. This policy explains which personal data we process when you use the app, why, for how long, and what rights you have.
 
@@ -10,10 +8,10 @@ ChangeLens is an app for iOS and Android that compares two versions of a brief a
 
 The controller under the General Data Protection Regulation (GDPR) is:
 
-[FULL NAME]
-[STREET AND NUMBER]
-[POSTCODE AND CITY], Germany
-Email: [PRIVACY EMAIL]
+G.K Hoskins
+Burgschmietstraße 5
+90419 Nürnberg, Germany
+Email: contact@pixeltronic.dev
 
 We have not appointed a data protection officer because we are not required to. Send any privacy question to the email address above.
 
@@ -35,7 +33,7 @@ We have not appointed a data protection officer because we are not required to. 
 
 **Legal basis:** performance of our contract with you (Art. 6(1)(b) GDPR). Security events: our legitimate interest in protecting the service and your account (Art. 6(1)(f) GDPR).
 
-Sign-in codes are sent by email through [EMAIL PROVIDER, LOCATION].
+Sign-in codes are sent by email through IONOS.
 
 ### 3.2 Documents and comparisons
 
@@ -71,7 +69,7 @@ If you send feedback or answer an optional question in the app (for example, wha
 
 **Demo feedback form (draft, added 2026-11-22, not legally reviewed):** during the demo period the app offers one feedback form per account. If you send it, we store with your account number: which predefined answer you chose for what is missing, which monthly amount you chose, the plan description that question referred to, the time, and what you typed into the two text fields ("Other" and "Anything else?"). The text fields are stored as you wrote them. Please do not enter text from your documents or personal data about other people there. The price question is research; nothing is offered or charged. Sending the form does not change what you can use in the app.
 
-**Legal basis:** your consent, given by answering (Art. 6(1)(a) GDPR). Answering is never required. [LEGAL REVIEW: confirm consent as the basis for the demo feedback form, and how a single answer is withdrawn; today it is deleted with the account or on request to [CONTACT EMAIL].]
+**Legal basis:** your consent, given by answering (Art. 6(1)(a) GDPR). Answering is never required. [LEGAL REVIEW: confirm consent as the basis for the demo feedback form, and how a single answer is withdrawn; today it is deleted with the account or on request to contact@pixeltronic.dev.]
 
 ### 3.7 Server logs
 
@@ -91,7 +89,7 @@ If you enter your email address in the early-bird form on our website, we store 
 
 **Purpose:** to tell you when the full version of ChangeLens is available and to give you the early-bird discount. An address on the list is not an account and is not needed to use the app.
 
-**Legal basis:** your consent (Art. 6(1)(a) GDPR; for the emails also § 7(2) UWG). You can withdraw it at any time through the unsubscribe link in every email to the list, or by writing to [CONTACT EMAIL]. With the link your address is deleted at once, and we keep no record that it was on the list; if you write to us we delete it then. Copies in backups expire as described in section 6. Withdrawal does not affect processing before it.
+**Legal basis:** your consent (Art. 6(1)(a) GDPR; for the emails also § 7(2) UWG). You can withdraw it at any time through the unsubscribe link in every email to the list, or by writing to contact@pixeltronic.dev. With the link your address is deleted at once, and we keep no record that it was on the list; if you write to us we delete it then. Copies in backups expire as described in section 6. Withdrawal does not affect processing before it.
 
 **Retention:** an address that is not confirmed is deleted 7 days after the last confirmation email. A confirmed address is kept until you withdraw your consent or we close the list.
 
@@ -100,7 +98,7 @@ If you enter your email address in the early-bird form on our website, we store 
 | Recipient | Role | Data | Location |
 |---|---|---|---|
 | IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, Germany | Processor (Art. 28 GDPR): servers, database, file storage, AI Model Hub | All data in sections 3.1 to 3.7 | Germany |
-| [EMAIL PROVIDER] | Processor: sending sign-in codes and the early-bird confirmation email (3.8) | Email address, code or confirmation link | [LOCATION] |
+| IONOS | Processor: sending sign-in codes and the early-bird confirmation email (3.8) | Email address, code or confirmation link | Germany |
 | Apple Inc. / Apple Distribution International | Independent controller, only if you use Sign in with Apple | As described in Apple's privacy policy | Ireland / USA |
 | Google Ireland Ltd. / Google LLC | Independent controller, only if you use Google sign-in | As described in Google's privacy policy | Ireland / USA |
 
@@ -134,7 +132,7 @@ You have the right to access (Art. 15 GDPR), rectification (Art. 16), erasure (A
 
 **Right to object (Art. 21 GDPR):** where we process data on the basis of legitimate interest (sections 3.1 security events, 3.4 and 3.7), you can object at any time for reasons arising from your particular situation. For the usage statistics in section 3.4 we accept an objection without reasons.
 
-To exercise your rights, email [PRIVACY EMAIL].
+To exercise your rights, email contact@pixeltronic.dev.
 
 You also have the right to lodge a complaint with a data protection supervisory authority, for example the authority responsible for us: [SUPERVISORY AUTHORITY, ADDRESS].
 
@@ -152,4 +150,4 @@ ChangeLens is a work tool for freelancers and studios and is not intended for ch
 
 ## 12. Changes
 
-We will update this policy when the app or the law changes. The current version is always in the app and at [URL]. We will tell you in the app about material changes.
+We will update this policy when the app or the law changes. The current version is always in the app and at https://changelens.pixeltronic.dev/privacy.html. We will tell you in the app about material changes.
