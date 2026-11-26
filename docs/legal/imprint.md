@@ -1,22 +1,16 @@
 # Impressum / Imprint
 
-> **ENTWURF / DRAFT 2026-11-13, nicht rechtlich geprüft.** Platzhalter in `[ECKIGEN KLAMMERN]`. Pflichtangaben nach § 5 Digitale-Dienste-Gesetz (DDG).
-
 ## Angaben gemäß § 5 DDG
 
-[VOLLSTÄNDIGER NAME]
-[STRASSE UND HAUSNUMMER]
-[PLZ UND ORT]
+G.K Hoskins
+Burgschmietstraße 5
+90419 Nürnberg
 Deutschland
 
 ## Kontakt
 
-E-Mail: [KONTAKT-E-MAIL]
-Telefon oder Kontaktformular: [TELEFON ODER LINK ZUM KONTAKTFORMULAR]
-
-## Umsatzsteuer
-
-[Falls vorhanden: Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: DE…. Sonst diesen Abschnitt streichen.]
+E-Mail: contact@pixeltronic.dev
+Telefon: +(49)1573723432940
 
 ## Verbraucherstreitbeilegung
 

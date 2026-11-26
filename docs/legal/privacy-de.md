@@ -1,8 +1,8 @@
 # Datenschutzerklärung für ChangeLens
 
-> **ENTWURF 2026-11-13, nicht rechtlich geprüft.** Platzhalter in `[ECKIGEN KLAMMERN]`. Diese deutsche Fassung ist maßgeblich.
+> **ENTWURF 2026-11-13, nicht rechtlich geprüft.**
 
-Stand: [DATUM]
+Stand: 2026-11-13
 
 ChangeLens ist eine App für iOS und Android, die zwei Fassungen eines Briefings vergleicht und zeigt, was sich geändert hat, mit Belegstellen aus beiden Dokumenten. Diese Erklärung beschreibt, welche personenbezogenen Daten wir verarbeiten, wenn Sie die App nutzen, zu welchem Zweck, wie lange, und welche Rechte Sie haben.
 
@@ -10,10 +10,10 @@ ChangeLens ist eine App für iOS und Android, die zwei Fassungen eines Briefings
 
 Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:
 
-[VOLLSTÄNDIGER NAME]
-[STRASSE UND HAUSNUMMER]
-[PLZ UND ORT], Deutschland
-E-Mail: [DATENSCHUTZ-E-MAIL]
+G.K Hoskins
+Burgschmietstraße 5
+90419 Nürnberg, Deutschland
+E-Mail: contact@pixeltronic.dev
 
 Ein Datenschutzbeauftragter ist nicht bestellt, weil dazu keine Pflicht besteht. Fragen zum Datenschutz richten Sie bitte an die E-Mail-Adresse oben.
 
@@ -35,7 +35,7 @@ Ein Datenschutzbeauftragter ist nicht bestellt, weil dazu keine Pflicht besteht.
 
 **Rechtsgrundlage:** Erfüllung des Nutzungsvertrags mit Ihnen (Art. 6 Abs. 1 lit. b DSGVO). Sicherheitsereignisse: unser berechtigtes Interesse am Schutz des Dienstes und Ihres Kontos (Art. 6 Abs. 1 lit. f DSGVO).
 
-Anmeldecodes versenden wir per E-Mail über [E-MAIL-DIENSTLEISTER, SITZ].
+Anmeldecodes versenden wir per E-Mail über IONOS.
 
 ### 3.2 Dokumente und Vergleiche
 
@@ -71,7 +71,7 @@ Wenn Sie uns Feedback senden oder eine freiwillige Frage in der App beantworten 
 
 **Demo-Feedbackformular (Entwurf, ergänzt am 22.11.2026, nicht rechtlich geprüft):** In der Demo-Phase bietet die App ein Feedbackformular pro Konto an. Wenn Sie es absenden, speichern wir mit Ihrer Kontonummer: welche vorgegebene Antwort Sie auf die Frage gewählt haben, was fehlt, welchen monatlichen Betrag Sie gewählt haben, die Tarifbeschreibung, auf die sich diese Frage bezog, den Zeitpunkt und was Sie in die beiden Textfelder („Etwas anderes“ und „Noch etwas?“) eingegeben haben. Die Textfelder werden so gespeichert, wie Sie sie geschrieben haben. Bitte geben Sie dort keinen Text aus Ihren Dokumenten und keine personenbezogenen Daten anderer Personen ein. Die Preisfrage dient der Marktforschung; es wird nichts angeboten oder berechnet. Das Absenden des Formulars ändert nichts daran, was Sie in der App nutzen können.
 
-**Rechtsgrundlage:** Ihre Einwilligung, die Sie mit der Antwort erteilen (Art. 6 Abs. 1 lit. a DSGVO). Eine Antwort ist nie erforderlich. [RECHTLICHE PRÜFUNG: Einwilligung als Grundlage für das Demo-Feedbackformular bestätigen, ebenso den Widerruf einer einzelnen Antwort; derzeit wird sie mit dem Konto oder auf Anfrage an [KONTAKT-E-MAIL] gelöscht.]
+**Rechtsgrundlage:** Ihre Einwilligung, die Sie mit der Antwort erteilen (Art. 6 Abs. 1 lit. a DSGVO). Eine Antwort ist nie erforderlich. [RECHTLICHE PRÜFUNG: Einwilligung als Grundlage für das Demo-Feedbackformular bestätigen, ebenso den Widerruf einer einzelnen Antwort; derzeit wird sie mit dem Konto oder auf Anfrage an contact@pixeltronic.dev gelöscht.]
 
 ### 3.7 Server-Protokolle
 
@@ -91,7 +91,7 @@ Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eint
 
 **Zweck:** Sie zu informieren, wenn die Vollversion von ChangeLens verfügbar ist, und Ihnen den Early-Bird-Rabatt zu gewähren. Eine Adresse auf der Liste ist kein Konto und für die Nutzung der App nicht erforderlich.
 
-**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO; für die E-Mails auch § 7 Abs. 2 UWG). Sie können sie jederzeit widerrufen: über den Abmeldelink in jeder E-Mail an die Liste oder indem Sie an [KONTAKT-E-MAIL] schreiben. Über den Link wird Ihre Adresse sofort gelöscht, und wir bewahren keinen Vermerk darüber auf, dass sie auf der Liste stand; wenn Sie uns schreiben, löschen wir sie dann. Kopien in Backups laufen wie in Abschnitt 6 beschrieben ab. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.
+**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO; für die E-Mails auch § 7 Abs. 2 UWG). Sie können sie jederzeit widerrufen: über den Abmeldelink in jeder E-Mail an die Liste oder indem Sie an contact@pixeltronic.dev schreiben. Über den Link wird Ihre Adresse sofort gelöscht, und wir bewahren keinen Vermerk darüber auf, dass sie auf der Liste stand; wenn Sie uns schreiben, löschen wir sie dann. Kopien in Backups laufen wie in Abschnitt 6 beschrieben ab. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.
 
 **Speicherdauer:** Eine nicht bestätigte Adresse wird 7 Tage nach der letzten Bestätigungs-E-Mail gelöscht. Eine bestätigte Adresse bleibt gespeichert, bis Sie Ihre Einwilligung widerrufen oder wir die Liste schließen.
 
@@ -100,7 +100,7 @@ Wenn Sie Ihre E-Mail-Adresse in das Early-Bird-Formular auf unserer Website eint
 | Empfänger | Rolle | Daten | Ort |
 |---|---|---|---|
 | IONOS SE, Elgendorfer Str. 57, 56410 Montabaur | Auftragsverarbeiter (Art. 28 DSGVO): Server, Datenbank, Dateispeicher, AI Model Hub | Alle Daten aus Abschnitt 3.1 bis 3.7 | Deutschland |
-| [E-MAIL-DIENSTLEISTER] | Auftragsverarbeiter: Versand von Anmeldecodes und der Bestätigungs-E-Mail der Early-Bird-Liste (3.8) | E-Mail-Adresse, Code oder Bestätigungslink | [ORT] |
+| IONOS | Auftragsverarbeiter: Versand von Anmeldecodes und der Bestätigungs-E-Mail der Early-Bird-Liste (3.8) | E-Mail-Adresse, Code oder Bestätigungslink | Deutschland |
 | Apple Inc. / Apple Distribution International | Eigener Verantwortlicher, nur bei Anmeldung mit Apple | Siehe Datenschutzerklärung von Apple | Irland / USA |
 | Google Ireland Ltd. / Google LLC | Eigener Verantwortlicher, nur bei Anmeldung mit Google | Siehe Datenschutzerklärung von Google | Irland / USA |
 
@@ -134,7 +134,7 @@ Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Lösch
 
 **Widerspruchsrecht (Art. 21 DSGVO):** Soweit wir Daten auf Grundlage berechtigter Interessen verarbeiten (Abschnitt 3.1 Sicherheitsereignisse, 3.4 und 3.7), können Sie aus Gründen, die sich aus Ihrer besonderen Situation ergeben, jederzeit widersprechen. Einem Widerspruch gegen die Nutzungsstatistik nach Abschnitt 3.4 folgen wir auch ohne Begründung.
 
-Zur Ausübung Ihrer Rechte schreiben Sie an [DATENSCHUTZ-E-MAIL].
+Zur Ausübung Ihrer Rechte schreiben Sie an contact@pixeltronic.dev.
 
 Sie haben außerdem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, zum Beispiel bei der für uns zuständigen Behörde: [AUFSICHTSBEHÖRDE, ANSCHRIFT].
 
@@ -152,4 +152,4 @@ ChangeLens ist ein Arbeitswerkzeug für Freiberufler und Studios und nicht für 
 
 ## 12. Änderungen
 
-Wir passen diese Erklärung an, wenn sich die App oder die Rechtslage ändert. Die aktuelle Fassung finden Sie immer in der App und unter [URL]. Über wesentliche Änderungen informieren wir Sie in der App.
+Wir passen diese Erklärung an, wenn sich die App oder die Rechtslage ändert. Die aktuelle Fassung finden Sie immer in der App und unter https://changelens.pixeltronic.dev/de/privacy.html. Über wesentliche Änderungen informieren wir Sie in der App.

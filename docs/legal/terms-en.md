@@ -1,12 +1,12 @@
 # ChangeLens terms of use
 
-> **DRAFT 2026-11-13, not legally reviewed.** Placeholders in `[SQUARE BRACKETS]`. The German version is binding; this is a translation.
+> **DRAFT 2026-11-13, not legally reviewed.**
 
-Last updated: [DATE]
+Last updated: 2026-11-13
 
 ## 1. Provider and scope
 
-These terms apply to the ChangeLens app for iOS and Android and the related online service ("ChangeLens"). The provider is [FULL NAME], [ADDRESS], Germany ("we"). See the imprint for contact details. By creating an account you accept these terms. The terms of Apple's App Store or Google Play also apply to downloading the app.
+These terms apply to the ChangeLens app for iOS and Android and the related online service ("ChangeLens"). The provider is G.K Hoskins, Burgschmietstraße 5, 90419 Nürnberg, Germany ("we"). See the imprint for contact details. By creating an account you accept these terms. The terms of Apple's App Store or Google Play also apply to downloading the app.
 
 ## 2. What ChangeLens does
 
@@ -69,7 +69,7 @@ We may change these terms for valid reasons, for example legal changes or new fe
 
 ## 13. Applicable law and disputes
 
-German law applies, excluding the UN Convention on Contracts for the International Sale of Goods. If you are a consumer, the mandatory consumer protection rules of the country where you habitually reside also apply. If you are a merchant, the courts at [CITY] have jurisdiction.
+German law applies, excluding the UN Convention on Contracts for the International Sale of Goods. If you are a consumer, the mandatory consumer protection rules of the country where you habitually reside also apply. If you are a merchant, the courts at Nuremberg have jurisdiction.
 
 We are neither obliged nor willing to take part in dispute resolution proceedings before a consumer arbitration board.
 

@@ -1,12 +1,12 @@
 # Nutzungsbedingungen für ChangeLens
 
-> **ENTWURF 2026-11-13, nicht rechtlich geprüft.** Platzhalter in `[ECKIGEN KLAMMERN]`. Diese deutsche Fassung ist maßgeblich.
+> **ENTWURF 2026-11-13, nicht rechtlich geprüft.**
 
-Stand: [DATUM]
+Stand: 2026-11-13
 
 ## 1. Anbieter und Geltungsbereich
 
-Diese Bedingungen gelten für die App ChangeLens für iOS und Android und den zugehörigen Online-Dienst („ChangeLens“). Anbieter ist [VOLLSTÄNDIGER NAME], [ANSCHRIFT], Deutschland („wir“). Kontaktdaten finden Sie im Impressum. Mit dem Anlegen eines Kontos akzeptieren Sie diese Bedingungen. Für den Download der App gelten zusätzlich die Bedingungen des App Store von Apple bzw. von Google Play.
+Diese Bedingungen gelten für die App ChangeLens für iOS und Android und den zugehörigen Online-Dienst („ChangeLens“). Anbieter ist G.K Hoskins, Burgschmietstraße 5, 90419 Nürnberg, Deutschland („wir“). Kontaktdaten finden Sie im Impressum. Mit dem Anlegen eines Kontos akzeptieren Sie diese Bedingungen. Für den Download der App gelten zusätzlich die Bedingungen des App Store von Apple bzw. von Google Play.
 
 ## 2. Was ChangeLens leistet
 
@@ -69,7 +69,7 @@ Wir können diese Bedingungen aus triftigem Grund ändern, etwa wegen Gesetzesä
 
 ## 13. Anwendbares Recht und Streitbeilegung
 
-Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Sind Sie Verbraucher, gelten zusätzlich die zwingenden Verbraucherschutzvorschriften des Staates, in dem Sie Ihren gewöhnlichen Aufenthalt haben. Sind Sie Kaufmann, ist Gerichtsstand [ORT].
+Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Sind Sie Verbraucher, gelten zusätzlich die zwingenden Verbraucherschutzvorschriften des Staates, in dem Sie Ihren gewöhnlichen Aufenthalt haben. Sind Sie Kaufmann, ist Gerichtsstand Nürnberg.
 
 Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
 
