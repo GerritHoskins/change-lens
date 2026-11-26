@@ -129,6 +129,8 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email, locale: form.dataset.locale === 'de' ? 'de' : 'en' })
     }).then(function (response) {
+      // 429: this network is over the API's limit for the form (per minute or per day).
+      if (response.status === 429) { show(template('eb-msg-limited')); return; }
       if (response.status !== 202) throw new Error('unexpected status');
       form.reset();
       show(template('eb-msg-sent'));
