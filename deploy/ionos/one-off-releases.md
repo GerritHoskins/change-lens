@@ -340,3 +340,35 @@ may run without consent (`docs/landing-page-handoff.md`, Measurement); that answ
 4. **Switch the tracker on** in the repository (local): in `web/site.js` set `TRACKER_WEBSITE_ID` to that ID
    and `TRACKER_ENABLED = true`, update both privacy texts, commit, push, and run the app release command
    with `--profile stats` on its `docker compose up -d`.
+
+## Another site in Umami (stats.pixeltronic.dev)
+
+**Owner's decision, 2026-11-26:** sites that are not served from this server (first: `pixeltronic.dev` on
+GitHub Pages) use the same Umami through `stats.pixeltronic.dev`, which passes on `/script.js` and
+`/api/send` only. Such a site needs its own privacy note; the consent question of the legal review applies
+to it too.
+
+1. **DNS first** (owner, at the domain's DNS): an `A` record `stats` to the server's address
+   (and `AAAA` only if the other hosts have one). Local, PowerShell:
+   ```powershell
+   Resolve-DnsName stats.pixeltronic.dev -Type A
+   ```
+   Expected: the server's address. Without the record Caddy cannot get the certificate.
+2. **Release** on the server, then restart Caddy for the changed Caddyfile:
+   ```bash
+   cd /opt/changelens && git pull && cd deploy/ionos && docker compose --profile stats up -d && docker compose restart caddy
+   ```
+   ```bash
+   sleep 30 && curl -s -o /dev/null -w '%{http_code}
+' https://stats.pixeltronic.dev/script.js && curl -s -o /dev/null -w '%{http_code}
+' https://stats.pixeltronic.dev/
+   ```
+   Expected: `200`, then `404`.
+3. **In the dashboard** (tunnel as above): Settings, Websites, Add website, with the site's domain. Copy the
+   website ID.
+4. **In that site's pages**, in the `<head>`:
+   ```html
+   <script defer src="https://stats.pixeltronic.dev/script.js" data-website-id="<website ID>" data-do-not-track="true"></script>
+   ```
+   A site with a Content-Security-Policy must allow `https://stats.pixeltronic.dev` in `script-src` and
+   `connect-src`.
